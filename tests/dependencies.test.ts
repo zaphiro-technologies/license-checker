@@ -1,12 +1,16 @@
 import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { checkDependencies } from "../src/dependencies.js";
 import { Logger } from "../src/logger.js";
 import type { LicenseEyeConfig } from "../src/types.js";
 
 describe("dependency checker", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
   it("uses configured license overrides before remote resolution", async () => {
     const root = mkdtempSync(join(tmpdir(), "license-checker-deps-"));
     mkdirSync(join(root, "src"), { recursive: true });
@@ -111,5 +115,320 @@ describe("dependency checker", () => {
       "@docusaurus/react-loadable@6.0.0",
     ]);
     expect(report.failures).toHaveLength(0);
+  });
+
+  it("prefers the adjacent Poetry lockfile's exact package versions", async () => {
+    const root = mkdtempSync(join(tmpdir(), "license-checker-poetry-"));
+    writeFileSync(
+      join(root, "pyproject.toml"),
+      `[project]\ndependencies = [\n  "markdown (>=3.8.2,<4.0.0)",\n]\n`,
+    );
+    writeFileSync(
+      join(root, "poetry.lock"),
+      `[[package]]\nname = "markdown"\nversion = "3.8.2"\n\n[[package]]\nname = "transitive-package"\nversion = "1.2.3"\n`,
+    );
+    const config: LicenseEyeConfig = {
+      header: { license: { "spdx-id": "Apache-2.0" } },
+      dependency: {
+        files: ["pyproject.toml"],
+        licenses: [
+          { name: "markdown", version: "3.8.2", license: "BSD-3-Clause" },
+          {
+            name: "transitive-package",
+            version: "1.2.3",
+            license: "Apache-2.0",
+          },
+        ],
+      },
+    };
+
+    const report = await checkDependencies(
+      root,
+      config,
+      undefined,
+      false,
+      new Logger("error"),
+    );
+
+    expect(
+      report.results.map((result) => `${result.name}@${result.version}`),
+    ).toEqual(["markdown@3.8.2", "transitive-package@1.2.3"]);
+    expect(
+      report.results.every((result) => result.resolution === "configured"),
+    ).toBe(true);
+  });
+
+  it("uses PyPI SPDX license expressions", async () => {
+    const root = mkdtempSync(join(tmpdir(), "license-checker-pypi-"));
+    writeFileSync(join(root, "requirements.txt"), "pep639-package==1.0.0\n");
+    const fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        info: { version: "1.0.0", license_expression: "MIT" },
+      }),
+    });
+    vi.stubGlobal("fetch", fetch);
+    const config: LicenseEyeConfig = {
+      header: { license: { "spdx-id": "Apache-2.0" } },
+      dependency: { files: ["requirements.txt"] },
+    };
+
+    const report = await checkDependencies(
+      root,
+      config,
+      undefined,
+      false,
+      new Logger("error"),
+    );
+
+    expect(report.results[0]).toMatchObject({
+      name: "pep639-package",
+      version: "1.0.0",
+      license: "MIT",
+      normalized: "MIT",
+      resolution: "registry",
+      compatible: "compatible",
+    });
+  });
+
+  it("uses a normalized PyPI classifier when legacy license metadata is prose", async () => {
+    const root = mkdtempSync(
+      join(tmpdir(), "license-checker-pypi-classifier-"),
+    );
+    writeFileSync(
+      join(root, "requirements.txt"),
+      "legacy-classifier-package==1.0.0\n",
+    );
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({
+          info: {
+            version: "1.0.0",
+            license:
+              "GNU LESSER GENERAL PUBLIC LICENSE Version 3, 29 June 2007 " +
+              "The Library is a covered work. ".repeat(30),
+            classifiers: [
+              "License :: OSI Approved :: GNU Lesser General Public License v3 or later (LGPLv3+)",
+            ],
+          },
+        }),
+      }),
+    );
+    const config: LicenseEyeConfig = {
+      header: { license: { "spdx-id": "Apache-2.0" } },
+      dependency: { files: ["requirements.txt"] },
+    };
+
+    const report = await checkDependencies(
+      root,
+      config,
+      undefined,
+      false,
+      new Logger("error"),
+    );
+
+    expect(report.results[0]).toMatchObject({
+      license: "LGPL-3.0-or-later",
+      normalized: "LGPL-3.0-or-later",
+      source: "pypi.org classifier",
+      compatible: "compatible",
+    });
+  });
+
+  it("falls back to linked GitHub repository licenses for Python packages", async () => {
+    const root = mkdtempSync(join(tmpdir(), "license-checker-pypi-github-"));
+    writeFileSync(
+      join(root, "requirements.txt"),
+      "repository-metadata==1.0.0\nrepository-text==1.0.0\n",
+    );
+    const fetch = vi.fn().mockImplementation((url: string) => {
+      if (url.endsWith("/repository-metadata/1.0.0/json"))
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({
+            info: {
+              project_urls: {
+                Repository: "https://github.com/example/repository-metadata",
+              },
+            },
+          }),
+        });
+      if (url.endsWith("/repository-text/1.0.0/json"))
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({
+            info: {
+              project_urls: {
+                Source: "git+https://github.com/example/repository-text.git",
+              },
+            },
+          }),
+        });
+      if (url.endsWith("/repos/example/repository-metadata/license"))
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({ license: { spdx_id: "BSD-3-Clause" } }),
+        });
+      if (url.endsWith("/repos/example/repository-text/license"))
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({
+            license: { spdx_id: "NOASSERTION" },
+            download_url: "https://raw.example/repository-text/LICENSE",
+            html_url:
+              "https://github.com/example/repository-text/blob/main/LICENSE",
+          }),
+        });
+      if (url === "https://raw.example/repository-text/LICENSE")
+        return Promise.resolve({
+          ok: true,
+          text: async () =>
+            "Permission is hereby granted, free of charge, to any person obtaining a copy.",
+        });
+      return Promise.resolve({ ok: false, json: async () => ({}) });
+    });
+    vi.stubGlobal("fetch", fetch);
+    const config: LicenseEyeConfig = {
+      header: { license: { "spdx-id": "Apache-2.0" } },
+      dependency: { files: ["requirements.txt"] },
+    };
+
+    const report = await checkDependencies(
+      root,
+      config,
+      undefined,
+      false,
+      new Logger("error"),
+    );
+
+    expect(
+      report.results.map((result) => ({
+        name: result.name,
+        license: result.license,
+        resolution: result.resolution,
+      })),
+    ).toEqual([
+      {
+        name: "repository-metadata",
+        license: "BSD-3-Clause",
+        resolution: "repository",
+      },
+      { name: "repository-text", license: "MIT", resolution: "repository" },
+    ]);
+  });
+
+  it("uses Pyphen's documented tri-license instead of its first PyPI classifier", async () => {
+    const root = mkdtempSync(join(tmpdir(), "license-checker-pyphen-"));
+    writeFileSync(join(root, "requirements.txt"), "pyphen==0.17.2\n");
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockImplementation((url: string) => {
+        if (url.endsWith("/pyphen/0.17.2/json"))
+          return Promise.resolve({
+            ok: true,
+            json: async () => ({
+              info: {
+                project_urls: {
+                  Repository: "https://github.com/Kozea/Pyphen",
+                },
+                classifiers: [
+                  "License :: OSI Approved :: GNU General Public License v2 or later (GPLv2+)",
+                  "License :: OSI Approved :: GNU Lesser General Public License v2 or later (LGPLv2+)",
+                  "License :: OSI Approved :: Mozilla Public License 1.1 (MPL 1.1)",
+                ],
+              },
+            }),
+          });
+        if (url.endsWith("/repos/Kozea/Pyphen/license"))
+          return Promise.resolve({
+            ok: true,
+            json: async () => ({
+              license: { spdx_id: "NOASSERTION" },
+              download_url: "https://raw.example/Pyphen/LICENSE",
+            }),
+          });
+        if (url === "https://raw.example/Pyphen/LICENSE")
+          return Promise.resolve({
+            ok: true,
+            text: async () =>
+              "Pyphen is released under the GPL 2.0+/LGPL 2.1+/MPL 1.1 tri-license.",
+          });
+        return Promise.resolve({ ok: false, json: async () => ({}) });
+      }),
+    );
+    const config: LicenseEyeConfig = {
+      header: { license: { "spdx-id": "Apache-2.0" } },
+      dependency: { files: ["requirements.txt"] },
+    };
+
+    const report = await checkDependencies(
+      root,
+      config,
+      undefined,
+      false,
+      new Logger("error"),
+    );
+
+    expect(report.results[0]).toMatchObject({
+      license: "(GPL-2.0-or-later OR LGPL-2.1-or-later OR MPL-1.1)",
+      normalized: "(GPL-2.0-or-later OR (LGPL-2.1-or-later OR MPL-1.1))",
+      resolution: "repository",
+      compatible: "compatible",
+    });
+  });
+
+  it("selects the latest non-yanked PyPI release within a pyproject constraint", async () => {
+    const root = mkdtempSync(join(tmpdir(), "license-checker-pypi-range-"));
+    writeFileSync(
+      join(root, "pyproject.toml"),
+      `[project]\ndependencies = ["range-package (>=1.0.0,<2.0.0)"]\n`,
+    );
+    const fetch = vi.fn().mockImplementation((url: string) => {
+      if (url.endsWith("/range-package/1.5.0/json"))
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({
+            info: { version: "1.5.0", license_expression: "MIT" },
+          }),
+        });
+      return Promise.resolve({
+        ok: true,
+        json: async () => ({
+          info: { version: "2.0.0" },
+          releases: {
+            "1.4.0": [{}],
+            "1.5.0": [{}],
+            "1.9.0": [{ yanked: true }],
+            "2.0.0": [{}],
+          },
+        }),
+      });
+    });
+    vi.stubGlobal("fetch", fetch);
+    const config: LicenseEyeConfig = {
+      header: { license: { "spdx-id": "Apache-2.0" } },
+      dependency: { files: ["pyproject.toml"] },
+    };
+
+    const report = await checkDependencies(
+      root,
+      config,
+      undefined,
+      false,
+      new Logger("error"),
+    );
+
+    expect(report.results[0]).toMatchObject({
+      name: "range-package",
+      version: "1.5.0",
+      normalized: "MIT",
+      compatible: "compatible",
+    });
+    expect(fetch).toHaveBeenCalledWith(
+      "https://pypi.org/pypi/range-package/1.5.0/json",
+      expect.any(Object),
+    );
   });
 });

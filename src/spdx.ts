@@ -30,6 +30,8 @@ const CATEGORY_A = new Set([
   "AFL-3.0",
   "MS-PL",
   "Python-2.0",
+  "PSF-2.0",
+  "CNRI-Python",
   "BSL-1.0",
   "WTFPL",
   "Unicode-DFS-2016",
@@ -40,6 +42,7 @@ const CATEGORY_A = new Set([
   "MulanPSL-2.0",
   "MIT",
   "MIT-0",
+  "MIT-CMU",
   "BlueOak-1.0.0",
   "CC-BY-4.0",
   "CC0-1.0",
@@ -66,6 +69,7 @@ const CATEGORY_B = new Set([
 ]);
 
 const CATEGORY_A_INCOMPATIBLE = new Set([
+  "CAL-1.0",
   "LGPL-2.0+",
   "LGPL-2.0",
   "LGPL-2.0-only",
@@ -146,6 +150,7 @@ const OSI_APPROVED = new Set([
   "BSD-3-Clause-LBNL",
   "BSD-2-Clause-Patent",
   "EUPL-1.2",
+  "CAL-1.0",
 ]);
 
 const ALIASES: Record<string, string> = {
@@ -154,6 +159,9 @@ const ALIASES: Record<string, string> = {
   "Apache License 2.0": "Apache-2.0",
   "Apache License, Version 2.0": "Apache-2.0",
   "MIT License": "MIT",
+  "ISC license": "ISC",
+  "ISC License": "ISC",
+  "ISC License (ISCL)": "ISC",
   "BSD License": "BSD-3-Clause",
   BSD: "BSD-3-Clause",
   "GPL-2.0+": "GPL-2.0-or-later",

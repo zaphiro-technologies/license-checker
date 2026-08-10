@@ -9,6 +9,10 @@ describe("SPDX normalization", () => {
   it("normalizes common package-manager license names", () => {
     expect(normalizeLicenseId("MIT License")).toBe("MIT");
     expect(normalizeLicenseId("Apache License 2.0")).toBe("Apache-2.0");
+    expect(normalizeLicenseId("ISC license")).toBe("ISC");
+    expect(normalizeLicenseId("ISC License (ISCL)")).toBe("ISC");
+    for (const license of ["PSF-2.0", "CAL-1.0", "CNRI-Python", "MIT-CMU"])
+      expect(normalizeLicenseId(license)).toBe(license);
     expect(normalizeLicenseExpression("MIT OR Apache-2.0")).toBe(
       "(MIT OR Apache-2.0)",
     );
@@ -27,12 +31,18 @@ describe("SPDX normalization", () => {
       "MPL-1.1",
       "CC-BY-4.0",
       "CC0-1.0",
+      "PSF-2.0",
+      "CNRI-Python",
+      "MIT-CMU",
     ]) {
       expect(checkCompatibility("Apache-2.0", license, false)).toBe(
         "compatible",
       );
     }
     expect(checkCompatibility("Apache-2.0", "GPL-3.0-only", false)).toBe(
+      "incompatible",
+    );
+    expect(checkCompatibility("Apache-2.0", "CAL-1.0", false)).toBe(
       "incompatible",
     );
     expect(checkCompatibility("Apache-2.0", "BSD-4-Clause", false)).toBe(

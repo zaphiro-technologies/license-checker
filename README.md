@@ -51,7 +51,9 @@ Supported dependency inputs are:
 
 Yarn `workspace:` entries represent local packages and are ignored; only third-party dependencies are checked.
 
-License resolution uses configured overrides first, then manifest or lockfile metadata, installed npm metadata, public package registries, and repository license files. Unresolved licenses remain `Unknown` and fail compatibility checks until an override is supplied.
+When `pyproject.toml` has an adjacent `poetry.lock`, the lockfile is preferred and its exact direct and transitive package versions are checked. Without a lockfile, standard numeric PyPI constraints such as `>=1.0,<2.0`, `~=1.4`, and `==1.4.*` are resolved to the latest non-yanked matching release. Python license resolution uses PyPI's SPDX `license_expression` metadata when available.
+
+License resolution uses configured overrides first, then manifest or lockfile metadata, installed npm metadata, public package registries, and repository license files. When PyPI metadata has no usable license, the checker follows a linked public GitHub repository and uses its license metadata or LICENSE text. Unresolved licenses remain `Unknown` and fail compatibility checks until an override is supplied.
 
 Use `dependency.exceptions` only for a manually reviewed non-SPDX license. Every entry requires an exact dependency `name` and `version`, a reference `url`, and an audit `reason`. It takes precedence over registry resolution and is reported as `approved-exception` with the provided terms link and reason; it is not represented as SPDX-compatible. Add a separate exception for each package, such as `@gsap/react`.
 
@@ -61,13 +63,13 @@ Compatibility decisions for the supported license families follow the [LicenseCh
 
 ## Action inputs
 
-| Input | Default | Description |
-|---|---|---|
-| `config` | `.licenserc.yaml` | License Eye-compatible YAML configuration path |
-| `token` | `${{ github.token }}` | Token used for pull-request comments |
-| `log` | `info` | `error`, `warn`, `info`, or `debug` |
-| `weak-compatible` | `false` | Enable License Eye weak-compatible compatibility entries |
-| `report-all` | `false` | Include compatible dependencies in the job summary |
+| Input             | Default               | Description                                              |
+| ----------------- | --------------------- | -------------------------------------------------------- |
+| `config`          | `.licenserc.yaml`     | License Eye-compatible YAML configuration path           |
+| `token`           | `${{ github.token }}` | Token used for pull-request comments                     |
+| `log`             | `info`                | `error`, `warn`, `info`, or `debug`                      |
+| `weak-compatible` | `false`               | Enable License Eye weak-compatible compatibility entries |
+| `report-all`      | `false`               | Include compatible dependencies in the job summary       |
 
 By default, the job summary and pull-request comment show dependency issues only. Manually approved non-SPDX exceptions remain visible in a separate audit section. Set `report-all: true` to include every compatible dependency in the job summary.
 

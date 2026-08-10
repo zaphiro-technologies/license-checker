@@ -45825,6 +45825,8 @@ const CATEGORY_A = new Set([
     "AFL-3.0",
     "MS-PL",
     "Python-2.0",
+    "PSF-2.0",
+    "CNRI-Python",
     "BSL-1.0",
     "WTFPL",
     "Unicode-DFS-2016",
@@ -45835,6 +45837,7 @@ const CATEGORY_A = new Set([
     "MulanPSL-2.0",
     "MIT",
     "MIT-0",
+    "MIT-CMU",
     "BlueOak-1.0.0",
     "CC-BY-4.0",
     "CC0-1.0",
@@ -45859,6 +45862,7 @@ const CATEGORY_B = new Set([
     "SPL-1.0",
 ]);
 const CATEGORY_A_INCOMPATIBLE = new Set([
+    "CAL-1.0",
     "LGPL-2.0+",
     "LGPL-2.0",
     "LGPL-2.0-only",
@@ -45937,6 +45941,7 @@ const OSI_APPROVED = new Set([
     "BSD-3-Clause-LBNL",
     "BSD-2-Clause-Patent",
     "EUPL-1.2",
+    "CAL-1.0",
 ]);
 const ALIASES = {
     "Apache 2": "Apache-2.0",
@@ -45944,6 +45949,9 @@ const ALIASES = {
     "Apache License 2.0": "Apache-2.0",
     "Apache License, Version 2.0": "Apache-2.0",
     "MIT License": "MIT",
+    "ISC license": "ISC",
+    "ISC License": "ISC",
+    "ISC License (ISCL)": "ISC",
     "BSD License": "BSD-3-Clause",
     BSD: "BSD-3-Clause",
     "GPL-2.0+": "GPL-2.0-or-later",
@@ -46573,9 +46581,11 @@ function parsePoetryLock(manifest, path, dependencies) {
                     manifest,
                 });
         }
+        return true;
     }
     catch {
         // An invalid lockfile is reported by the package manager; do not make the action crash here.
+        return false;
     }
 }
 function parsePipfileLock(manifest, path, dependencies) {
@@ -46632,8 +46642,12 @@ function parseManifest(root, path, dependencies) {
         parseGoSum(path, absolute, dependencies);
     else if (basename === "requirements.txt" || basename.endsWith(".txt"))
         parseRequirements(path, absolute, dependencies);
-    else if (basename === "pyproject.toml")
-        parsePyproject(path, absolute, dependencies);
+    else if (basename === "pyproject.toml") {
+        const poetryLockPath = (0,external_node_path_namespaceObject.join)((0,external_node_path_namespaceObject.dirname)(absolute), "poetry.lock");
+        if (!isFile(poetryLockPath) ||
+            !parsePoetryLock(path, poetryLockPath, dependencies))
+            parsePyproject(path, absolute, dependencies);
+    }
     else if (basename === "poetry.lock")
         parsePoetryLock(path, absolute, dependencies);
     else if (basename === "Pipfile.lock")
@@ -46724,6 +46738,9 @@ async function fetchText(url) {
 }
 function identifyLicenseText(text) {
     const lower = text.toLowerCase();
+    if (lower.includes("gpl 2.0+/lgpl 2.1+/mpl 1.1") &&
+        lower.includes("tri-license"))
+        return "(GPL-2.0-or-later OR LGPL-2.1-or-later OR MPL-1.1)";
     if (lower.includes("apache license") && lower.includes("version 2.0"))
         return "Apache-2.0";
     if (lower.includes("permission is hereby granted, free of charge"))
@@ -46780,23 +46797,230 @@ async function resolveNpm(root, dependency, logger) {
     logger.debug(`Could not resolve npm license for ${dependency.name}@${dependency.version}`);
     return { resolution: "unknown" };
 }
-async function resolvePython(dependency, logger) {
+function pythonVersionParts(version) {
+    const match = version.trim().match(/^v?(\d+(?:\.\d+)*)$/i);
+    return match?.[1].split(".").map(Number);
+}
+function comparePythonVersions(left, right) {
+    const leftParts = pythonVersionParts(left);
+    const rightParts = pythonVersionParts(right);
+    if (!leftParts || !rightParts)
+        return 0;
+    const length = Math.max(leftParts.length, rightParts.length);
+    for (let index = 0; index < length; index += 1) {
+        const difference = (leftParts[index] ?? 0) - (rightParts[index] ?? 0);
+        if (difference !== 0)
+            return difference;
+    }
+    return 0;
+}
+function pythonSpecifier(version) {
+    return version
+        .trim()
+        .replace(/^\((.*)\)$/, "$1")
+        .split(";", 1)[0]
+        .trim();
+}
+function matchesPythonSpecifier(version, specifier) {
+    const parts = pythonVersionParts(version);
+    if (!parts)
+        return false;
+    const constraints = pythonSpecifier(specifier);
+    if (!constraints || constraints === "*")
+        return true;
+    return constraints.split(",").every((constraint) => {
+        const match = constraint
+            .trim()
+            .match(/^(===|==|!=|~=|>=|<=|>|<)?\s*v?(\d+(?:\.\d+)*(?:\.\*)?)$/i);
+        if (!match)
+            return false;
+        const operator = match[1] ?? "==";
+        const target = match[2];
+        if (target.endsWith(".*")) {
+            const prefix = target.slice(0, -2).split(".").map(Number);
+            const matchesPrefix = prefix.every((value, index) => parts[index] === value);
+            return operator === "!="
+                ? !matchesPrefix
+                : operator === "==" && matchesPrefix;
+        }
+        const comparison = comparePythonVersions(version, target);
+        if (operator === "===" || operator === "==")
+            return comparison === 0;
+        if (operator === "!=")
+            return comparison !== 0;
+        if (operator === ">")
+            return comparison > 0;
+        if (operator === ">=")
+            return comparison >= 0;
+        if (operator === "<")
+            return comparison < 0;
+        if (operator === "<=")
+            return comparison <= 0;
+        const targetParts = pythonVersionParts(target);
+        if (!targetParts || targetParts.length < 2)
+            return false;
+        const upperBound = [...targetParts];
+        upperBound[upperBound.length - 2] += 1;
+        upperBound.length -= 1;
+        return (comparison >= 0 &&
+            comparePythonVersions(version, upperBound.join(".")) < 0);
+    });
+}
+function exactPythonVersion(version) {
+    const specifier = pythonSpecifier(version);
+    const match = specifier.match(/^(?:===|==)?\s*(v?\d+(?:\.\d+)*)$/i);
+    return match?.[1];
+}
+function selectPythonRelease(metadata, specifier) {
+    return Object.entries(metadata.releases ?? {})
+        .filter(([version, files]) => pythonVersionParts(version) &&
+        files.some((file) => file.yanked !== true) &&
+        matchesPythonSpecifier(version, specifier))
+        .map(([version]) => version)
+        .sort(comparePythonVersions)
+        .at(-1);
+}
+function licenseFromPythonClassifier(classifier) {
+    const label = classifier.split("::").pop()?.trim() ?? classifier;
+    if (/lesser general public license v3.*\(lgplv3\+\)/i.test(label))
+        return "LGPL-3.0-or-later";
+    if (/lesser general public license v2\.1.*\(lgplv2\.1\+\)/i.test(label))
+        return "LGPL-2.1-or-later";
+    if (/lesser general public license v2.*\(lgplv2\+\)/i.test(label))
+        return "LGPL-2.0-or-later";
+    if (/general public license v3.*\(gplv3\+\)/i.test(label))
+        return "GPL-3.0-or-later";
+    if (/general public license v2.*\(gplv2\+\)/i.test(label))
+        return "GPL-2.0-or-later";
+    if (/mozilla public license 1\.1.*\(mpl 1\.1\)/i.test(label))
+        return "MPL-1.1";
+    return label;
+}
+function licensesFromPythonClassifiers(classifiers) {
+    const licenses = new Set();
+    for (const classifier of classifiers ?? []) {
+        if (!classifier.startsWith("License ::"))
+            continue;
+        const normalized = normalizeLicenseExpression(licenseFromPythonClassifier(classifier));
+        if (normalized !== "Unknown")
+            licenses.add(normalized);
+    }
+    return [...licenses];
+}
+function isConciseLicenseMetadata(value) {
+    return value.length <= 200 && !/[\r\n]/.test(value);
+}
+function githubRepositoryFromUrl(url) {
+    try {
+        const parsed = new URL(url.replace(/^git\+/, ""));
+        if (parsed.hostname.toLowerCase() !== "github.com" &&
+            parsed.hostname.toLowerCase() !== "www.github.com")
+            return undefined;
+        const [owner, repository] = parsed.pathname.split("/").filter(Boolean);
+        return owner && repository
+            ? `${owner}/${repository.replace(/\.git$/, "")}`
+            : undefined;
+    }
+    catch {
+        return undefined;
+    }
+}
+function githubRepositoryForPython(info) {
+    if (!info)
+        return undefined;
+    const urls = [info.home_page, ...Object.values(info.project_urls ?? {})];
+    for (const url of urls) {
+        if (!url)
+            continue;
+        const repository = githubRepositoryFromUrl(url);
+        if (repository)
+            return repository;
+    }
+    return undefined;
+}
+async function resolveGithubRepositoryLicense(repository, token) {
+    const apiUrl = `https://api.github.com/repos/${repository}/license`;
+    const metadata = (await fetchJson(apiUrl, token));
+    const apiLicense = metadata?.license?.spdx_id;
+    if (apiLicense && apiLicense !== "NOASSERTION")
+        return {
+            license: apiLicense,
+            source: apiUrl,
+            resolution: "repository",
+        };
+    if (metadata?.download_url) {
+        const text = await fetchText(metadata.download_url);
+        const license = text ? identifyLicenseText(text) : undefined;
+        if (license)
+            return {
+                license,
+                source: metadata.html_url ?? metadata.download_url,
+                resolution: "repository",
+            };
+    }
+    return { resolution: "unknown" };
+}
+async function resolvePython(dependency, token, logger) {
     const packageName = dependency.name.replace(/[-_.]+/g, "-");
-    const metadata = (await fetchJson(`https://pypi.org/pypi/${encodeURIComponent(packageName)}/json`));
+    const packageUrl = `https://pypi.org/pypi/${encodeURIComponent(packageName)}`;
+    const pinnedVersion = exactPythonVersion(dependency.version);
+    let resolvedVersion = pinnedVersion;
+    let metadata = (await fetchJson(pinnedVersion
+        ? `${packageUrl}/${encodeURIComponent(pinnedVersion)}/json`
+        : `${packageUrl}/json`));
+    if (!pinnedVersion && metadata) {
+        resolvedVersion = selectPythonRelease(metadata, dependency.version);
+        if (resolvedVersion && resolvedVersion !== metadata.info?.version) {
+            const releaseMetadata = (await fetchJson(`${packageUrl}/${encodeURIComponent(resolvedVersion)}/json`));
+            if (releaseMetadata)
+                metadata = releaseMetadata;
+        }
+    }
     const info = metadata?.info;
-    if (info?.license?.trim())
+    if (info?.license_expression?.trim())
         return {
-            license: info.license,
+            license: info.license_expression,
             source: "pypi.org",
+            version: resolvedVersion,
             resolution: "registry",
         };
-    const classifier = info?.classifiers?.find((item) => item.startsWith("License ::"));
-    if (classifier)
+    const declaredLicense = info?.license?.trim();
+    if (declaredLicense &&
+        isConciseLicenseMetadata(declaredLicense) &&
+        normalizeLicenseExpression(declaredLicense) !== "Unknown")
         return {
-            license: classifier.split("::").pop()?.trim(),
-            source: "pypi.org classifier",
+            license: declaredLicense,
+            source: "pypi.org",
+            version: resolvedVersion,
             resolution: "registry",
         };
+    const classifierLicenses = licensesFromPythonClassifiers(info?.classifiers);
+    const repository = githubRepositoryForPython(info);
+    if (classifierLicenses.length > 1 && repository) {
+        const resolved = await resolveGithubRepositoryLicense(repository, token);
+        if (resolved.license)
+            return {
+                ...resolved,
+                version: resolvedVersion,
+            };
+    }
+    if (classifierLicenses.length > 0)
+        return {
+            license: classifierLicenses.length === 1
+                ? classifierLicenses[0]
+                : `(${classifierLicenses.join(" OR ")})`,
+            source: "pypi.org classifier",
+            version: resolvedVersion,
+            resolution: "registry",
+        };
+    if (repository) {
+        const resolved = await resolveGithubRepositoryLicense(repository, token);
+        if (resolved.license)
+            return {
+                ...resolved,
+                version: resolvedVersion,
+            };
+    }
     logger.debug(`Could not resolve Python license for ${dependency.name}@${dependency.version}`);
     return { resolution: "unknown" };
 }
@@ -46855,12 +47079,13 @@ async function resolveLicense(root, dependency, config, token, logger) {
     const resolved = dependency.ecosystem === "npm"
         ? await resolveNpm(root, dependency, logger)
         : dependency.ecosystem === "python"
-            ? await resolvePython(dependency, logger)
+            ? await resolvePython(dependency, token, logger)
             : await resolveGo(dependency, token, logger);
     return {
         license: resolved.license ?? "Unknown",
         resolution: resolved.resolution,
         source: resolved.source,
+        version: resolved.version,
     };
 }
 function mainLicenseFor(manifest, config) {
@@ -46916,10 +47141,13 @@ async function checkDependencies(root, config, token, weakCompatible, logger) {
                 continue;
             }
             const resolved = await resolveLicense(root, dependency, dependencyConfig, token, logger);
+            const resolvedDependency = resolved.version
+                ? { ...dependency, version: resolved.version }
+                : dependency;
             const normalized = normalizeLicenseExpression(resolved.license);
             const compatibility = checkCompatibility(mainLicenseFor(dependency.manifest, config), normalized, weakCompatible, dependencyConfig);
             resultSlots[index] = {
-                ...dependency,
+                ...resolvedDependency,
                 license: resolved.license,
                 normalized,
                 resolution: resolved.resolution,

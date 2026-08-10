@@ -46034,6 +46034,38 @@ function normalizeLicenseExpression(value) {
     };
     return render(expression);
 }
+function licenseIds(expression) {
+    if (expression.type === "license")
+        return [expression.id];
+    if (expression.type === "with")
+        return licenseIds(expression.license);
+    return [...licenseIds(expression.left), ...licenseIds(expression.right)];
+}
+function distributionWarningFor(expression) {
+    const ids = licenseIds(parseLicenseExpression(expression));
+    if (ids.some((id) => /^AGPL-/.test(id)))
+        return "Distribution review: AGPL terms can require offering corresponding source to network users. Include required notices and review the license before distribution or deployment.";
+    if (ids.some((id) => /^GPL-/.test(id)))
+        return "Distribution review: GPL terms can require distributing corresponding source and licensing covered combined work under GPL. Include required notices and the license text.";
+    if (ids.some((id) => /^LGPL-/.test(id)))
+        return "Distribution review: LGPL terms require preserving notices and providing the license text; distribution of modified or combined work can create source and relinking obligations.";
+    if (ids.some((id) => /^MPL-/.test(id)))
+        return "Distribution review: MPL terms require preserving notices and making covered source files available when distributing executable form.";
+    if (ids.includes("CAL-1.0"))
+        return "Distribution review: CAL has reciprocal source, deployment, and user-autonomy obligations. Review its terms before providing the software to third parties.";
+    if (ids.some((id) => [
+        "CDDL-1.0",
+        "CDDL-1.1",
+        "CPL-1.0",
+        "EPL-1.0",
+        "EPL-2.0",
+        "EUPL-1.2",
+        "OSL-3.0",
+        "CPAL-1.0",
+    ].includes(id)))
+        return "Distribution review: This reciprocal license can impose notice and source-availability obligations when distributing covered software. Review its terms before release.";
+    return undefined;
+}
 function isFree(id) {
     return FSF_FREE.has(id);
 }
@@ -47187,6 +47219,7 @@ async function checkDependencies(root, config, token, weakCompatible, logger) {
                 ? { ...dependency, version: resolved.version }
                 : dependency;
             const normalized = normalizeLicenseExpression(resolved.license);
+            const distributionWarning = distributionWarningFor(normalized);
             const compatibility = checkCompatibility(mainLicenseFor(dependency.manifest, config), normalized, weakCompatible, dependencyConfig);
             resultSlots[index] = {
                 ...resolvedDependency,
@@ -47195,6 +47228,7 @@ async function checkDependencies(root, config, token, weakCompatible, logger) {
                 resolution: resolved.resolution,
                 source: resolved.source,
                 compatible: compatibility,
+                distributionWarning,
                 reason: compatibility === "compatible"
                     ? undefined
                     : `${compatibility} with project license`,
@@ -47273,10 +47307,17 @@ function dependencyRows(results) {
         result.compatible,
         result.resolution,
         approvalDetails(result),
+        result.distributionWarning ?? "",
     ]);
 }
+function distributionWarnings(report) {
+    return report.dependency.results.filter((result) => result.distributionWarning);
+}
 function summaryDependencies(report, reportAll) {
-    return reportAll ? report.dependency.results : report.dependency.failures;
+    return reportAll
+        ? report.dependency.results
+        : report.dependency.results.filter((result) => report.dependency.failures.includes(result) ||
+            result.distributionWarning);
 }
 function commentBody(report) {
     const lines = [COMMENT_MARKER, "## License Checker", ""];
@@ -47284,6 +47325,14 @@ function commentBody(report) {
         lines.push("### Dependency license failures", "", "| Dependency | Version | License | Result |", "|---|---:|---|---|");
         for (const result of report.dependency.failures.slice(0, 100)) {
             lines.push(`| ${result.name} | ${result.version} | ${result.normalized} | ${result.compatible} |`);
+        }
+        lines.push("");
+    }
+    const warnings = distributionWarnings(report);
+    if (warnings.length > 0) {
+        lines.push("### Distribution review warnings", "", "| Dependency | Version | License | Review required |", "|---|---:|---|---|");
+        for (const result of warnings.slice(0, 100)) {
+            lines.push(`| ${result.name} | ${result.version} | ${result.normalized} | ${escapeTableCell(result.distributionWarning ?? "")} |`);
         }
         lines.push("");
     }
@@ -47300,19 +47349,28 @@ function commentBody(report) {
 }
 async function writeSummary(report, reportAll = false) {
     const approvals = report.dependency.results.filter((result) => result.compatible === "approved-exception");
+    const warnings = distributionWarnings(report);
     const dependencyRowsForSummary = report.dependency.failures.length === 0
-        ? [
-            [
-                "Dependencies",
-                "pass",
-                `${report.dependency.checked} checked; ${approvals.length} manual approval(s)`,
-            ],
-        ]
+        ? warnings.length === 0
+            ? [
+                [
+                    "Dependencies",
+                    "pass",
+                    `${report.dependency.checked} checked; ${approvals.length} manual approval(s)`,
+                ],
+            ]
+            : [
+                [
+                    "Dependencies",
+                    "warning",
+                    `${report.dependency.checked} checked; ${warnings.length} distribution review warning(s)`,
+                ],
+            ]
         : [
             [
                 "Dependencies",
                 "fail",
-                `${report.dependency.failures.length} failure(s)`,
+                `${report.dependency.failures.length} failure(s); ${warnings.length} distribution review warning(s)`,
             ],
         ];
     core.summary.addHeading("License Checker").addTable([
@@ -47335,6 +47393,7 @@ async function writeSummary(report, reportAll = false) {
                 { data: "Compatibility", header: true },
                 { data: "Resolution", header: true },
                 { data: "Manual approval", header: true },
+                { data: "Distribution review", header: true },
             ],
             ...dependencyRows(displayedDependencies),
         ]);
@@ -47348,6 +47407,7 @@ async function writeSummary(report, reportAll = false) {
                 { data: "Compatibility", header: true },
                 { data: "Resolution", header: true },
                 { data: "Manual approval", header: true },
+                { data: "Distribution review", header: true },
             ],
             ...dependencyRows(approvals),
         ]);
@@ -47358,6 +47418,12 @@ async function writeSummary(report, reportAll = false) {
 function annotate(report) {
     for (const result of report.dependency.failures) {
         core.error(`${result.name}@${result.version}: ${result.normalized} (${result.compatible})`, {
+            file: result.manifest,
+            startLine: 1,
+        });
+    }
+    for (const result of distributionWarnings(report)) {
+        core.warning(`${result.name}@${result.version}: ${result.distributionWarning}`, {
             file: result.manifest,
             startLine: 1,
         });
@@ -47434,7 +47500,8 @@ async function run() {
     };
     annotate(report);
     await writeSummary(report, reportAll);
-    if (report.failed && commentsEnabled(config))
+    if ((report.failed || distributionWarnings(report).length > 0) &&
+        commentsEnabled(config))
         await commentOnPullRequest(token, report);
     logger.info(`Checked ${dependency.checked} dependencies.`);
     if (report.failed) {

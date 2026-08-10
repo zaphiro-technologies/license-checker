@@ -76,6 +76,40 @@ describe("dependency checker", () => {
     });
   });
 
+  it("reports non-blocking distribution review warnings", async () => {
+    const root = mkdtempSync(join(tmpdir(), "license-checker-distribution-"));
+    writeFileSync(
+      join(root, "go.mod"),
+      "module example.com/app\n\nrequire example.com/reciprocal v1.2.3\n",
+    );
+    const config: LicenseEyeConfig = {
+      header: { license: { "spdx-id": "Apache-2.0" } },
+      dependency: {
+        files: ["go.mod"],
+        licenses: [
+          {
+            name: "example.com/reciprocal",
+            license: "LGPL-3.0-or-later",
+          },
+        ],
+      },
+    };
+
+    const report = await checkDependencies(
+      root,
+      config,
+      undefined,
+      false,
+      new Logger("error"),
+    );
+
+    expect(report.failures).toHaveLength(0);
+    expect(report.results[0]).toMatchObject({
+      compatible: "compatible",
+      distributionWarning: expect.stringContaining("LGPL"),
+    });
+  });
+
   it("records a version-pinned non-SPDX exception as a manual approval", async () => {
     const root = mkdtempSync(join(tmpdir(), "license-checker-exception-"));
     writeFileSync(

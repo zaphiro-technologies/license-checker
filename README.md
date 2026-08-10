@@ -18,7 +18,7 @@ steps:
       log: info
 ```
 
-The action is dependency check-only. It does not modify files or scan source-file headers. It writes a job summary and workflow annotations. When a pull request fails and a token is available, it creates or updates one managed pull-request comment.
+The action is dependency check-only. It does not modify files or scan source-file headers. It writes a job summary and workflow annotations. When a pull request has a failure or distribution-review warning and a token is available, it creates or updates one managed pull-request comment.
 
 ## Configuration
 
@@ -72,6 +72,8 @@ Compatibility decisions for the supported license families follow the [LicenseCh
 | `report-all`      | `false`               | Include compatible dependencies in the job summary       |
 
 By default, the job summary and pull-request comment show dependency issues only. Manually approved non-SPDX exceptions remain visible in a separate audit section. Set `report-all: true` to include every compatible dependency in the job summary.
+
+Compatible reciprocal/copyleft dependencies are also reported by default as non-blocking **Distribution review** warnings. LGPL, MPL, GPL/AGPL, CAL, and related reciprocal licenses can require notices, license copies, source availability, relinking, or other conditions when software is distributed. These warnings do not fail the action, but they do appear in the job summary, pull-request comment, and GitHub Actions warning annotations.
 
 The generated `dist/index.js` bundle is committed because JavaScript GitHub Actions run from the checked-out action repository without installing its Node dependencies.
 

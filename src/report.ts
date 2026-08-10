@@ -21,14 +21,27 @@ function dependencyRows(results: DependencyResult[]): string[][] {
     result.compatible,
     result.resolution,
     approvalDetails(result),
+    result.distributionWarning ?? "",
   ]);
+}
+
+export function distributionWarnings(report: CheckReport): DependencyResult[] {
+  return report.dependency.results.filter(
+    (result) => result.distributionWarning,
+  );
 }
 
 export function summaryDependencies(
   report: CheckReport,
   reportAll: boolean,
 ): DependencyResult[] {
-  return reportAll ? report.dependency.results : report.dependency.failures;
+  return reportAll
+    ? report.dependency.results
+    : report.dependency.results.filter(
+        (result) =>
+          report.dependency.failures.includes(result) ||
+          result.distributionWarning,
+      );
 }
 
 function commentBody(report: CheckReport): string {
@@ -43,6 +56,21 @@ function commentBody(report: CheckReport): string {
     for (const result of report.dependency.failures.slice(0, 100)) {
       lines.push(
         `| ${result.name} | ${result.version} | ${result.normalized} | ${result.compatible} |`,
+      );
+    }
+    lines.push("");
+  }
+  const warnings = distributionWarnings(report);
+  if (warnings.length > 0) {
+    lines.push(
+      "### Distribution review warnings",
+      "",
+      "| Dependency | Version | License | Review required |",
+      "|---|---:|---|---|",
+    );
+    for (const result of warnings.slice(0, 100)) {
+      lines.push(
+        `| ${result.name} | ${result.version} | ${result.normalized} | ${escapeTableCell(result.distributionWarning ?? "")} |`,
       );
     }
     lines.push("");
@@ -75,20 +103,29 @@ export async function writeSummary(
   const approvals = report.dependency.results.filter(
     (result) => result.compatible === "approved-exception",
   );
+  const warnings = distributionWarnings(report);
   const dependencyRowsForSummary =
     report.dependency.failures.length === 0
-      ? [
-          [
-            "Dependencies",
-            "pass",
-            `${report.dependency.checked} checked; ${approvals.length} manual approval(s)`,
-          ],
-        ]
+      ? warnings.length === 0
+        ? [
+            [
+              "Dependencies",
+              "pass",
+              `${report.dependency.checked} checked; ${approvals.length} manual approval(s)`,
+            ],
+          ]
+        : [
+            [
+              "Dependencies",
+              "warning",
+              `${report.dependency.checked} checked; ${warnings.length} distribution review warning(s)`,
+            ],
+          ]
       : [
           [
             "Dependencies",
             "fail",
-            `${report.dependency.failures.length} failure(s)`,
+            `${report.dependency.failures.length} failure(s); ${warnings.length} distribution review warning(s)`,
           ],
         ];
 
@@ -116,6 +153,7 @@ export async function writeSummary(
           { data: "Compatibility", header: true },
           { data: "Resolution", header: true },
           { data: "Manual approval", header: true },
+          { data: "Distribution review", header: true },
         ],
         ...dependencyRows(displayedDependencies),
       ]);
@@ -129,6 +167,7 @@ export async function writeSummary(
         { data: "Compatibility", header: true },
         { data: "Resolution", header: true },
         { data: "Manual approval", header: true },
+        { data: "Distribution review", header: true },
       ],
       ...dependencyRows(approvals),
     ]);
@@ -140,6 +179,15 @@ export function annotate(report: CheckReport): void {
   for (const result of report.dependency.failures) {
     core.error(
       `${result.name}@${result.version}: ${result.normalized} (${result.compatible})`,
+      {
+        file: result.manifest,
+        startLine: 1,
+      },
+    );
+  }
+  for (const result of distributionWarnings(report)) {
+    core.warning(
+      `${result.name}@${result.version}: ${result.distributionWarning}`,
       {
         file: result.manifest,
         startLine: 1,

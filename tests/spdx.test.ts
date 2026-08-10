@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   checkCompatibility,
+  distributionWarningFor,
   normalizeLicenseExpression,
   normalizeLicenseId,
 } from "../src/spdx.js";
@@ -51,6 +52,9 @@ describe("SPDX normalization", () => {
     expect(checkCompatibility("Apache-2.0", "GPL-3.0-only OR MIT", false)).toBe(
       "compatible",
     );
+    expect(distributionWarningFor("MIT")).toBeUndefined();
+    expect(distributionWarningFor("LGPL-3.0-or-later")).toContain("LGPL");
+    expect(distributionWarningFor("GPL-3.0-only OR MIT")).toContain("GPL");
   });
 
   it("follows the published compatibility matrix", () => {

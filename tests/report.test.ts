@@ -21,12 +21,17 @@ function dependency(
 describe("summary reporting", () => {
   it("shows only dependency issues by default", () => {
     const failure = dependency("unknown-license", "unknown");
+    const warning = {
+      ...dependency("lgpl-license", "compatible"),
+      distributionWarning: "Distribution review is required.",
+    };
     const report: CheckReport = {
       dependency: {
         checked: 3,
         results: [
           dependency("compatible-license", "compatible"),
           dependency("manual-approval", "approved-exception"),
+          warning,
           failure,
         ],
         failures: [failure],
@@ -34,7 +39,7 @@ describe("summary reporting", () => {
       failed: true,
     };
 
-    expect(summaryDependencies(report, false)).toEqual([failure]);
+    expect(summaryDependencies(report, false)).toEqual([warning, failure]);
     expect(summaryDependencies(report, true)).toEqual(
       report.dependency.results,
     );

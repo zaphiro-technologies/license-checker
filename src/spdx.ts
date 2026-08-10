@@ -253,6 +253,44 @@ export function normalizeLicenseExpression(value: string | undefined): string {
   return render(expression);
 }
 
+function licenseIds(expression: SpdxExpression): string[] {
+  if (expression.type === "license") return [expression.id];
+  if (expression.type === "with") return licenseIds(expression.license);
+  return [...licenseIds(expression.left), ...licenseIds(expression.right)];
+}
+
+export function distributionWarningFor(
+  expression: string | undefined,
+): string | undefined {
+  const ids = licenseIds(parseLicenseExpression(expression));
+  if (ids.some((id) => /^AGPL-/.test(id)))
+    return "Distribution review: AGPL terms can require offering corresponding source to network users. Include required notices and review the license before distribution or deployment.";
+  if (ids.some((id) => /^GPL-/.test(id)))
+    return "Distribution review: GPL terms can require distributing corresponding source and licensing covered combined work under GPL. Include required notices and the license text.";
+  if (ids.some((id) => /^LGPL-/.test(id)))
+    return "Distribution review: LGPL terms require preserving notices and providing the license text; distribution of modified or combined work can create source and relinking obligations.";
+  if (ids.some((id) => /^MPL-/.test(id)))
+    return "Distribution review: MPL terms require preserving notices and making covered source files available when distributing executable form.";
+  if (ids.includes("CAL-1.0"))
+    return "Distribution review: CAL has reciprocal source, deployment, and user-autonomy obligations. Review its terms before providing the software to third parties.";
+  if (
+    ids.some((id) =>
+      [
+        "CDDL-1.0",
+        "CDDL-1.1",
+        "CPL-1.0",
+        "EPL-1.0",
+        "EPL-2.0",
+        "EUPL-1.2",
+        "OSL-3.0",
+        "CPAL-1.0",
+      ].includes(id),
+    )
+  )
+    return "Distribution review: This reciprocal license can impose notice and source-availability obligations when distributing covered software. Review its terms before release.";
+  return undefined;
+}
+
 function isFree(id: string): boolean {
   return FSF_FREE.has(id);
 }

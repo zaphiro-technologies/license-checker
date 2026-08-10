@@ -82,6 +82,7 @@ export interface DependencyResult extends Dependency {
     | "unknown";
   approval?: Pick<DependencyException, "url" | "reason">;
   reason?: string;
+  distributionWarning?: string;
 }
 
 export interface DependencyReport {

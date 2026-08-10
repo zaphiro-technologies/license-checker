@@ -5,7 +5,11 @@ import { parse as parseYaml } from "yaml";
 import { minimatch } from "minimatch";
 import { headerRules } from "./config.js";
 import { Logger } from "./logger.js";
-import { checkCompatibility, normalizeLicenseExpression } from "./spdx.js";
+import {
+  checkCompatibility,
+  distributionWarningFor,
+  normalizeLicenseExpression,
+} from "./spdx.js";
 import type {
   Dependency,
   DependencyConfig,
@@ -1159,6 +1163,7 @@ export async function checkDependencies(
         ? { ...dependency, version: resolved.version }
         : dependency;
       const normalized = normalizeLicenseExpression(resolved.license);
+      const distributionWarning = distributionWarningFor(normalized);
       const compatibility = checkCompatibility(
         mainLicenseFor(dependency.manifest, config),
         normalized,
@@ -1172,6 +1177,7 @@ export async function checkDependencies(
         resolution: resolved.resolution,
         source: resolved.source,
         compatible: compatibility,
+        distributionWarning,
         reason:
           compatibility === "compatible"
             ? undefined

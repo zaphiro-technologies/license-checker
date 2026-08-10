@@ -2,7 +2,12 @@ import * as core from "@actions/core";
 import { loadConfig } from "./config.js";
 import { checkDependencies } from "./dependencies.js";
 import { Logger } from "./logger.js";
-import { annotate, commentOnPullRequest, writeSummary } from "./report.js";
+import {
+  annotate,
+  commentOnPullRequest,
+  distributionWarnings,
+  writeSummary,
+} from "./report.js";
 import { headerRules } from "./config.js";
 import type { CheckReport, LicenseEyeConfig } from "./types.js";
 
@@ -49,7 +54,10 @@ async function run(): Promise<void> {
 
   annotate(report);
   await writeSummary(report, reportAll);
-  if (report.failed && commentsEnabled(config))
+  if (
+    (report.failed || distributionWarnings(report).length > 0) &&
+    commentsEnabled(config)
+  )
     await commentOnPullRequest(token, report);
 
   logger.info(`Checked ${dependency.checked} dependencies.`);

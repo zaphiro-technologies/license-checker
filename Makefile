@@ -12,6 +12,10 @@ all: build
 build:
 	yarn build
 
+.PHONY: test
+test:
+	yarn test:cov
+
 ci-test:
 ci-bench:
 ci-pre-build:

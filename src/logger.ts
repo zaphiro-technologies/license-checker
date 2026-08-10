@@ -1,5 +1,5 @@
-import * as core from '@actions/core';
-import type { LogLevel } from './types.js';
+import * as core from "@actions/core";
+import type { LogLevel } from "./types.js";
 
 const priorities: Record<LogLevel, number> = {
   error: 0,
@@ -12,8 +12,8 @@ export class Logger {
   readonly level: LogLevel;
 
   constructor(level: string | undefined) {
-    const normalized = (level ?? 'info').toLowerCase() as LogLevel;
-    this.level = normalized in priorities ? normalized : 'info';
+    const normalized = (level ?? "info").toLowerCase() as LogLevel;
+    this.level = normalized in priorities ? normalized : "info";
   }
 
   private enabled(level: LogLevel): boolean {
@@ -21,18 +21,20 @@ export class Logger {
   }
 
   error(message: string): void {
-    if (this.enabled('error')) core.error(message);
+    if (this.enabled("error")) core.error(message);
   }
 
   warn(message: string): void {
-    if (this.enabled('warn')) core.warning(message);
+    if (this.enabled("warn")) core.warning(message);
   }
 
   info(message: string): void {
-    if (this.enabled('info')) core.info(message);
+    if (this.enabled("info")) core.info(message);
   }
 
   debug(message: string): void {
-    if (this.enabled('debug')) core.debug(message);
+    if (!this.enabled("debug")) return;
+    if (process.env.ACTIONS_STEP_DEBUG === "true") core.debug(message);
+    else core.info(`[debug] ${message}`);
   }
 }

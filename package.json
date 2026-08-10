@@ -1,12 +1,14 @@
 {
   "name": "license-checker-action",
   "version": "0.1.0",
-  "description": "A cross-platform GitHub Action for License Eye-compatible header and dependency checks.",
+  "description": "A cross-platform GitHub Action for License Eye-compatible dependency license checks.",
   "private": true,
+  "packageManager": "yarn@4.13.0",
   "type": "module",
   "main": "dist/index.js",
   "scripts": {
     "build": "tsc && ncc build lib/index.js -o dist",
+    "check": "yarn build && node lib/index.js",
     "format": "prettier --write \"src/**/*.ts\" \"tests/**/*.ts\"",
     "test": "vitest run",
     "typecheck": "tsc --noEmit"

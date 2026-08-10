@@ -1,5 +1,5 @@
 name: License Checker
-description: Check License Eye-compatible headers and dependency licenses for JavaScript, Go, and Python projects.
+description: Check License Eye-compatible dependency licenses for JavaScript, Go, and Python projects.
 author: Zaphiro Technologies
 branding:
   icon: shield

@@ -1,0 +1,33 @@
+{
+  "name": "license-checker-action",
+  "version": "0.1.0",
+  "description": "A cross-platform GitHub Action for License Eye-compatible header and dependency checks.",
+  "private": true,
+  "type": "module",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc && ncc build lib/index.js -o dist",
+    "format": "prettier --write \"src/**/*.ts\" \"tests/**/*.ts\"",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@actions/core": "^1.11.1",
+    "@actions/github": "^6.0.0",
+    "@iarna/toml": "^2.2.5",
+    "minimatch": "^10.0.1",
+    "spdx-correct": "^3.2.0",
+    "spdx-expression-parse": "^3.0.1",
+    "yaml": "^2.6.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.2",
+    "@types/spdx-correct": "^3.0.0",
+    "@types/spdx-expression-parse": "^3.0.1",
+    "@vercel/ncc": "^0.38.3",
+    "prettier": "^3.4.2",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2",
+    "vitest": "^2.1.8"
+  }
+}

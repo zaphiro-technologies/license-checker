@@ -1,0 +1,26 @@
+name: License Checker
+description: Check License Eye-compatible headers and dependency licenses for JavaScript, Go, and Python projects.
+author: Zaphiro Technologies
+branding:
+  icon: shield
+  color: blue
+inputs:
+  config:
+    description: Path to the License Eye-compatible YAML configuration file.
+    required: false
+    default: .licenserc.yaml
+  token:
+    description: GitHub token used to update pull-request comments on failure.
+    required: false
+    default: ${{ github.token }}
+  log:
+    description: 'Log level: error, warn, info, or debug.'
+    required: false
+    default: info
+  weak-compatible:
+    description: Treat License Eye weak-compatible licenses as compatible.
+    required: false
+    default: 'false'
+runs:
+  using: node20
+  main: dist/index.js

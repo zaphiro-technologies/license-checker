@@ -46306,7 +46306,7 @@ function readJson(path) {
 }
 function readText(path) {
     try {
-        return readFileSync(path, "utf8");
+        return (0,external_node_fs_namespaceObject.readFileSync)(path, "utf8");
     }
     catch {
         return undefined;
@@ -47024,7 +47024,41 @@ async function resolvePython(dependency, token, logger) {
     logger.debug(`Could not resolve Python license for ${dependency.name}@${dependency.version}`);
     return { resolution: "unknown" };
 }
-async function resolveGo(dependency, token, logger) {
+function resolveVendoredGoLicense(root, dependency) {
+    const vendorRoot = (0,external_node_path_namespaceObject.join)(root, (0,external_node_path_namespaceObject.dirname)(dependency.manifest), "vendor");
+    let directory = (0,external_node_path_namespaceObject.join)(vendorRoot, ...dependency.name.split("/"));
+    for (;;) {
+        for (const filename of [
+            "LICENSE",
+            "LICENCE",
+            "LICENSE.txt",
+            "LICENCE.txt",
+            "LICENSE.md",
+            "LICENCE.md",
+            "COPYING",
+        ]) {
+            const path = (0,external_node_path_namespaceObject.join)(directory, filename);
+            const text = readText(path);
+            const license = text ? identifyLicenseText(text) : undefined;
+            if (license)
+                return {
+                    license,
+                    source: (0,external_node_path_namespaceObject.relative)(root, path),
+                };
+        }
+        if (directory === vendorRoot)
+            break;
+        directory = (0,external_node_path_namespaceObject.dirname)(directory);
+    }
+    return {};
+}
+async function resolveGo(root, dependency, token, logger) {
+    const vendored = resolveVendoredGoLicense(root, dependency);
+    if (vendored.license)
+        return {
+            ...vendored,
+            resolution: "manifest",
+        };
     const match = dependency.name.match(/^github\.com\/([^/]+\/[^/]+)(?:\/v\d+)?$/);
     if (!match) {
         logger.debug(`No repository resolver for Go module ${dependency.name}`);
@@ -47045,7 +47079,15 @@ async function resolveGo(dependency, token, logger) {
         "main",
         "master",
     ];
-    const attempts = await Promise.all(candidates.flatMap((ref) => ["LICENSE", "LICENSE.txt", "LICENSE.md", "COPYING"].map(async (filename) => ({
+    const attempts = await Promise.all(candidates.flatMap((ref) => [
+        "LICENSE",
+        "LICENCE",
+        "LICENSE.txt",
+        "LICENCE.txt",
+        "LICENSE.md",
+        "LICENCE.md",
+        "COPYING",
+    ].map(async (filename) => ({
         filename,
         text: await fetchText(`https://raw.githubusercontent.com/${match[1]}/${encodeURIComponent(ref)}/${filename}`),
     }))));
@@ -47080,7 +47122,7 @@ async function resolveLicense(root, dependency, config, token, logger) {
         ? await resolveNpm(root, dependency, logger)
         : dependency.ecosystem === "python"
             ? await resolvePython(dependency, token, logger)
-            : await resolveGo(dependency, token, logger);
+            : await resolveGo(root, dependency, token, logger);
     return {
         license: resolved.license ?? "Unknown",
         resolution: resolved.resolution,

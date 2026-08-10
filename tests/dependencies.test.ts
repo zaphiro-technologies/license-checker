@@ -42,6 +42,40 @@ describe("dependency checker", () => {
     expect(report.results[0]?.resolution).toBe("configured");
   });
 
+  it("prefers vendored Go license files before remote resolution", async () => {
+    const root = mkdtempSync(join(tmpdir(), "license-checker-go-vendor-"));
+    writeFileSync(
+      join(root, "go.mod"),
+      "module example.com/app\n\nrequire example.com/non-github v1.2.3\n",
+    );
+    const vendorModule = join(root, "vendor", "example.com", "non-github");
+    mkdirSync(vendorModule, { recursive: true });
+    writeFileSync(
+      join(vendorModule, "LICENCE"),
+      "Apache License\nVersion 2.0, January 2004\n",
+    );
+    const config: LicenseEyeConfig = {
+      header: { license: { "spdx-id": "Apache-2.0" } },
+      dependency: { files: ["go.mod"] },
+    };
+
+    const report = await checkDependencies(
+      root,
+      config,
+      undefined,
+      false,
+      new Logger("error"),
+    );
+
+    expect(report.results[0]).toMatchObject({
+      name: "example.com/non-github",
+      license: "Apache-2.0",
+      source: "vendor/example.com/non-github/LICENCE",
+      resolution: "manifest",
+      compatible: "compatible",
+    });
+  });
+
   it("records a version-pinned non-SPDX exception as a manual approval", async () => {
     const root = mkdtempSync(join(tmpdir(), "license-checker-exception-"));
     writeFileSync(

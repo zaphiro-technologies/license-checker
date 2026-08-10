@@ -1,5 +1,5 @@
 import { readFileSync } from "node:fs";
-import { dirname, join, resolve } from "node:path";
+import { dirname, join, relative, resolve } from "node:path";
 import { parse as parseToml } from "@iarna/toml";
 import { parse as parseYaml } from "yaml";
 import { minimatch } from "minimatch";
@@ -908,7 +908,39 @@ async function resolvePython(
   return { resolution: "unknown" };
 }
 
+function resolveVendoredGoLicense(
+  root: string,
+  dependency: Dependency,
+): { license?: string; source?: string } {
+  const vendorRoot = join(root, dirname(dependency.manifest), "vendor");
+  let directory = join(vendorRoot, ...dependency.name.split("/"));
+  for (;;) {
+    for (const filename of [
+      "LICENSE",
+      "LICENCE",
+      "LICENSE.txt",
+      "LICENCE.txt",
+      "LICENSE.md",
+      "LICENCE.md",
+      "COPYING",
+    ]) {
+      const path = join(directory, filename);
+      const text = readText(path);
+      const license = text ? identifyLicenseText(text) : undefined;
+      if (license)
+        return {
+          license,
+          source: relative(root, path),
+        };
+    }
+    if (directory === vendorRoot) break;
+    directory = dirname(directory);
+  }
+  return {};
+}
+
 async function resolveGo(
+  root: string,
   dependency: Dependency,
   token: string | undefined,
   logger: Logger,
@@ -917,6 +949,12 @@ async function resolveGo(
   source?: string;
   resolution: DependencyResult["resolution"];
 }> {
+  const vendored = resolveVendoredGoLicense(root, dependency);
+  if (vendored.license)
+    return {
+      ...vendored,
+      resolution: "manifest",
+    };
   const match = dependency.name.match(
     /^github\.com\/([^/]+\/[^/]+)(?:\/v\d+)?$/,
   );
@@ -946,14 +984,20 @@ async function resolveGo(
   ];
   const attempts = await Promise.all(
     candidates.flatMap((ref) =>
-      ["LICENSE", "LICENSE.txt", "LICENSE.md", "COPYING"].map(
-        async (filename) => ({
-          filename,
-          text: await fetchText(
-            `https://raw.githubusercontent.com/${match[1]}/${encodeURIComponent(ref)}/${filename}`,
-          ),
-        }),
-      ),
+      [
+        "LICENSE",
+        "LICENCE",
+        "LICENSE.txt",
+        "LICENCE.txt",
+        "LICENSE.md",
+        "LICENCE.md",
+        "COPYING",
+      ].map(async (filename) => ({
+        filename,
+        text: await fetchText(
+          `https://raw.githubusercontent.com/${match[1]}/${encodeURIComponent(ref)}/${filename}`,
+        ),
+      })),
     ),
   );
   for (const attempt of attempts) {
@@ -1006,7 +1050,7 @@ async function resolveLicense(
       ? await resolveNpm(root, dependency, logger)
       : dependency.ecosystem === "python"
         ? await resolvePython(dependency, token, logger)
-        : await resolveGo(dependency, token, logger);
+        : await resolveGo(root, dependency, token, logger);
   return {
     license: resolved.license ?? "Unknown",
     resolution: resolved.resolution,

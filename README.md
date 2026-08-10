@@ -46,7 +46,7 @@ dependency:
 Supported dependency inputs are:
 
 - JavaScript: `package.json`, npm lockfiles, `yarn.lock`, and `pnpm-lock.yaml`
-- Go: `go.mod` and `go.sum`
+- Go: `go.mod` and `go.sum`; vendored module LICENSE files are preferred when `vendor/` is present
 - Python: `requirements.txt`, `pyproject.toml`, `poetry.lock`, and `Pipfile.lock`
 
 Yarn `workspace:` entries represent local packages and are ignored; only third-party dependencies are checked.

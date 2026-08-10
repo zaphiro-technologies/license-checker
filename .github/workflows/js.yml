@@ -16,5 +16,7 @@ on:
 
 jobs:
   javascript:
-    uses: zaphiro-technologies/github-workflows/.github/workflows/js.yaml@main
+    uses: zaphiro-technologies/github-workflows/.github/workflows/js.yaml@license-workflow-fix-js-support
     secrets: inherit
+    with:
+      upload-artefacts: false

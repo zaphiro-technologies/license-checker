@@ -21,6 +21,10 @@ inputs:
     description: Treat License Eye weak-compatible licenses as compatible.
     required: false
     default: 'false'
+  report-all:
+    description: Include compatible dependencies in the job summary.
+    required: false
+    default: 'false'
 runs:
   using: node24
   main: dist/index.js

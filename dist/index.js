@@ -46997,6 +46997,9 @@ function dependencyRows(results) {
         approvalDetails(result),
     ]);
 }
+function summaryDependencies(report, reportAll) {
+    return reportAll ? report.dependency.results : report.dependency.failures;
+}
 function commentBody(report) {
     const lines = [COMMENT_MARKER, "## License Checker", ""];
     if (report.dependency.failures.length > 0) {
@@ -47017,7 +47020,7 @@ function commentBody(report) {
     lines.push(`Checked ${report.dependency.checked} dependencies.`);
     return lines.join("\n");
 }
-async function writeSummary(report) {
+async function writeSummary(report, reportAll = false) {
     const approvals = report.dependency.results.filter((result) => result.compatible === "approved-exception");
     const dependencyRowsForSummary = report.dependency.failures.length === 0
         ? [
@@ -47042,8 +47045,11 @@ async function writeSummary(report) {
         ],
         ...dependencyRowsForSummary,
     ]);
-    if (report.dependency.results.length > 0) {
-        core.summary.addHeading("Dependency licenses", 3).addTable([
+    const displayedDependencies = summaryDependencies(report, reportAll);
+    if (displayedDependencies.length > 0) {
+        core.summary
+            .addHeading(reportAll ? "Dependency licenses" : "Dependency license issues", 3)
+            .addTable([
             [
                 { data: "Dependency", header: true },
                 { data: "Version", header: true },
@@ -47052,7 +47058,20 @@ async function writeSummary(report) {
                 { data: "Resolution", header: true },
                 { data: "Manual approval", header: true },
             ],
-            ...dependencyRows(report.dependency.results),
+            ...dependencyRows(displayedDependencies),
+        ]);
+    }
+    if (!reportAll && approvals.length > 0) {
+        core.summary.addHeading("Manual license approvals", 3).addTable([
+            [
+                { data: "Dependency", header: true },
+                { data: "Version", header: true },
+                { data: "License", header: true },
+                { data: "Compatibility", header: true },
+                { data: "Resolution", header: true },
+                { data: "Manual approval", header: true },
+            ],
+            ...dependencyRows(approvals),
         ]);
     }
     if (process.env.GITHUB_STEP_SUMMARY)
@@ -47126,6 +47145,8 @@ async function run() {
         argumentValue("--weak-compatible") ||
         "false";
     const weakCompatible = weakCompatibleInput.toLowerCase() === "true";
+    const reportAllInput = core.getInput("report-all") || argumentValue("--report-all") || "false";
+    const reportAll = reportAllInput.toLowerCase() === "true";
     logger.info(`Loading configuration from ${configInput}`);
     const { config } = loadConfig(root, configInput);
     const dependency = await checkDependencies(root, config, token, weakCompatible, logger);
@@ -47134,7 +47155,7 @@ async function run() {
         failed: dependency.failures.length > 0,
     };
     annotate(report);
-    await writeSummary(report);
+    await writeSummary(report, reportAll);
     if (report.failed && commentsEnabled(config))
         await commentOnPullRequest(token, report);
     logger.info(`Checked ${dependency.checked} dependencies.`);

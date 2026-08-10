@@ -67,6 +67,9 @@ Compatibility decisions for the supported license families follow the [LicenseCh
 | `token` | `${{ github.token }}` | Token used for pull-request comments |
 | `log` | `info` | `error`, `warn`, `info`, or `debug` |
 | `weak-compatible` | `false` | Enable License Eye weak-compatible compatibility entries |
+| `report-all` | `false` | Include compatible dependencies in the job summary |
+
+By default, the job summary and pull-request comment show dependency issues only. Manually approved non-SPDX exceptions remain visible in a separate audit section. Set `report-all: true` to include every compatible dependency in the job summary.
 
 The generated `dist/index.js` bundle is committed because JavaScript GitHub Actions run from the checked-out action repository without installing its Node dependencies.
 

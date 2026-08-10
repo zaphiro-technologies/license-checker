@@ -29,6 +29,9 @@ async function run(): Promise<void> {
     argumentValue("--weak-compatible") ||
     "false";
   const weakCompatible = weakCompatibleInput.toLowerCase() === "true";
+  const reportAllInput =
+    core.getInput("report-all") || argumentValue("--report-all") || "false";
+  const reportAll = reportAllInput.toLowerCase() === "true";
 
   logger.info(`Loading configuration from ${configInput}`);
   const { config } = loadConfig(root, configInput);
@@ -45,7 +48,7 @@ async function run(): Promise<void> {
   };
 
   annotate(report);
-  await writeSummary(report);
+  await writeSummary(report, reportAll);
   if (report.failed && commentsEnabled(config))
     await commentOnPullRequest(token, report);
 

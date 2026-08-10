@@ -24,6 +24,13 @@ function dependencyRows(results: DependencyResult[]): string[][] {
   ]);
 }
 
+export function summaryDependencies(
+  report: CheckReport,
+  reportAll: boolean,
+): DependencyResult[] {
+  return reportAll ? report.dependency.results : report.dependency.failures;
+}
+
 function commentBody(report: CheckReport): string {
   const lines = [COMMENT_MARKER, "## License Checker", ""];
   if (report.dependency.failures.length > 0) {
@@ -61,7 +68,10 @@ function commentBody(report: CheckReport): string {
   return lines.join("\n");
 }
 
-export async function writeSummary(report: CheckReport): Promise<void> {
+export async function writeSummary(
+  report: CheckReport,
+  reportAll = false,
+): Promise<void> {
   const approvals = report.dependency.results.filter(
     (result) => result.compatible === "approved-exception",
   );
@@ -91,8 +101,27 @@ export async function writeSummary(report: CheckReport): Promise<void> {
     ...dependencyRowsForSummary,
   ]);
 
-  if (report.dependency.results.length > 0) {
-    core.summary.addHeading("Dependency licenses", 3).addTable([
+  const displayedDependencies = summaryDependencies(report, reportAll);
+  if (displayedDependencies.length > 0) {
+    core.summary
+      .addHeading(
+        reportAll ? "Dependency licenses" : "Dependency license issues",
+        3,
+      )
+      .addTable([
+        [
+          { data: "Dependency", header: true },
+          { data: "Version", header: true },
+          { data: "License", header: true },
+          { data: "Compatibility", header: true },
+          { data: "Resolution", header: true },
+          { data: "Manual approval", header: true },
+        ],
+        ...dependencyRows(displayedDependencies),
+      ]);
+  }
+  if (!reportAll && approvals.length > 0) {
+    core.summary.addHeading("Manual license approvals", 3).addTable([
       [
         { data: "Dependency", header: true },
         { data: "Version", header: true },
@@ -101,7 +130,7 @@ export async function writeSummary(report: CheckReport): Promise<void> {
         { data: "Resolution", header: true },
         { data: "Manual approval", header: true },
       ],
-      ...dependencyRows(report.dependency.results),
+      ...dependencyRows(approvals),
     ]);
   }
   if (process.env.GITHUB_STEP_SUMMARY) await core.summary.write();

@@ -1,6 +1,6 @@
 # License Checker GitHub Action
 
-License Checker is a cross-platform Node 20 GitHub Action that checks source-file headers and dependency license compatibility. It accepts the main License Eye configuration shape and normalizes license metadata to SPDX identifiers and expressions.
+License Checker is a cross-platform Node 24 GitHub Action that checks source-file headers and dependency license compatibility. It accepts the main License Eye configuration shape and normalizes license metadata to SPDX identifiers and expressions.
 
 ## Usage
 

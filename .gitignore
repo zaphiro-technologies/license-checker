@@ -4,3 +4,4 @@ lib/
 .eslintcache
 .pnp.*
 .yarn/*
+/coverage

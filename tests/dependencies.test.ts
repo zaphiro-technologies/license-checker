@@ -83,7 +83,7 @@ describe("dependency checker", () => {
     writeFileSync(join(root, "package.json"), "{}\n");
     writeFileSync(
       join(root, "yarn.lock"),
-      `__metadata:\n  version: 6\n\n"documentation@workspace:.":\n  version: 0.0.0-use.local\n  resolution: "documentation@workspace:."\n\nfoo@npm:^1.0.0:\n  version: 1.2.3\n\n"@scope/bar@npm:^2.0.0":\n  version: 2.1.0\n`,
+      `__metadata:\n  version: 6\n\n"documentation@workspace:.":\n  version: 0.0.0-use.local\n  resolution: "documentation@workspace:."\n\nfoo@npm:^1.0.0:\n  version: 1.2.3\n\n"@scope/bar@npm:^2.0.0":\n  version: 2.1.0\n\n"react-loadable@npm:@docusaurus/react-loadable@6.0.0":\n  version: 6.0.0\n`,
     );
     const config: LicenseEyeConfig = {
       header: { license: { "spdx-id": "Apache-2.0" } },
@@ -92,6 +92,7 @@ describe("dependency checker", () => {
         licenses: [
           { name: "foo", license: "Apache-2.0" },
           { name: "@scope/bar", license: "Apache-2.0" },
+          { name: "@docusaurus/react-loadable", license: "MIT" },
         ],
       },
     };
@@ -104,7 +105,11 @@ describe("dependency checker", () => {
     );
     expect(
       report.results.map((result) => `${result.name}@${result.version}`),
-    ).toEqual(["foo@1.2.3", "@scope/bar@2.1.0"]);
+    ).toEqual([
+      "foo@1.2.3",
+      "@scope/bar@2.1.0",
+      "@docusaurus/react-loadable@6.0.0",
+    ]);
     expect(report.failures).toHaveLength(0);
   });
 });

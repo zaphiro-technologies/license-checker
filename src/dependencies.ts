@@ -151,7 +151,17 @@ function parseYarnLock(
         }
         const berryAlias = normalized.indexOf("@npm:");
         if (berryAlias > 0) {
-          names.push(normalized.slice(0, berryAlias));
+          // A Berry descriptor such as `alias@npm:real-package@1.0.0`
+          // installs the target package, rather than `alias`. Keep the
+          // original name for ordinary descriptors like `foo@npm:^1.0.0`.
+          const target = normalized.slice(berryAlias + "@npm:".length);
+          const targetScoped = target.match(/^(@[^/]+\/[^@]+)@/);
+          const targetPlain = target.match(/^([^@/]+)@/);
+          names.push(
+            targetScoped?.[1] ??
+              targetPlain?.[1] ??
+              normalized.slice(0, berryAlias),
+          );
           continue;
         }
         const scoped = normalized.match(/^(@[^/]+\/[^@]+)@/);

@@ -1,0 +1,48 @@
+{
+  "name": "license-checker-action",
+  "version": "0.1.0",
+  "description": "A cross-platform GitHub Action for License Eye-compatible dependency license checks.",
+  "private": true,
+  "packageManager": "yarn@4.13.0",
+  "type": "module",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc && ncc build lib/index.js -o dist",
+    "check": "yarn build && node lib/index.js",
+    "format": "prettier --write \"src/**/*.ts\" \"tests/**/*.ts\"",
+    "fix": "yarn fix:eslint && yarn fix:prettier",
+    "fix:eslint": "eslint --fix ./src",
+    "fix:prettier": "prettier --write ./src",
+    "lint": "eslint --cache ./src",
+    "lint:eslint": "eslint ./src",
+    "lint:prettier": "prettier --check ./src",
+    "lint:fix": "yarn run lint --fix && prettier --write --list-different .",
+    "test:unit": "vitest --run",
+    "test:unit:cov": "vitest --run --coverage",
+    "test:cov": "yarn test:unit:cov",
+    "test": "yarn test:unit",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@actions/core": "^1.11.1",
+    "@actions/github": "^6.0.0",
+    "@iarna/toml": "^2.2.5",
+    "eslint": "^10.8.1",
+    "minimatch": "^10.0.1",
+    "spdx-correct": "^3.2.0",
+    "spdx-expression-parse": "^3.0.1",
+    "yaml": "^2.6.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.2",
+    "@types/spdx-correct": "^3.0.0",
+    "@types/spdx-expression-parse": "^3.0.1",
+    "@vercel/ncc": "^0.38.3",
+    "@vitest/coverage-v8": "2.1.9",
+    "prettier": "^3.4.2",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2",
+    "typescript-eslint": "^8.67.0",
+    "vitest": "^2.1.8"
+  }
+}

@@ -1,0 +1,6 @@
+{
+    "sonarlint.connectedMode.project": {
+        "connectionId": "zaphiro-technologies",
+        "projectKey": "zaphiro-technologies_license-checker"
+    }
+}

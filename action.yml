@@ -14,17 +14,17 @@ inputs:
     required: false
     default: ${{ github.token }}
   log:
-    description: 'Log level: error, warn, info, or debug.'
+    description: "Log level: error, warn, info, or debug."
     required: false
     default: info
   weak-compatible:
     description: Treat License Eye weak-compatible licenses as compatible.
     required: false
-    default: 'false'
+    default: "false"
   report-all:
     description: Include compatible dependencies in the job summary.
     required: false
-    default: 'false'
+    default: "false"
 runs:
   using: node24
   main: dist/index.js

@@ -499,4 +499,127 @@ describe("dependency checker", () => {
       expect.any(Object),
     );
   });
+
+  it("parses npm, pnpm, Go, Pipfile, requirements, and unlocked Poetry manifests", async () => {
+    const root = mkdtempSync(join(tmpdir(), "license-checker-manifests-"));
+    writeFileSync(
+      join(root, "package-lock.json"),
+      JSON.stringify({
+        packages: {
+          "node_modules/string-license": { version: "1.0.0", license: "MIT" },
+          "node_modules/object-license": {
+            version: "2.0.0",
+            license: { type: "Apache-2.0" },
+          },
+          "node_modules/array-license": {
+            version: "3.0.0",
+            licenses: [{ type: "BSD-3-Clause" }, {}],
+          },
+        },
+        dependencies: {
+          legacy: {
+            version: "4.0.0",
+            dependencies: { "legacy-child": { version: "5.0.0" } },
+          },
+        },
+      }),
+    );
+    writeFileSync(
+      join(root, "pnpm-lock.yaml"),
+      "packages:\n  /pnpm-package@1.2.3: {}\n  /@scope/pnpm-package@2.3.4(peer@1.0.0): {}\nsnapshots:\n  /snapshot-package@3.4.5: {}\n",
+    );
+    writeFileSync(
+      join(root, "go.sum"),
+      "example.com/first v1.0.0 h1:checksum\nexample.com/second v2.0.0/go.mod h1:checksum\n",
+    );
+    writeFileSync(
+      join(root, "requirements.txt"),
+      '# comment\n-r constraints.txt\nrequests[security]>=2.0.0 ; python_version >= "3.10"\nsingle==1.0.0 # inline comment\n',
+    );
+    writeFileSync(
+      join(root, "pyproject.toml"),
+      '[project]\ndependencies = ["project-package >=1.0.0"]\n\n[tool.poetry.dependencies]\npython = "^3.11"\npoetry-package = "^2.0.0"\n',
+    );
+    writeFileSync(join(root, "poetry.lock"), "not valid = [");
+    writeFileSync(
+      join(root, "Pipfile.lock"),
+      JSON.stringify({
+        default: { pipfile: { version: "==1.0.0" } },
+        develop: { development: { version: "==2.0.0" } },
+      }),
+    );
+    const config: LicenseEyeConfig = {
+      header: { license: { "spdx-id": "Apache-2.0" } },
+      dependency: {
+        files: [
+          "package-lock.json",
+          "pnpm-lock.yaml",
+          "go.sum",
+          "requirements.txt",
+          "pyproject.toml",
+          "Pipfile.lock",
+        ],
+        licenses: [{ name: "**", license: "Apache-2.0" }],
+      },
+    };
+
+    const report = await checkDependencies(
+      root,
+      config,
+      undefined,
+      false,
+      new Logger("error"),
+    );
+
+    expect(report.results).toHaveLength(16);
+    expect(
+      report.results.every((result) => result.resolution === "configured"),
+    ).toBe(true);
+    expect(report.results.map((result) => result.name)).toEqual(
+      expect.arrayContaining([
+        "string-license",
+        "legacy-child",
+        "@scope/pnpm-package",
+        "example.com/second",
+        "requests",
+        "poetry-package",
+        "development",
+      ]),
+    );
+  });
+
+  it("uses all package.json dependency sections when no lockfile exists", async () => {
+    const root = mkdtempSync(join(tmpdir(), "license-checker-package-json-"));
+    writeFileSync(
+      join(root, "package.json"),
+      JSON.stringify({
+        dependencies: { production: "1.0.0" },
+        devDependencies: { development: "2.0.0" },
+        optionalDependencies: { optional: "3.0.0" },
+        peerDependencies: { peer: "4.0.0" },
+      }),
+    );
+    const config: LicenseEyeConfig = {
+      header: { license: { "spdx-id": "Apache-2.0" } },
+      dependency: {
+        files: ["package.json"],
+        licenses: [{ name: "*", license: "MIT" }],
+      },
+    };
+
+    const report = await checkDependencies(
+      root,
+      config,
+      undefined,
+      false,
+      new Logger("error"),
+    );
+
+    expect(report.results.map((result) => result.name)).toEqual([
+      "production",
+      "development",
+      "optional",
+      "peer",
+    ]);
+  });
 });

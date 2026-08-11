@@ -299,122 +299,39 @@ function isOsi(id: string): boolean {
   return OSI_APPROVED.has(id);
 }
 
-type MatrixGroup =
-  | "permissive"
-  | "gpl-3"
-  | "gpl-2"
-  | "lgpl-3"
-  | "lgpl-2.1"
-  | "mpl-2"
-  | "agpl-3"
-  | "cc0"
-  | "unlicense";
+const MATRIX_GROUPS = [
+  "permissive",
+  "gpl-3",
+  "gpl-2",
+  "lgpl-3",
+  "lgpl-2.1",
+  "mpl-2",
+  "agpl-3",
+  "cc0",
+  "unlicense",
+] as const;
+
+type MatrixGroup = (typeof MATRIX_GROUPS)[number];
 type MatrixValue = "compatible" | "warning" | "incompatible";
 
-const COMPATIBILITY_MATRIX: Record<
-  MatrixGroup,
-  Record<MatrixGroup, MatrixValue>
-> = {
-  permissive: {
-    permissive: "compatible",
-    "gpl-3": "incompatible",
-    "gpl-2": "incompatible",
-    "lgpl-3": "compatible",
-    "lgpl-2.1": "compatible",
-    "mpl-2": "compatible",
-    "agpl-3": "incompatible",
-    cc0: "compatible",
-    unlicense: "compatible",
-  },
-  "gpl-3": {
-    permissive: "incompatible",
-    "gpl-3": "compatible",
-    "gpl-2": "warning",
-    "lgpl-3": "incompatible",
-    "lgpl-2.1": "incompatible",
-    "mpl-2": "incompatible",
-    "agpl-3": "warning",
-    cc0: "warning",
-    unlicense: "compatible",
-  },
-  "gpl-2": {
-    permissive: "incompatible",
-    "gpl-3": "warning",
-    "gpl-2": "compatible",
-    "lgpl-3": "incompatible",
-    "lgpl-2.1": "incompatible",
-    "mpl-2": "incompatible",
-    "agpl-3": "warning",
-    cc0: "warning",
-    unlicense: "compatible",
-  },
-  "lgpl-3": {
-    permissive: "compatible",
-    "gpl-3": "incompatible",
-    "gpl-2": "incompatible",
-    "lgpl-3": "compatible",
-    "lgpl-2.1": "warning",
-    "mpl-2": "warning",
-    "agpl-3": "incompatible",
-    cc0: "incompatible",
-    unlicense: "compatible",
-  },
-  "lgpl-2.1": {
-    permissive: "compatible",
-    "gpl-3": "incompatible",
-    "gpl-2": "incompatible",
-    "lgpl-3": "warning",
-    "lgpl-2.1": "compatible",
-    "mpl-2": "warning",
-    "agpl-3": "incompatible",
-    cc0: "incompatible",
-    unlicense: "compatible",
-  },
-  "mpl-2": {
-    permissive: "compatible",
-    "gpl-3": "incompatible",
-    "gpl-2": "incompatible",
-    "lgpl-3": "warning",
-    "lgpl-2.1": "warning",
-    "mpl-2": "compatible",
-    "agpl-3": "incompatible",
-    cc0: "incompatible",
-    unlicense: "compatible",
-  },
-  "agpl-3": {
-    permissive: "incompatible",
-    "gpl-3": "warning",
-    "gpl-2": "warning",
-    "lgpl-3": "incompatible",
-    "lgpl-2.1": "incompatible",
-    "mpl-2": "incompatible",
-    "agpl-3": "incompatible",
-    cc0: "compatible",
-    unlicense: "compatible",
-  },
-  cc0: {
-    permissive: "compatible",
-    "gpl-3": "compatible",
-    "gpl-2": "compatible",
-    "lgpl-3": "compatible",
-    "lgpl-2.1": "compatible",
-    "mpl-2": "compatible",
-    "agpl-3": "compatible",
-    cc0: "compatible",
-    unlicense: "compatible",
-  },
-  unlicense: {
-    permissive: "compatible",
-    "gpl-3": "compatible",
-    "gpl-2": "compatible",
-    "lgpl-3": "compatible",
-    "lgpl-2.1": "compatible",
-    "mpl-2": "compatible",
-    "agpl-3": "compatible",
-    cc0: "compatible",
-    unlicense: "compatible",
-  },
+const MATRIX_VALUES: Record<"c" | "w" | "i", MatrixValue> = {
+  c: "compatible",
+  w: "warning",
+  i: "incompatible",
 };
+
+// Rows and columns follow MATRIX_GROUPS. c = compatible, w = warning, i = incompatible.
+const COMPATIBILITY_MATRIX = [
+  "ciicccicc",
+  "icwiiiwwc",
+  "iwciiiwwc",
+  "ciicwwiic",
+  "ciiwcwiic",
+  "ciiwwciic",
+  "iwwiiiicc",
+  "ccccccccc",
+  "ccccccccc",
+] as const;
 
 function matrixGroup(id: string): MatrixGroup | undefined {
   if (id === "CC0-1.0") return "cc0";
@@ -434,7 +351,12 @@ function matrixCompatibility(
   dependency: MatrixGroup,
   weakCompatible: boolean,
 ): Compatibility {
-  const value = COMPATIBILITY_MATRIX[main][dependency];
+  const mainIndex = MATRIX_GROUPS.indexOf(main);
+  const dependencyIndex = MATRIX_GROUPS.indexOf(dependency);
+  const value =
+    MATRIX_VALUES[
+      COMPATIBILITY_MATRIX[mainIndex][dependencyIndex] as "c" | "w" | "i"
+    ];
   if (value === "warning")
     return weakCompatible ? "weak-compatible" : "unknown";
   return value;

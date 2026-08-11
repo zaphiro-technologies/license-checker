@@ -492,6 +492,15 @@ function installedNpmPackage(
 
 const jsonCache = new Map<string, Promise<unknown | undefined>>();
 const textCache = new Map<string, Promise<string | undefined>>();
+const LICENSE_FILENAMES = [
+  "LICENSE",
+  "LICENCE",
+  "LICENSE.txt",
+  "LICENCE.txt",
+  "LICENSE.md",
+  "LICENCE.md",
+  "COPYING",
+];
 
 async function fetchJson(
   url: string,
@@ -919,15 +928,7 @@ function resolveVendoredGoLicense(
   const vendorRoot = join(root, dirname(dependency.manifest), "vendor");
   let directory = join(vendorRoot, ...dependency.name.split("/"));
   for (;;) {
-    for (const filename of [
-      "LICENSE",
-      "LICENCE",
-      "LICENSE.txt",
-      "LICENCE.txt",
-      "LICENSE.md",
-      "LICENCE.md",
-      "COPYING",
-    ]) {
+    for (const filename of LICENSE_FILENAMES) {
       const path = join(directory, filename);
       const text = readText(path);
       const license = text ? identifyLicenseText(text) : undefined;
@@ -988,15 +989,7 @@ async function resolveGo(
   ];
   const attempts = await Promise.all(
     candidates.flatMap((ref) =>
-      [
-        "LICENSE",
-        "LICENCE",
-        "LICENSE.txt",
-        "LICENCE.txt",
-        "LICENSE.md",
-        "LICENCE.md",
-        "COPYING",
-      ].map(async (filename) => ({
+      LICENSE_FILENAMES.map(async (filename) => ({
         filename,
         text: await fetchText(
           `https://raw.githubusercontent.com/${match[1]}/${encodeURIComponent(ref)}/${filename}`,

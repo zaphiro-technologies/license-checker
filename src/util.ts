@@ -1,6 +1,5 @@
-import { execFileSync } from "node:child_process";
-import { existsSync, lstatSync, readdirSync, readFileSync } from "node:fs";
-import { join, relative, sep } from "node:path";
+import { existsSync, lstatSync, readFileSync } from "node:fs";
+import { sep } from "node:path";
 import { minimatch } from "minimatch";
 
 export function pathForGlob(path: string): string {
@@ -24,45 +23,6 @@ export function matchesPath(
       normalized.startsWith(`${candidate.replace(/\/$/, "")}/`)
     );
   });
-}
-
-export function listRepositoryFiles(root: string): string[] {
-  try {
-    const output = execFileSync(
-      "git",
-      ["ls-files", "--cached", "--others", "--exclude-standard"],
-      {
-        cwd: root,
-        encoding: "utf8",
-        stdio: ["ignore", "pipe", "ignore"],
-      },
-    );
-    return output.split(/\r?\n/).filter(Boolean);
-  } catch {
-    const files: string[] = [];
-    const ignored = new Set([
-      ".git",
-      "node_modules",
-      "vendor",
-      "dist",
-      "build",
-      ".venv",
-      "venv",
-    ]);
-
-    const walk = (directory: string): void => {
-      for (const entry of readdirSync(directory, { withFileTypes: true })) {
-        if (ignored.has(entry.name)) continue;
-        const absolute = join(directory, entry.name);
-        if (entry.isDirectory()) walk(absolute);
-        else if (entry.isFile())
-          files.push(pathForGlob(relative(root, absolute)));
-      }
-    };
-
-    walk(root);
-    return files;
-  }
 }
 
 export function readJson(path: string): unknown | undefined {

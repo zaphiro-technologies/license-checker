@@ -18,8 +18,8 @@
     "lint:prettier": "prettier --check ./src",
     "lint:fix": "yarn run lint --fix && prettier --write --list-different .",
     "test:unit": "vitest --run",
-    "test:unit:cov": "rm -rf coverage/unit && VITEST_COVERAGE_DIR=coverage/unit vitest --run --coverage",
-    "test:cov": "rm -rf coverage/lcov.info coverage/coverage-final.json coverage/lcov-report && yarn test:unit:cov",
+    "test:unit:cov": "vitest --run --coverage",
+    "test:cov": "yarn test:unit:cov",
     "test": "yarn test:unit",
     "typecheck": "tsc --noEmit"
   },

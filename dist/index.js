@@ -46072,107 +46072,34 @@ function isFree(id) {
 function isOsi(id) {
     return OSI_APPROVED.has(id);
 }
-const COMPATIBILITY_MATRIX = {
-    permissive: {
-        permissive: "compatible",
-        "gpl-3": "incompatible",
-        "gpl-2": "incompatible",
-        "lgpl-3": "compatible",
-        "lgpl-2.1": "compatible",
-        "mpl-2": "compatible",
-        "agpl-3": "incompatible",
-        cc0: "compatible",
-        unlicense: "compatible",
-    },
-    "gpl-3": {
-        permissive: "incompatible",
-        "gpl-3": "compatible",
-        "gpl-2": "warning",
-        "lgpl-3": "incompatible",
-        "lgpl-2.1": "incompatible",
-        "mpl-2": "incompatible",
-        "agpl-3": "warning",
-        cc0: "warning",
-        unlicense: "compatible",
-    },
-    "gpl-2": {
-        permissive: "incompatible",
-        "gpl-3": "warning",
-        "gpl-2": "compatible",
-        "lgpl-3": "incompatible",
-        "lgpl-2.1": "incompatible",
-        "mpl-2": "incompatible",
-        "agpl-3": "warning",
-        cc0: "warning",
-        unlicense: "compatible",
-    },
-    "lgpl-3": {
-        permissive: "compatible",
-        "gpl-3": "incompatible",
-        "gpl-2": "incompatible",
-        "lgpl-3": "compatible",
-        "lgpl-2.1": "warning",
-        "mpl-2": "warning",
-        "agpl-3": "incompatible",
-        cc0: "incompatible",
-        unlicense: "compatible",
-    },
-    "lgpl-2.1": {
-        permissive: "compatible",
-        "gpl-3": "incompatible",
-        "gpl-2": "incompatible",
-        "lgpl-3": "warning",
-        "lgpl-2.1": "compatible",
-        "mpl-2": "warning",
-        "agpl-3": "incompatible",
-        cc0: "incompatible",
-        unlicense: "compatible",
-    },
-    "mpl-2": {
-        permissive: "compatible",
-        "gpl-3": "incompatible",
-        "gpl-2": "incompatible",
-        "lgpl-3": "warning",
-        "lgpl-2.1": "warning",
-        "mpl-2": "compatible",
-        "agpl-3": "incompatible",
-        cc0: "incompatible",
-        unlicense: "compatible",
-    },
-    "agpl-3": {
-        permissive: "incompatible",
-        "gpl-3": "warning",
-        "gpl-2": "warning",
-        "lgpl-3": "incompatible",
-        "lgpl-2.1": "incompatible",
-        "mpl-2": "incompatible",
-        "agpl-3": "incompatible",
-        cc0: "compatible",
-        unlicense: "compatible",
-    },
-    cc0: {
-        permissive: "compatible",
-        "gpl-3": "compatible",
-        "gpl-2": "compatible",
-        "lgpl-3": "compatible",
-        "lgpl-2.1": "compatible",
-        "mpl-2": "compatible",
-        "agpl-3": "compatible",
-        cc0: "compatible",
-        unlicense: "compatible",
-    },
-    unlicense: {
-        permissive: "compatible",
-        "gpl-3": "compatible",
-        "gpl-2": "compatible",
-        "lgpl-3": "compatible",
-        "lgpl-2.1": "compatible",
-        "mpl-2": "compatible",
-        "agpl-3": "compatible",
-        cc0: "compatible",
-        unlicense: "compatible",
-    },
+const MATRIX_GROUPS = [
+    "permissive",
+    "gpl-3",
+    "gpl-2",
+    "lgpl-3",
+    "lgpl-2.1",
+    "mpl-2",
+    "agpl-3",
+    "cc0",
+    "unlicense",
+];
+const MATRIX_VALUES = {
+    c: "compatible",
+    w: "warning",
+    i: "incompatible",
 };
+// Rows and columns follow MATRIX_GROUPS. c = compatible, w = warning, i = incompatible.
+const COMPATIBILITY_MATRIX = [
+    "ciicccicc",
+    "icwiiiwwc",
+    "iwciiiwwc",
+    "ciicwwiic",
+    "ciiwcwiic",
+    "ciiwwciic",
+    "iwwiiiicc",
+    "ccccccccc",
+    "ccccccccc",
+];
 function matrixGroup(id) {
     if (id === "CC0-1.0")
         return "cc0";
@@ -46195,7 +46122,9 @@ function matrixGroup(id) {
     return undefined;
 }
 function matrixCompatibility(main, dependency, weakCompatible) {
-    const value = COMPATIBILITY_MATRIX[main][dependency];
+    const mainIndex = MATRIX_GROUPS.indexOf(main);
+    const dependencyIndex = MATRIX_GROUPS.indexOf(dependency);
+    const value = MATRIX_VALUES[COMPATIBILITY_MATRIX[mainIndex][dependencyIndex]];
     if (value === "warning")
         return weakCompatible ? "weak-compatible" : "unknown";
     return value;
@@ -46269,10 +46198,7 @@ function isUnknownLicense(value) {
     return normalizeLicenseExpression(value) === "Unknown";
 }
 //# sourceMappingURL=spdx.js.map
-;// CONCATENATED MODULE: external "node:child_process"
-const external_node_child_process_namespaceObject = __WEBPACK_EXTERNAL_createRequire(import.meta.url)("node:child_process");
 ;// CONCATENATED MODULE: ./lib/util.js
-
 
 
 
@@ -46292,41 +46218,6 @@ function matchesPath(path, patterns) {
             normalized === candidate.replace(/\/$/, "") ||
             normalized.startsWith(`${candidate.replace(/\/$/, "")}/`));
     });
-}
-function listRepositoryFiles(root) {
-    try {
-        const output = execFileSync("git", ["ls-files", "--cached", "--others", "--exclude-standard"], {
-            cwd: root,
-            encoding: "utf8",
-            stdio: ["ignore", "pipe", "ignore"],
-        });
-        return output.split(/\r?\n/).filter(Boolean);
-    }
-    catch {
-        const files = [];
-        const ignored = new Set([
-            ".git",
-            "node_modules",
-            "vendor",
-            "dist",
-            "build",
-            ".venv",
-            "venv",
-        ]);
-        const walk = (directory) => {
-            for (const entry of readdirSync(directory, { withFileTypes: true })) {
-                if (ignored.has(entry.name))
-                    continue;
-                const absolute = join(directory, entry.name);
-                if (entry.isDirectory())
-                    walk(absolute);
-                else if (entry.isFile())
-                    files.push(pathForGlob(relative(root, absolute)));
-            }
-        };
-        walk(root);
-        return files;
-    }
 }
 function readJson(path) {
     try {
@@ -46728,6 +46619,15 @@ function installedNpmPackage(root, manifest, name) {
 }
 const jsonCache = new Map();
 const textCache = new Map();
+const LICENSE_FILENAMES = [
+    "LICENSE",
+    "LICENCE",
+    "LICENSE.txt",
+    "LICENCE.txt",
+    "LICENSE.md",
+    "LICENCE.md",
+    "COPYING",
+];
 async function fetchJson(url, token) {
     const cacheKey = `${token ? "authenticated" : "anonymous"}:${url}`;
     const cached = jsonCache.get(cacheKey);
@@ -47060,15 +46960,7 @@ function resolveVendoredGoLicense(root, dependency) {
     const vendorRoot = (0,external_node_path_namespaceObject.join)(root, (0,external_node_path_namespaceObject.dirname)(dependency.manifest), "vendor");
     let directory = (0,external_node_path_namespaceObject.join)(vendorRoot, ...dependency.name.split("/"));
     for (;;) {
-        for (const filename of [
-            "LICENSE",
-            "LICENCE",
-            "LICENSE.txt",
-            "LICENCE.txt",
-            "LICENSE.md",
-            "LICENCE.md",
-            "COPYING",
-        ]) {
+        for (const filename of LICENSE_FILENAMES) {
             const path = (0,external_node_path_namespaceObject.join)(directory, filename);
             const text = readText(path);
             const license = text ? identifyLicenseText(text) : undefined;
@@ -47111,15 +47003,7 @@ async function resolveGo(root, dependency, token, logger) {
         "main",
         "master",
     ];
-    const attempts = await Promise.all(candidates.flatMap((ref) => [
-        "LICENSE",
-        "LICENCE",
-        "LICENSE.txt",
-        "LICENCE.txt",
-        "LICENSE.md",
-        "LICENCE.md",
-        "COPYING",
-    ].map(async (filename) => ({
+    const attempts = await Promise.all(candidates.flatMap((ref) => LICENSE_FILENAMES.map(async (filename) => ({
         filename,
         text: await fetchText(`https://raw.githubusercontent.com/${match[1]}/${encodeURIComponent(ref)}/${filename}`),
     }))));

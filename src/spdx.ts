@@ -44,6 +44,7 @@ const CATEGORY_A = new Set([
   "MIT-0",
   "MIT-CMU",
   "BlueOak-1.0.0",
+  "CC-BY-3.0",
   "CC-BY-4.0",
   "CC0-1.0",
 ]);

@@ -30,6 +30,7 @@ describe("SPDX normalization", () => {
     for (const license of [
       "BlueOak-1.0.0",
       "MPL-1.1",
+      "CC-BY-3.0",
       "CC-BY-4.0",
       "CC0-1.0",
       "PSF-2.0",

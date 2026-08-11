@@ -12,6 +12,8 @@ header:
     - ".docker"
     - "**/*.{md,MD}"
     - "package.json"
+    - "LICENSE"
+    - ".vscode"
 
   comment: on-failure
 

@@ -14,6 +14,7 @@ header:
     - "package.json"
     - "LICENSE"
     - ".vscode"
+    - "yarn.lock"
 
   comment: on-failure
 

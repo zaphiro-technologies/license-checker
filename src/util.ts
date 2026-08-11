@@ -25,7 +25,7 @@ export function matchesPath(
   });
 }
 
-export function readJson(path: string): unknown | undefined {
+export function readJson(path: string): unknown {
   try {
     return JSON.parse(readFileSync(path, "utf8")) as unknown;
   } catch {

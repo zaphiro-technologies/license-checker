@@ -25,6 +25,7 @@ vi.mock("@actions/core", () => actionMocks);
 vi.mock("@actions/github", () => githubMocks);
 
 import {
+  allSummaryDependencies,
   annotate,
   commentOnPullRequest,
   distributionWarnings,
@@ -92,7 +93,7 @@ describe("summary reporting", () => {
     expect(
       summaryDependencies(value, false).map((result) => result.name),
     ).toEqual(["lgpl-license", "unknown-license"]);
-    expect(summaryDependencies(value, true)).toEqual(value.dependency.results);
+    expect(allSummaryDependencies(value)).toEqual(value.dependency.results);
     expect(distributionWarnings(value).map((result) => result.name)).toEqual([
       "lgpl-license",
     ]);
@@ -118,7 +119,7 @@ describe("summary reporting", () => {
     expect(actionMocks.summary.addTable).toHaveBeenCalledTimes(3);
     expect(actionMocks.summary.write).toHaveBeenCalledOnce();
 
-    await writeSummary(value, true);
+    await writeSummary(value, "all");
     expect(actionMocks.summary.addHeading).toHaveBeenCalledWith(
       "Dependency licenses",
       3,

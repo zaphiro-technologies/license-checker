@@ -129,6 +129,7 @@ function parseYarnLock(
   let names: string[] = [];
   let version = "*";
   let workspaceEntry = false;
+
   const flush = (): void => {
     if (!workspaceEntry) {
       for (const name of names)
@@ -139,44 +140,61 @@ function parseYarnLock(
     workspaceEntry = false;
   };
 
+  const parseSelector = (selector: string): void => {
+    for (const item of selector.split(",").map((value) => value.trim())) {
+      const normalized = item.replace(/^['"]|['"]$/g, "");
+      if (normalized.includes("@workspace:")) {
+        workspaceEntry = true;
+        continue;
+      }
+      const berryAlias = normalized.indexOf("@npm:");
+      if (berryAlias > 0) {
+        // A Berry descriptor such as `alias@npm:real-package@1.0.0`
+        // installs the target package, rather than `alias`. Keep the
+        // original name for ordinary descriptors like `foo@npm:^1.0.0`.
+        const target = normalized.slice(berryAlias + "@npm:".length);
+        const targetScoped = /^(@[^/]+\/[^@]+)@/.exec(target);
+        const targetPlain = /^([^@/]+)@/.exec(target);
+        names.push(
+          targetScoped?.[1] ??
+            targetPlain?.[1] ??
+            normalized.slice(0, berryAlias),
+        );
+        continue;
+      }
+      const scoped = /^(@[^/]+\/[^@]+)@/.exec(normalized);
+      const plain = /^([^@]+)@/.exec(normalized);
+      const name = scoped?.[1] ?? plain?.[1];
+      if (name) names.push(name);
+    }
+  };
+
+  const versionFromLine = (line: string): string | undefined => {
+    const trimmed = line.trimStart();
+    if (!trimmed.startsWith("version")) return undefined;
+    let value = trimmed.slice("version".length).trimStart();
+    if (value.startsWith(":")) value = value.slice(1).trimStart();
+    value = value.replace(/^['"]/, "");
+    const end = [...value].findIndex(
+      (character) =>
+        character === "'" ||
+        character === '"' ||
+        character === " " ||
+        character === "\t",
+    );
+    return value.slice(0, end < 0 ? value.length : end);
+  };
+
   for (const line of text.split(/\r?\n/)) {
     if (line.trim() === "" || line.startsWith("#")) continue;
     if (!line.startsWith(" ") && !line.startsWith("\t") && line.endsWith(":")) {
       flush();
-      const selector = line
-        .slice(0, -1)
-        .trim()
-        .replace(/^['"]|['"]$/g, "");
-      for (const item of selector.split(/\s*,\s*/)) {
-        const normalized = item.replace(/^['"]|['"]$/g, "");
-        if (normalized.includes("@workspace:")) {
-          workspaceEntry = true;
-          continue;
-        }
-        const berryAlias = normalized.indexOf("@npm:");
-        if (berryAlias > 0) {
-          // A Berry descriptor such as `alias@npm:real-package@1.0.0`
-          // installs the target package, rather than `alias`. Keep the
-          // original name for ordinary descriptors like `foo@npm:^1.0.0`.
-          const target = normalized.slice(berryAlias + "@npm:".length);
-          const targetScoped = target.match(/^(@[^/]+\/[^@]+)@/);
-          const targetPlain = target.match(/^([^@/]+)@/);
-          names.push(
-            targetScoped?.[1] ??
-              targetPlain?.[1] ??
-              normalized.slice(0, berryAlias),
-          );
-          continue;
-        }
-        const scoped = normalized.match(/^(@[^/]+\/[^@]+)@/);
-        const plain = normalized.match(/^([^@]+)@/);
-        const name = scoped?.[1] ?? plain?.[1];
-        if (name) names.push(name);
-      }
+      parseSelector(line.slice(0, -1).trim());
     } else {
-      const match = line.match(/^\s+version(?:\s+|:\s*)['"]?([^'"\s]+)['"]?/);
-      if (match) version = match[1];
-      if (/^\s+resolution:\s+['"]?.+@workspace:/.test(line))
+      const parsedVersion = versionFromLine(line);
+      if (parsedVersion) version = parsedVersion;
+      const trimmed = line.trimStart();
+      if (trimmed.startsWith("resolution:") && trimmed.includes("@workspace:"))
         workspaceEntry = true;
     }
   }
@@ -187,9 +205,9 @@ function packageFromLockKey(
   key: string,
 ): { name: string; version: string } | undefined {
   const normalized = key.replace(/^\//, "").replace(/^npm:/, "");
-  const scoped = normalized.match(/^(@[^/]+\/[^@]+)@(.+)$/);
+  const scoped = /^(@[^/]+\/[^@]+)@(.+)$/.exec(normalized);
   if (scoped) return { name: scoped[1], version: scoped[2].split("(")[0] };
-  const plain = normalized.match(/^([^@/]+)@(.+)$/);
+  const plain = /^([^@/]+)@(.+)$/.exec(normalized);
   return plain
     ? { name: plain[1], version: plain[2].split("(")[0] }
     : undefined;
@@ -223,7 +241,10 @@ function parseGoMod(
   const text = readFileSync(path, "utf8");
   let inRequire = false;
   for (const rawLine of text.split(/\r?\n/)) {
-    const line = rawLine.replace(/\/\/.*$/, "").trim();
+    const commentStart = rawLine.indexOf("//");
+    const line = (
+      commentStart < 0 ? rawLine : rawLine.slice(0, commentStart)
+    ).trim();
     if (!line) continue;
     if (/^require\s*\(/.test(line)) {
       inRequire = true;
@@ -233,8 +254,8 @@ function parseGoMod(
       inRequire = false;
       continue;
     }
-    const inline = line.match(/^require\s+(\S+)\s+(\S+)/);
-    const block = inRequire ? line.match(/^(\S+)\s+(\S+)/) : undefined;
+    const inline = /^require\s+(\S+)\s+(\S+)/.exec(line);
+    const block = inRequire ? /^(\S+)\s+(\S+)/.exec(line) : undefined;
     const match = inline ?? block;
     if (!match) continue;
     dependencies.push({
@@ -252,14 +273,21 @@ function parseGoSum(
   dependencies: Dependency[],
 ): void {
   for (const rawLine of readFileSync(path, "utf8").split(/\r?\n/)) {
-    const match = rawLine.trim().match(/^(\S+)\s+(\S+)(?:\/go\.mod)?\s+h1:/);
-    if (match)
+    const fields = rawLine.trim().split(/\s+/);
+    const name = fields[0];
+    const rawVersion = fields[1];
+    const checksum = fields[2];
+    if (name && rawVersion && checksum?.startsWith("h1:")) {
+      const version = rawVersion.endsWith("/go.mod")
+        ? rawVersion.slice(0, -"/go.mod".length)
+        : rawVersion;
       dependencies.push({
-        name: match[1],
-        version: match[2],
+        name,
+        version,
         ecosystem: "go",
         manifest,
       });
+    }
   }
 }
 
@@ -268,16 +296,42 @@ function parseRequirements(
   path: string,
   dependencies: Dependency[],
 ): void {
+  const parseRequirement = (
+    value: string,
+  ): { name: string; version: string } | undefined => {
+    const nameMatch = /^[A-Za-z0-9][A-Za-z0-9_.-]*/.exec(value);
+    if (!nameMatch) return undefined;
+    const name = nameMatch[0];
+    let remainder = value.slice(name.length).trimStart();
+    if (remainder.startsWith("[")) {
+      const extrasEnd = remainder.indexOf("]");
+      if (extrasEnd < 0) return undefined;
+      remainder = remainder.slice(extrasEnd + 1).trimStart();
+    }
+    const operator = /^(===|==|~=|>=|<=|>|<)/.exec(remainder)?.[0];
+    if (!operator) return { name, version: "*" };
+    remainder = remainder.slice(operator.length).trimStart();
+    const semicolon = remainder.indexOf(";");
+    const whitespace = remainder.search(/\s/);
+    const end = [semicolon, whitespace]
+      .filter((index) => index >= 0)
+      .sort((left, right) => left - right)[0];
+    return {
+      name,
+      version: remainder.slice(0, end ?? remainder.length) || "*",
+    };
+  };
+
   for (const rawLine of readFileSync(path, "utf8").split(/\r?\n/)) {
-    const line = rawLine.replace(/\s+#.*$/, "").trim();
+    const commentStart = rawLine.indexOf("#");
+    const line = (
+      commentStart < 0 ? rawLine : rawLine.slice(0, commentStart)
+    ).trim();
     if (!line || line.startsWith("#") || line.startsWith("-")) continue;
-    const match = line.match(
-      /^([A-Za-z0-9][A-Za-z0-9_.-]*)(?:\[[^\]]+\])?\s*(?:(===|==|~=|>=|<=|>|<)\s*([^;\s]+))?/,
-    );
-    if (match)
+    const requirement = parseRequirement(line);
+    if (requirement)
       dependencies.push({
-        name: match[1],
-        version: match[3] ?? "*",
+        ...requirement,
         ecosystem: "python",
         manifest,
       });
@@ -289,34 +343,36 @@ function parsePyproject(
   path: string,
   dependencies: Dependency[],
 ): void {
-  const text = readFileSync(path, "utf8");
-  const dependencyLines =
-    text.match(/(?:^|\n)\s*dependencies\s*=\s*\[([\s\S]*?)\]/m)?.[1] ?? "";
-  for (const value of dependencyLines.matchAll(/['"]([^'"]+)['"]/g)) {
-    const match = value[1].match(
-      /^([A-Za-z0-9][A-Za-z0-9_.-]*)(?:\[[^\]]+\])?\s*(.*)$/,
-    );
-    if (match)
-      dependencies.push({
-        name: match[1],
-        version: match[2].trim() || "*",
-        ecosystem: "python",
-        manifest,
-      });
+  let parsed: {
+    project?: { dependencies?: unknown };
+    tool?: { poetry?: { dependencies?: Record<string, unknown> } };
+  };
+  try {
+    parsed = parseToml(readFileSync(path, "utf8")) as typeof parsed;
+  } catch {
+    return;
   }
 
-  const section =
-    text.match(/\[tool\.poetry\.dependencies\]([\s\S]*?)(?=\n\[|$)/)?.[1] ?? "";
-  for (const line of section.split(/\r?\n/)) {
-    const match = line.match(/^\s*([A-Za-z0-9][A-Za-z0-9_.-]*)\s*=\s*(.+)$/);
-    if (match && match[1].toLowerCase() !== "python") {
+  const projectDependencies = parsed.project?.dependencies;
+  if (Array.isArray(projectDependencies)) {
+    for (const value of projectDependencies) {
+      if (typeof value !== "string") continue;
+      const nameMatch = /^[A-Za-z0-9][A-Za-z0-9_.-]*/.exec(value);
+      if (!nameMatch) continue;
       dependencies.push({
-        name: match[1],
-        version: match[2].replace(/^['"]|['"]$/g, ""),
+        name: nameMatch[0],
+        version: value.slice(nameMatch[0].length).trim() || "*",
         ecosystem: "python",
         manifest,
       });
     }
+  }
+
+  for (const [name, value] of Object.entries(
+    parsed.tool?.poetry?.dependencies ?? {},
+  )) {
+    if (name.toLowerCase() === "python" || typeof value !== "string") continue;
+    dependencies.push({ name, version: value, ecosystem: "python", manifest });
   }
 }
 
@@ -368,6 +424,64 @@ function parsePipfileLock(
   }
 }
 
+type ManifestParser = (
+  manifest: string,
+  path: string,
+  dependencies: Dependency[],
+) => void;
+
+function parsePackageJsonManifest(
+  manifest: string,
+  absolute: string,
+  dependencies: Dependency[],
+): void {
+  const packageJson = readJson(absolute) as PackageJson | undefined;
+  const lockParsers: Record<string, ManifestParser> = {
+    "package-lock.json": parseNpmLock,
+    "npm-shrinkwrap.json": parseNpmLock,
+    "yarn.lock": parseYarnLock,
+    "pnpm-lock.yaml": parsePnpmLock,
+  };
+  let lockFound = false;
+  for (const [lockName, parser] of Object.entries(lockParsers)) {
+    const lockPath = join(dirname(absolute), lockName);
+    if (!isFile(lockPath)) continue;
+    lockFound = true;
+    parser(manifest, lockPath, dependencies);
+  }
+  if (!lockFound && packageJson)
+    addPackageJsonDependencies(dependencies, manifest, packageJson);
+}
+
+function parsePyprojectManifest(
+  manifest: string,
+  path: string,
+  dependencies: Dependency[],
+): void {
+  const poetryLockPath = join(dirname(path), "poetry.lock");
+  if (
+    isFile(poetryLockPath) &&
+    parsePoetryLock(manifest, poetryLockPath, dependencies)
+  )
+    return;
+  parsePyproject(manifest, path, dependencies);
+}
+
+const MANIFEST_PARSERS: Record<string, ManifestParser> = {
+  "package-lock.json": parseNpmLock,
+  "npm-shrinkwrap.json": parseNpmLock,
+  "yarn.lock": parseYarnLock,
+  "pnpm-lock.yaml": parsePnpmLock,
+  "go.mod": parseGoMod,
+  "go.sum": parseGoSum,
+  "requirements.txt": parseRequirements,
+  "pyproject.toml": parsePyprojectManifest,
+  "poetry.lock": (manifest, path, dependencies) => {
+    parsePoetryLock(manifest, path, dependencies);
+  },
+  "Pipfile.lock": parsePipfileLock,
+};
+
 function parseManifest(
   root: string,
   path: string,
@@ -378,48 +492,13 @@ function parseManifest(
   if (!isFile(absolute)) return;
 
   if (basename === "package.json") {
-    const packageJson = readJson(absolute) as PackageJson | undefined;
-    const lockFiles: string[] = [];
-    for (const lockName of [
-      "package-lock.json",
-      "npm-shrinkwrap.json",
-      "yarn.lock",
-      "pnpm-lock.yaml",
-    ]) {
-      const lockPath = join(dirname(absolute), lockName);
-      if (!isFile(lockPath)) continue;
-      lockFiles.push(lockName);
-      if (lockName === "yarn.lock") parseYarnLock(path, lockPath, dependencies);
-      else if (lockName === "pnpm-lock.yaml")
-        parsePnpmLock(path, lockPath, dependencies);
-      else parseNpmLock(path, lockPath, dependencies);
-    }
-    if (lockFiles.length === 0 && packageJson)
-      addPackageJsonDependencies(dependencies, path, packageJson);
-  } else if (
-    basename === "package-lock.json" ||
-    basename === "npm-shrinkwrap.json"
-  )
-    parseNpmLock(path, absolute, dependencies);
-  else if (basename === "yarn.lock")
-    parseYarnLock(path, absolute, dependencies);
-  else if (basename === "pnpm-lock.yaml")
-    parsePnpmLock(path, absolute, dependencies);
-  else if (basename === "go.mod") parseGoMod(path, absolute, dependencies);
-  else if (basename === "go.sum") parseGoSum(path, absolute, dependencies);
-  else if (basename === "requirements.txt" || basename.endsWith(".txt"))
-    parseRequirements(path, absolute, dependencies);
-  else if (basename === "pyproject.toml") {
-    const poetryLockPath = join(dirname(absolute), "poetry.lock");
-    if (
-      !isFile(poetryLockPath) ||
-      !parsePoetryLock(path, poetryLockPath, dependencies)
-    )
-      parsePyproject(path, absolute, dependencies);
-  } else if (basename === "poetry.lock")
-    parsePoetryLock(path, absolute, dependencies);
-  else if (basename === "Pipfile.lock")
-    parsePipfileLock(path, absolute, dependencies);
+    parsePackageJsonManifest(path, absolute, dependencies);
+    return;
+  }
+  const parser =
+    MANIFEST_PARSERS[basename] ??
+    (basename.endsWith(".txt") ? parseRequirements : undefined);
+  parser?.(path, absolute, dependencies);
 }
 
 function overrideFor(
@@ -490,7 +569,7 @@ function installedNpmPackage(
   return undefined;
 }
 
-const jsonCache = new Map<string, Promise<unknown | undefined>>();
+const jsonCache = new Map<string, Promise<unknown>>();
 const textCache = new Map<string, Promise<string | undefined>>();
 const LICENSE_FILENAMES = [
   "LICENSE",
@@ -502,15 +581,12 @@ const LICENSE_FILENAMES = [
   "COPYING",
 ];
 
-async function fetchJson(
-  url: string,
-  token?: string,
-): Promise<unknown | undefined> {
+async function fetchJson(url: string, token?: string): Promise<unknown> {
   const cacheKey = `${token ? "authenticated" : "anonymous"}:${url}`;
   const cached = jsonCache.get(cacheKey);
   if (cached) return cached;
 
-  const request = (async (): Promise<unknown | undefined> => {
+  const request = (async (): Promise<unknown> => {
     try {
       const response = await fetch(url, {
         headers: token
@@ -649,8 +725,12 @@ interface PythonPackageMetadata {
 }
 
 function pythonVersionParts(version: string): number[] | undefined {
-  const match = version.trim().match(/^v?(\d+(?:\.\d+)*)$/i);
-  return match?.[1].split(".").map(Number);
+  let value = version.trim();
+  if (value[0]?.toLowerCase() === "v") value = value.slice(1);
+  const parts = value.split(".");
+  if (parts.length === 0 || parts.some((part) => !/^\d+$/.test(part)))
+    return undefined;
+  return parts.map(Number);
 }
 
 function comparePythonVersions(left: string, right: string): number {
@@ -666,11 +746,9 @@ function comparePythonVersions(left: string, right: string): number {
 }
 
 function pythonSpecifier(version: string): string {
-  return version
-    .trim()
-    .replace(/^\((.*)\)$/, "$1")
-    .split(";", 1)[0]
-    .trim();
+  let value = version.trim();
+  if (value.startsWith("(") && value.endsWith(")")) value = value.slice(1, -1);
+  return value.split(";", 1)[0].trim();
 }
 
 function matchesPythonSpecifier(version: string, specifier: string): boolean {
@@ -680,9 +758,10 @@ function matchesPythonSpecifier(version: string, specifier: string): boolean {
   if (!constraints || constraints === "*") return true;
 
   return constraints.split(",").every((constraint) => {
-    const match = constraint
-      .trim()
-      .match(/^(===|==|!=|~=|>=|<=|>|<)?\s*v?(\d+(?:\.\d+)*(?:\.\*)?)$/i);
+    const match =
+      /^(===|==|!=|~=|>=|<=|>|<)?\s*v?(\d+(?:\.\d+)*(?:\.\*)?)$/i.exec(
+        constraint.trim(),
+      );
     if (!match) return false;
     const operator = match[1] ?? "==";
     const target = match[2];
@@ -715,9 +794,10 @@ function matchesPythonSpecifier(version: string, specifier: string): boolean {
 }
 
 function exactPythonVersion(version: string): string | undefined {
-  const specifier = pythonSpecifier(version);
-  const match = specifier.match(/^(?:===|==)?\s*(v?\d+(?:\.\d+)*)$/i);
-  return match?.[1];
+  let specifier = pythonSpecifier(version);
+  if (specifier.startsWith("===")) specifier = specifier.slice(3).trim();
+  else if (specifier.startsWith("==")) specifier = specifier.slice(2).trim();
+  return pythonVersionParts(specifier) ? specifier : undefined;
 }
 
 function selectPythonRelease(
@@ -738,17 +818,30 @@ function selectPythonRelease(
 
 function licenseFromPythonClassifier(classifier: string): string {
   const label = classifier.split("::").pop()?.trim() ?? classifier;
-  if (/lesser general public license v3.*\(lgplv3\+\)/i.test(label))
+  const lower = label.toLowerCase();
+  if (
+    lower.includes("lesser general public license v3") &&
+    lower.includes("(lgplv3+)")
+  )
     return "LGPL-3.0-or-later";
-  if (/lesser general public license v2\.1.*\(lgplv2\.1\+\)/i.test(label))
+  if (
+    lower.includes("lesser general public license v2.1") &&
+    lower.includes("(lgplv2.1+)")
+  )
     return "LGPL-2.1-or-later";
-  if (/lesser general public license v2.*\(lgplv2\+\)/i.test(label))
+  if (
+    lower.includes("lesser general public license v2") &&
+    lower.includes("(lgplv2+)")
+  )
     return "LGPL-2.0-or-later";
-  if (/general public license v3.*\(gplv3\+\)/i.test(label))
+  if (lower.includes("general public license v3") && lower.includes("(gplv3+)"))
     return "GPL-3.0-or-later";
-  if (/general public license v2.*\(gplv2\+\)/i.test(label))
+  if (lower.includes("general public license v2") && lower.includes("(gplv2+)"))
     return "GPL-2.0-or-later";
-  if (/mozilla public license 1\.1.*\(mpl 1\.1\)/i.test(label))
+  if (
+    lower.includes("mozilla public license 1.1") &&
+    lower.includes("(mpl 1.1)")
+  )
     return "MPL-1.1";
   return label;
 }
@@ -837,83 +930,116 @@ async function resolveGithubRepositoryLicense(
   return { resolution: "unknown" };
 }
 
-async function resolvePython(
-  dependency: Dependency,
-  token: string | undefined,
-  logger: Logger,
-): Promise<{
+type PythonResolution = {
   license?: string;
   source?: string;
   version?: string;
   resolution: DependencyResult["resolution"];
-}> {
-  const packageName = dependency.name.replace(/[-_.]+/g, "-");
-  const packageUrl = `https://pypi.org/pypi/${encodeURIComponent(packageName)}`;
+};
+
+async function loadPythonMetadata(
+  packageUrl: string,
+  dependency: Dependency,
+): Promise<{ metadata?: PythonPackageMetadata; version?: string }> {
   const pinnedVersion = exactPythonVersion(dependency.version);
   let resolvedVersion = pinnedVersion;
   let metadata = (await fetchJson(
     pinnedVersion
-      ? `${packageUrl}/${encodeURIComponent(pinnedVersion)}/json`
-      : `${packageUrl}/json`,
+      ? packageUrl + "/" + encodeURIComponent(pinnedVersion) + "/json"
+      : packageUrl + "/json",
   )) as PythonPackageMetadata | undefined;
-
   if (!pinnedVersion && metadata) {
     resolvedVersion = selectPythonRelease(metadata, dependency.version);
     if (resolvedVersion && resolvedVersion !== metadata.info?.version) {
       const releaseMetadata = (await fetchJson(
-        `${packageUrl}/${encodeURIComponent(resolvedVersion)}/json`,
+        packageUrl + "/" + encodeURIComponent(resolvedVersion) + "/json",
       )) as PythonPackageMetadata | undefined;
       if (releaseMetadata) metadata = releaseMetadata;
     }
   }
+  return { metadata, version: resolvedVersion };
+}
 
-  const info = metadata?.info;
-  if (info?.license_expression?.trim())
+function declaredPythonLicense(
+  info: PythonPackageMetadata["info"],
+  version: string | undefined,
+): PythonResolution | undefined {
+  const expression = info?.license_expression?.trim();
+  if (expression)
     return {
-      license: info.license_expression,
+      license: expression,
       source: "pypi.org",
-      version: resolvedVersion,
+      version,
       resolution: "registry",
     };
   const declaredLicense = info?.license?.trim();
   if (
-    declaredLicense &&
-    isConciseLicenseMetadata(declaredLicense) &&
-    normalizeLicenseExpression(declaredLicense) !== "Unknown"
+    !declaredLicense ||
+    !isConciseLicenseMetadata(declaredLicense) ||
+    normalizeLicenseExpression(declaredLicense) === "Unknown"
   )
-    return {
-      license: declaredLicense,
-      source: "pypi.org",
-      version: resolvedVersion,
-      resolution: "registry",
-    };
+    return undefined;
+  return {
+    license: declaredLicense,
+    source: "pypi.org",
+    version,
+    resolution: "registry",
+  };
+}
+
+function classifierPythonLicense(
+  classifiers: string[] | undefined,
+  version: string | undefined,
+): PythonResolution | undefined {
+  const licenses = licensesFromPythonClassifiers(classifiers);
+  if (licenses.length === 0) return undefined;
+  let license = licenses[0] ?? "Unknown";
+  if (licenses.length > 1) license = "(" + licenses.join(" OR ") + ")";
+  return {
+    license,
+    source: "pypi.org classifier",
+    version,
+    resolution: "registry",
+  };
+}
+
+async function repositoryPythonLicense(
+  info: PythonPackageMetadata["info"],
+  token: string | undefined,
+  version: string | undefined,
+): Promise<PythonResolution | undefined> {
+  const repository = githubRepositoryForPython(info);
+  if (!repository) return undefined;
+  const resolved = await resolveGithubRepositoryLicense(repository, token);
+  return resolved.license ? { ...resolved, version } : undefined;
+}
+
+async function resolvePython(
+  dependency: Dependency,
+  token: string | undefined,
+  logger: Logger,
+): Promise<PythonResolution> {
+  const packageName = dependency.name.replace(/[-_.]+/g, "-");
+  const packageUrl = "https://pypi.org/pypi/" + encodeURIComponent(packageName);
+  const { metadata, version } = await loadPythonMetadata(
+    packageUrl,
+    dependency,
+  );
+
+  const info = metadata?.info;
+  const declared = declaredPythonLicense(info, version);
+  if (declared) return declared;
   const classifierLicenses = licensesFromPythonClassifiers(info?.classifiers);
   const repository = githubRepositoryForPython(info);
   if (classifierLicenses.length > 1 && repository) {
-    const resolved = await resolveGithubRepositoryLicense(repository, token);
-    if (resolved.license)
-      return {
-        ...resolved,
-        version: resolvedVersion,
-      };
+    const resolved = await repositoryPythonLicense(info, token, version);
+    if (resolved) return resolved;
   }
-  if (classifierLicenses.length > 0)
-    return {
-      license:
-        classifierLicenses.length === 1
-          ? classifierLicenses[0]
-          : `(${classifierLicenses.join(" OR ")})`,
-      source: "pypi.org classifier",
-      version: resolvedVersion,
-      resolution: "registry",
-    };
+  const classifier = classifierPythonLicense(info?.classifiers, version);
+  if (classifier) return classifier;
   if (repository) {
-    const resolved = await resolveGithubRepositoryLicense(repository, token);
-    if (resolved.license)
-      return {
-        ...resolved,
-        version: resolvedVersion,
-      };
+    const resolved = await repositoryPythonLicense(info, token, version);
+    if (resolved) return resolved;
   }
   logger.debug(
     `Could not resolve Python license for ${dependency.name}@${dependency.version}`,
@@ -960,8 +1086,8 @@ async function resolveGo(
       ...vendored,
       resolution: "manifest",
     };
-  const match = dependency.name.match(
-    /^github\.com\/([^/]+\/[^/]+)(?:\/v\d+)?$/,
+  const match = /^github\.com\/([^/]+\/[^/]+)(?:\/v\d+)?$/.exec(
+    dependency.name,
   );
   if (!match) {
     logger.debug(`No repository resolver for Go module ${dependency.name}`);
@@ -1011,6 +1137,24 @@ async function resolveGo(
   return { resolution: "unknown" };
 }
 
+async function resolveByEcosystem(
+  root: string,
+  dependency: Dependency,
+  token: string | undefined,
+  logger: Logger,
+): Promise<{
+  license?: string;
+  source?: string;
+  version?: string;
+  resolution: DependencyResult["resolution"];
+}> {
+  if (dependency.ecosystem === "npm")
+    return resolveNpm(root, dependency, logger);
+  if (dependency.ecosystem === "python")
+    return resolvePython(dependency, token, logger);
+  return resolveGo(root, dependency, token, logger);
+}
+
 async function resolveLicense(
   root: string,
   dependency: Dependency,
@@ -1037,17 +1181,7 @@ async function resolveLicense(
       source: dependency.manifest,
     };
 
-  const resolved: {
-    license?: string;
-    source?: string;
-    version?: string;
-    resolution: DependencyResult["resolution"];
-  } =
-    dependency.ecosystem === "npm"
-      ? await resolveNpm(root, dependency, logger)
-      : dependency.ecosystem === "python"
-        ? await resolvePython(dependency, token, logger)
-        : await resolveGo(root, dependency, token, logger);
+  const resolved = await resolveByEcosystem(root, dependency, token, logger);
   return {
     license: resolved.license ?? "Unknown",
     resolution: resolved.resolution,
@@ -1077,11 +1211,7 @@ export async function checkDependencies(
   logger: Logger,
 ): Promise<DependencyReport> {
   const dependencyConfig = config.dependency;
-  if (
-    !dependencyConfig ||
-    !dependencyConfig.files ||
-    dependencyConfig.files.length === 0
-  ) {
+  if (!dependencyConfig?.files?.length) {
     return { checked: 0, results: [], failures: [] };
   }
 

@@ -264,13 +264,13 @@ export function distributionWarningFor(
   expression: string | undefined,
 ): string | undefined {
   const ids = licenseIds(parseLicenseExpression(expression));
-  if (ids.some((id) => /^AGPL-/.test(id)))
+  if (ids.some((id) => id.startsWith("AGPL-")))
     return "Distribution review: AGPL terms can require offering corresponding source to network users. Include required notices and review the license before distribution or deployment.";
-  if (ids.some((id) => /^GPL-/.test(id)))
+  if (ids.some((id) => id.startsWith("GPL-")))
     return "Distribution review: GPL terms can require distributing corresponding source and licensing covered combined work under GPL. Include required notices and the license text.";
-  if (ids.some((id) => /^LGPL-/.test(id)))
+  if (ids.some((id) => id.startsWith("LGPL-")))
     return "Distribution review: LGPL terms require preserving notices and providing the license text; distribution of modified or combined work can create source and relinking obligations.";
-  if (ids.some((id) => /^MPL-/.test(id)))
+  if (ids.some((id) => id.startsWith("MPL-")))
     return "Distribution review: MPL terms require preserving notices and making covered source files available when distributing executable form.";
   if (ids.includes("CAL-1.0"))
     return "Distribution review: CAL has reciprocal source, deployment, and user-autonomy obligations. Review its terms before providing the software to third parties.";
@@ -363,21 +363,20 @@ function matrixCompatibility(
   return value;
 }
 
-function compareSingle(
+function configuredCompatibility(
+  dependency: string,
+  config?: DependencyConfig,
+): Compatibility | undefined {
+  if (config?.require_fsf_free && !isFree(dependency)) return "incompatible";
+  if (config?.require_osi_approved && !isOsi(dependency)) return "incompatible";
+  return undefined;
+}
+
+function categoryCompatibility(
   main: string,
   dependency: string,
   weakCompatible: boolean,
-  config?: DependencyConfig,
 ): Compatibility {
-  if (dependency === "Unknown") return "incompatible";
-  if (config?.require_fsf_free && !isFree(dependency)) return "incompatible";
-  if (config?.require_osi_approved && !isOsi(dependency)) return "incompatible";
-
-  const mainGroup = matrixGroup(main);
-  const dependencyGroup = matrixGroup(dependency);
-  if (mainGroup && dependencyGroup)
-    return matrixCompatibility(mainGroup, dependencyGroup, weakCompatible);
-
   if (CATEGORY_A.has(main)) {
     if (CATEGORY_A.has(dependency)) return "compatible";
     if (CATEGORY_B.has(dependency))
@@ -392,6 +391,24 @@ function compareSingle(
     return "incompatible";
   }
   return main === dependency ? "compatible" : "unknown";
+}
+
+function compareSingle(
+  main: string,
+  dependency: string,
+  weakCompatible: boolean,
+  config?: DependencyConfig,
+): Compatibility {
+  if (dependency === "Unknown") return "incompatible";
+  const configured = configuredCompatibility(dependency, config);
+  if (configured) return configured;
+
+  const mainGroup = matrixGroup(main);
+  const dependencyGroup = matrixGroup(dependency);
+  if (mainGroup && dependencyGroup)
+    return matrixCompatibility(mainGroup, dependencyGroup, weakCompatible);
+
+  return categoryCompatibility(main, dependency, weakCompatible);
 }
 
 function combineAnd(left: Compatibility, right: Compatibility): Compatibility {

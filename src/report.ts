@@ -5,7 +5,7 @@ import type { CheckReport, DependencyResult } from "./types.js";
 const COMMENT_MARKER = "<!-- license-checker-action -->";
 
 function escapeTableCell(value: string): string {
-  return value.replaceAll("|", "\\|").replaceAll("\n", " ");
+  return value.replaceAll("|", String.raw`\|`).replaceAll("\n", " ");
 }
 
 function approvalDetails(result: DependencyResult): string {
@@ -31,17 +31,17 @@ export function distributionWarnings(report: CheckReport): DependencyResult[] {
   );
 }
 
-export function summaryDependencies(
+export function summaryDependencies(report: CheckReport): DependencyResult[] {
+  return report.dependency.results.filter(
+    (result) =>
+      report.dependency.failures.includes(result) || result.distributionWarning,
+  );
+}
+
+export function allSummaryDependencies(
   report: CheckReport,
-  reportAll: boolean,
 ): DependencyResult[] {
-  return reportAll
-    ? report.dependency.results
-    : report.dependency.results.filter(
-        (result) =>
-          report.dependency.failures.includes(result) ||
-          result.distributionWarning,
-      );
+  return report.dependency.results;
 }
 
 function commentBody(report: CheckReport): string {
@@ -96,38 +96,50 @@ function commentBody(report: CheckReport): string {
   return lines.join("\n");
 }
 
+function dependencySummaryRows(
+  report: CheckReport,
+  warnings: DependencyResult[],
+  approvals: DependencyResult[],
+): string[][] {
+  if (report.dependency.failures.length > 0)
+    return [
+      [
+        "Dependencies",
+        "fail",
+        `${report.dependency.failures.length} failure(s); ${warnings.length} distribution review warning(s)`,
+      ],
+    ];
+  if (warnings.length > 0)
+    return [
+      [
+        "Dependencies",
+        "warning",
+        `${report.dependency.checked} checked; ${warnings.length} distribution review warning(s)`,
+      ],
+    ];
+  return [
+    [
+      "Dependencies",
+      "pass",
+      `${report.dependency.checked} checked; ${approvals.length} manual approval(s)`,
+    ],
+  ];
+}
+
 export async function writeSummary(
   report: CheckReport,
-  reportAll = false,
+  summaryMode: "issues" | "all" = "issues",
 ): Promise<void> {
+  const reportAll = summaryMode === "all";
   const approvals = report.dependency.results.filter(
     (result) => result.compatible === "approved-exception",
   );
   const warnings = distributionWarnings(report);
-  const dependencyRowsForSummary =
-    report.dependency.failures.length === 0
-      ? warnings.length === 0
-        ? [
-            [
-              "Dependencies",
-              "pass",
-              `${report.dependency.checked} checked; ${approvals.length} manual approval(s)`,
-            ],
-          ]
-        : [
-            [
-              "Dependencies",
-              "warning",
-              `${report.dependency.checked} checked; ${warnings.length} distribution review warning(s)`,
-            ],
-          ]
-      : [
-          [
-            "Dependencies",
-            "fail",
-            `${report.dependency.failures.length} failure(s); ${warnings.length} distribution review warning(s)`,
-          ],
-        ];
+  const dependencyRowsForSummary = dependencySummaryRows(
+    report,
+    warnings,
+    approvals,
+  );
 
   core.summary.addHeading("License Checker").addTable([
     [
@@ -138,7 +150,9 @@ export async function writeSummary(
     ...dependencyRowsForSummary,
   ]);
 
-  const displayedDependencies = summaryDependencies(report, reportAll);
+  const displayedDependencies = reportAll
+    ? allSummaryDependencies(report)
+    : summaryDependencies(report);
   if (displayedDependencies.length > 0) {
     core.summary
       .addHeading(

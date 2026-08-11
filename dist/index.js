@@ -32770,6 +32770,20 @@ module.exports = __WEBPACK_EXTERNAL_createRequire(import.meta.url)("node:events"
 
 /***/ }),
 
+/***/ 3024:
+/***/ ((module) => {
+
+module.exports = __WEBPACK_EXTERNAL_createRequire(import.meta.url)("node:fs");
+
+/***/ }),
+
+/***/ 6760:
+/***/ ((module) => {
+
+module.exports = __WEBPACK_EXTERNAL_createRequire(import.meta.url)("node:path");
+
+/***/ }),
+
 /***/ 7075:
 /***/ ((module) => {
 
@@ -43066,76 +43080,16 @@ exports.visitAsync = visitAsync;
 
 /***/ }),
 
-/***/ 4142:
-/***/ ((module) => {
+/***/ 9651:
+/***/ ((__unused_webpack___webpack_module__, __webpack_exports__, __nccwpck_require__) => {
 
-module.exports = /*#__PURE__*/JSON.parse('["389-exception","Asterisk-exception","Autoconf-exception-2.0","Autoconf-exception-3.0","Autoconf-exception-generic","Autoconf-exception-generic-3.0","Autoconf-exception-macro","Bison-exception-1.24","Bison-exception-2.2","Bootloader-exception","Classpath-exception-2.0","CLISP-exception-2.0","cryptsetup-OpenSSL-exception","DigiRule-FOSS-exception","eCos-exception-2.0","Fawkes-Runtime-exception","FLTK-exception","fmt-exception","Font-exception-2.0","freertos-exception-2.0","GCC-exception-2.0","GCC-exception-2.0-note","GCC-exception-3.1","Gmsh-exception","GNAT-exception","GNOME-examples-exception","GNU-compiler-exception","gnu-javamail-exception","GPL-3.0-interface-exception","GPL-3.0-linking-exception","GPL-3.0-linking-source-exception","GPL-CC-1.0","GStreamer-exception-2005","GStreamer-exception-2008","i2p-gpl-java-exception","KiCad-libraries-exception","LGPL-3.0-linking-exception","libpri-OpenH323-exception","Libtool-exception","Linux-syscall-note","LLGPL","LLVM-exception","LZMA-exception","mif-exception","OCaml-LGPL-linking-exception","OCCT-exception-1.0","OpenJDK-assembly-exception-1.0","openvpn-openssl-exception","PS-or-PDF-font-exception-20170817","QPL-1.0-INRIA-2004-exception","Qt-GPL-exception-1.0","Qt-LGPL-exception-1.1","Qwt-exception-1.0","SANE-exception","SHL-2.0","SHL-2.1","stunnel-exception","SWI-exception","Swift-exception","Texinfo-exception","u-boot-exception-2.0","UBDL-exception","Universal-FOSS-exception-1.0","vsftpd-openssl-exception","WxWindows-exception-3.1","x11vnc-openssl-exception"]');
-
-/***/ }),
-
-/***/ 3587:
-/***/ ((module) => {
-
-module.exports = /*#__PURE__*/JSON.parse('["AGPL-1.0","AGPL-3.0","BSD-2-Clause-FreeBSD","BSD-2-Clause-NetBSD","GFDL-1.1","GFDL-1.2","GFDL-1.3","GPL-1.0","GPL-2.0","GPL-2.0-with-GCC-exception","GPL-2.0-with-autoconf-exception","GPL-2.0-with-bison-exception","GPL-2.0-with-classpath-exception","GPL-2.0-with-font-exception","GPL-3.0","GPL-3.0-with-GCC-exception","GPL-3.0-with-autoconf-exception","LGPL-2.0","LGPL-2.1","LGPL-3.0","Net-SNMP","Nunit","StandardML-NJ","bzip2-1.0.5","eCos-2.0","wxWindows"]');
-
-/***/ }),
-
-/***/ 5274:
-/***/ ((module) => {
-
-module.exports = /*#__PURE__*/JSON.parse('["0BSD","3D-Slicer-1.0","AAL","ADSL","AFL-1.1","AFL-1.2","AFL-2.0","AFL-2.1","AFL-3.0","AGPL-1.0-only","AGPL-1.0-or-later","AGPL-3.0-only","AGPL-3.0-or-later","ALGLIB-Documentation","AMD-newlib","AMDPLPA","AML","AML-glslang","AMPAS","ANTLR-PD","ANTLR-PD-fallback","APAFML","APL-1.0","APSL-1.0","APSL-1.1","APSL-1.2","APSL-2.0","ASWF-Digital-Assets-1.0","ASWF-Digital-Assets-1.1","Abstyles","AdaCore-doc","Adobe-2006","Adobe-Display-PostScript","Adobe-Glyph","Adobe-Utopia","Advanced-Cryptics-Dictionary","Afmparse","Aladdin","Apache-1.0","Apache-1.1","Apache-2.0","App-s2p","Arphic-1999","Artistic-1.0","Artistic-1.0-Perl","Artistic-1.0-cl8","Artistic-2.0","Artistic-dist","Aspell-RU","BOLA-1.1","BSD-1-Clause","BSD-2-Clause","BSD-2-Clause-Darwin","BSD-2-Clause-Patent","BSD-2-Clause-Views","BSD-2-Clause-first-lines","BSD-2-Clause-pkgconf-disclaimer","BSD-3-Clause","BSD-3-Clause-Attribution","BSD-3-Clause-Clear","BSD-3-Clause-HP","BSD-3-Clause-LBNL","BSD-3-Clause-Modification","BSD-3-Clause-No-Military-License","BSD-3-Clause-No-Nuclear-License","BSD-3-Clause-No-Nuclear-License-2014","BSD-3-Clause-No-Nuclear-Warranty","BSD-3-Clause-Open-MPI","BSD-3-Clause-Sun","BSD-3-Clause-Tso","BSD-3-Clause-acpica","BSD-3-Clause-flex","BSD-4-Clause","BSD-4-Clause-Shortened","BSD-4-Clause-UC","BSD-4.3RENO","BSD-4.3TAHOE","BSD-Advertising-Acknowledgement","BSD-Attribution-HPND-disclaimer","BSD-Inferno-Nettverk","BSD-Mark-Modifications","BSD-Protection","BSD-Source-Code","BSD-Source-beginning-file","BSD-Systemics","BSD-Systemics-W3Works","BSL-1.0","BUSL-1.1","Baekmuk","Bahyph","Barr","Beerware","BitTorrent-1.0","BitTorrent-1.1","Bitstream-Charter","Bitstream-Vera","BlueOak-1.0.0","Boehm-GC","Boehm-GC-without-fee","Borceux","Brian-Gladman-2-Clause","Brian-Gladman-3-Clause","Buddy","C-UDA-1.0","CAL-1.0","CAL-1.0-Combined-Work-Exception","CAPEC-tou","CATOSL-1.1","CC-BY-1.0","CC-BY-2.0","CC-BY-2.5","CC-BY-2.5-AU","CC-BY-3.0","CC-BY-3.0-AT","CC-BY-3.0-AU","CC-BY-3.0-DE","CC-BY-3.0-IGO","CC-BY-3.0-NL","CC-BY-3.0-US","CC-BY-4.0","CC-BY-NC-1.0","CC-BY-NC-2.0","CC-BY-NC-2.5","CC-BY-NC-3.0","CC-BY-NC-3.0-DE","CC-BY-NC-4.0","CC-BY-NC-ND-1.0","CC-BY-NC-ND-2.0","CC-BY-NC-ND-2.5","CC-BY-NC-ND-3.0","CC-BY-NC-ND-3.0-DE","CC-BY-NC-ND-3.0-IGO","CC-BY-NC-ND-4.0","CC-BY-NC-SA-1.0","CC-BY-NC-SA-2.0","CC-BY-NC-SA-2.0-DE","CC-BY-NC-SA-2.0-FR","CC-BY-NC-SA-2.0-UK","CC-BY-NC-SA-2.5","CC-BY-NC-SA-3.0","CC-BY-NC-SA-3.0-DE","CC-BY-NC-SA-3.0-IGO","CC-BY-NC-SA-4.0","CC-BY-ND-1.0","CC-BY-ND-2.0","CC-BY-ND-2.5","CC-BY-ND-3.0","CC-BY-ND-3.0-DE","CC-BY-ND-4.0","CC-BY-SA-1.0","CC-BY-SA-2.0","CC-BY-SA-2.0-UK","CC-BY-SA-2.1-JP","CC-BY-SA-2.5","CC-BY-SA-3.0","CC-BY-SA-3.0-AT","CC-BY-SA-3.0-DE","CC-BY-SA-3.0-IGO","CC-BY-SA-4.0","CC-PDDC","CC-PDM-1.0","CC-SA-1.0","CC0-1.0","CDDL-1.0","CDDL-1.1","CDL-1.0","CDLA-Permissive-1.0","CDLA-Permissive-2.0","CDLA-Sharing-1.0","CECILL-1.0","CECILL-1.1","CECILL-2.0","CECILL-2.1","CECILL-B","CECILL-C","CERN-OHL-1.1","CERN-OHL-1.2","CERN-OHL-P-2.0","CERN-OHL-S-2.0","CERN-OHL-W-2.0","CFITSIO","CMU-Mach","CMU-Mach-nodoc","CNRI-Jython","CNRI-Python","CNRI-Python-GPL-Compatible","COIL-1.0","CPAL-1.0","CPL-1.0","CPOL-1.02","CUA-OPL-1.0","Caldera","Caldera-no-preamble","Catharon","ClArtistic","Clips","Community-Spec-1.0","Condor-1.1","Cornell-Lossless-JPEG","Cronyx","Crossword","CryptoSwift","CrystalStacker","Cube","D-FSL-1.0","DEC-3-Clause","DL-DE-BY-2.0","DL-DE-ZERO-2.0","DOC","DRL-1.0","DRL-1.1","DSDP","DocBook-DTD","DocBook-Schema","DocBook-Stylesheet","DocBook-XML","Dotseqn","ECL-1.0","ECL-2.0","EFL-1.0","EFL-2.0","EPICS","EPL-1.0","EPL-2.0","ESA-PL-permissive-2.4","ESA-PL-strong-copyleft-2.4","ESA-PL-weak-copyleft-2.4","EUDatagrid","EUPL-1.0","EUPL-1.1","EUPL-1.2","Elastic-2.0","Entessa","ErlPL-1.1","Eurosym","FBM","FDK-AAC","FSFAP","FSFAP-no-warranty-disclaimer","FSFUL","FSFULLR","FSFULLRSD","FSFULLRWD","FSL-1.1-ALv2","FSL-1.1-MIT","FTL","Fair","Ferguson-Twofish","Frameworx-1.0","FreeBSD-DOC","FreeImage","Furuseth","GCR-docs","GD","GFDL-1.1-invariants-only","GFDL-1.1-invariants-or-later","GFDL-1.1-no-invariants-only","GFDL-1.1-no-invariants-or-later","GFDL-1.1-only","GFDL-1.1-or-later","GFDL-1.2-invariants-only","GFDL-1.2-invariants-or-later","GFDL-1.2-no-invariants-only","GFDL-1.2-no-invariants-or-later","GFDL-1.2-only","GFDL-1.2-or-later","GFDL-1.3-invariants-only","GFDL-1.3-invariants-or-later","GFDL-1.3-no-invariants-only","GFDL-1.3-no-invariants-or-later","GFDL-1.3-only","GFDL-1.3-or-later","GL2PS","GLWTPL","GPL-1.0-only","GPL-1.0-or-later","GPL-2.0-only","GPL-2.0-or-later","GPL-3.0-only","GPL-3.0-or-later","Game-Programming-Gems","Giftware","Glide","Glulxe","Graphics-Gems","Gutmann","HDF5","HIDAPI","HP-1986","HP-1989","HPND","HPND-DEC","HPND-Fenneberg-Livingston","HPND-INRIA-IMAG","HPND-Intel","HPND-Kevlin-Henney","HPND-MIT-disclaimer","HPND-Markus-Kuhn","HPND-Netrek","HPND-Pbmplus","HPND-SMC","HPND-UC","HPND-UC-export-US","HPND-doc","HPND-doc-sell","HPND-export-US","HPND-export-US-acknowledgement","HPND-export-US-modify","HPND-export2-US","HPND-merchantability-variant","HPND-sell-MIT-disclaimer-xserver","HPND-sell-regexpr","HPND-sell-variant","HPND-sell-variant-MIT-disclaimer","HPND-sell-variant-MIT-disclaimer-rev","HPND-sell-variant-critical-systems","HTMLTIDY","HaskellReport","Hippocratic-2.1","IBM-pibs","ICU","IEC-Code-Components-EULA","IJG","IJG-short","IPA","IPL-1.0","ISC","ISC-Veillard","ISO-permission","ImageMagick","Imlib2","Info-ZIP","Inner-Net-2.0","InnoSetup","Intel","Intel-ACPI","Interbase-1.0","JPL-image","JPNIC","JSON","Jam","JasPer-2.0","Kastrup","Kazlib","Knuth-CTAN","LAL-1.2","LAL-1.3","LGPL-2.0-only","LGPL-2.0-or-later","LGPL-2.1-only","LGPL-2.1-or-later","LGPL-3.0-only","LGPL-3.0-or-later","LGPLLR","LOOP","LPD-document","LPL-1.0","LPL-1.02","LPPL-1.0","LPPL-1.1","LPPL-1.2","LPPL-1.3a","LPPL-1.3c","LZMA-SDK-9.11-to-9.20","LZMA-SDK-9.22","Latex2e","Latex2e-translated-notice","Leptonica","LiLiQ-P-1.1","LiLiQ-R-1.1","LiLiQ-Rplus-1.1","Libpng","Linux-OpenIB","Linux-man-pages-1-para","Linux-man-pages-copyleft","Linux-man-pages-copyleft-2-para","Linux-man-pages-copyleft-var","Lucida-Bitmap-Fonts","MIPS","MIT","MIT-0","MIT-CMU","MIT-Click","MIT-Festival","MIT-Khronos-old","MIT-Modern-Variant","MIT-STK","MIT-Wu","MIT-advertising","MIT-enna","MIT-feh","MIT-open-group","MIT-testregex","MITNFA","MMIXware","MMPL-1.0.1","MPEG-SSG","MPL-1.0","MPL-1.1","MPL-2.0","MPL-2.0-no-copyleft-exception","MS-LPL","MS-PL","MS-RL","MTLL","Mackerras-3-Clause","Mackerras-3-Clause-acknowledgment","MakeIndex","Martin-Birgmeier","McPhee-slideshow","Minpack","MirOS","Motosoto","MulanPSL-1.0","MulanPSL-2.0","Multics","Mup","NAIST-2003","NASA-1.3","NBPL-1.0","NCBI-PD","NCGL-UK-2.0","NCL","NCSA","NGPL","NICTA-1.0","NIST-PD","NIST-PD-TNT","NIST-PD-fallback","NIST-Software","NLOD-1.0","NLOD-2.0","NLPL","NOSL","NPL-1.0","NPL-1.1","NPOSL-3.0","NRL","NTIA-PD","NTP","NTP-0","Naumen","NetCDF","Newsletr","Nokia","Noweb","O-UDA-1.0","OAR","OCCT-PL","OCLC-2.0","ODC-By-1.0","ODbL-1.0","OFFIS","OFL-1.0","OFL-1.0-RFN","OFL-1.0-no-RFN","OFL-1.1","OFL-1.1-RFN","OFL-1.1-no-RFN","OGC-1.0","OGDL-Taiwan-1.0","OGL-Canada-2.0","OGL-UK-1.0","OGL-UK-2.0","OGL-UK-3.0","OGTSL","OLDAP-1.1","OLDAP-1.2","OLDAP-1.3","OLDAP-1.4","OLDAP-2.0","OLDAP-2.0.1","OLDAP-2.1","OLDAP-2.2","OLDAP-2.2.1","OLDAP-2.2.2","OLDAP-2.3","OLDAP-2.4","OLDAP-2.5","OLDAP-2.6","OLDAP-2.7","OLDAP-2.8","OLFL-1.3","OML","OPL-1.0","OPL-UK-3.0","OPUBL-1.0","OSC-1.0","OSET-PL-2.1","OSL-1.0","OSL-1.1","OSL-2.0","OSL-2.1","OSL-3.0","OSSP","OpenMDW-1.0","OpenPBS-2.3","OpenSSL","OpenSSL-standalone","OpenVision","PADL","PDDL-1.0","PHP-3.0","PHP-3.01","PPL","PSF-2.0","ParaType-Free-Font-1.3","Parity-6.0.0","Parity-7.0.0","Pixar","Plexus","PolyForm-Noncommercial-1.0.0","PolyForm-Small-Business-1.0.0","PostgreSQL","Python-2.0","Python-2.0.1","QPL-1.0","QPL-1.0-INRIA-2004","Qhull","RHeCos-1.1","RPL-1.1","RPL-1.5","RPSL-1.0","RSA-MD","RSCPL","Rdisc","Ruby","Ruby-pty","SAX-PD","SAX-PD-2.0","SCEA","SGI-B-1.0","SGI-B-1.1","SGI-B-2.0","SGI-OpenGL","SGMLUG-PM","SGP4","SHL-0.5","SHL-0.51","SISSL","SISSL-1.2","SL","SMAIL-GPL","SMLNJ","SMPPL","SNIA","SOFA","SPL-1.0","SSH-OpenSSH","SSH-short","SSLeay-standalone","SSPL-1.0","SUL-1.0","SWL","Saxpath","SchemeReport","Sendmail","Sendmail-8.23","Sendmail-Open-Source-1.1","SimPL-2.0","Sleepycat","Soundex","Spencer-86","Spencer-94","Spencer-99","SugarCRM-1.1.3","Sun-PPP","Sun-PPP-2000","SunPro","Symlinks","TAPR-OHL-1.0","TCL","TCP-wrappers","TGPPL-1.0","TMate","TORQUE-1.1","TOSL","TPDL","TPL-1.0","TTWL","TTYP0","TU-Berlin-1.0","TU-Berlin-2.0","TekHVC","TermReadKey","ThirdEye","TrustedQSL","UCAR","UCL-1.0","UMich-Merit","UPL-1.0","URT-RLE","Ubuntu-font-1.0","UnRAR","Unicode-3.0","Unicode-DFS-2015","Unicode-DFS-2016","Unicode-TOU","UnixCrypt","Unlicense","Unlicense-libtelnet","Unlicense-libwhirlpool","VOSTROM","VSL-1.0","Vim","Vixie-Cron","W3C","W3C-19980720","W3C-20150513","WTFNMFPL","WTFPL","Watcom-1.0","Widget-Workshop","WordNet","Wsuipa","X11","X11-distribute-modifications-variant","X11-no-permit-persons","X11-swapped","XFree86-1.1","XSkat","Xdebug-1.03","Xerox","Xfig","Xnet","YPL-1.0","YPL-1.1","ZPL-1.1","ZPL-2.0","ZPL-2.1","Zed","Zeeff","Zend-2.0","Zimbra-1.3","Zimbra-1.4","Zlib","any-OSI","any-OSI-perl-modules","bcrypt-Solar-Designer","blessing","bzip2-1.0.6","check-cvs","checkmk","copyleft-next-0.3.0","copyleft-next-0.3.1","curl","cve-tou","diffmark","dtoa","dvipdfm","eGenix","etalab-2.0","fwlw","gSOAP-1.3b","generic-xts","gnuplot","gtkbook","hdparm","hyphen-bulgarian","iMatix","jove","libpng-1.6.35","libpng-2.0","libselinux-1.0","libtiff","libutil-David-Nugent","lsof","magaz","mailprio","man2html","metamail","mpi-permissive","mpich2","mplus","ngrep","pkgconf","pnmstitch","psfrag","psutils","python-ldap","radvd","snprintf","softSurfer","ssh-keyscan","swrule","threeparttable","ulem","w3m","wwl","xinetd","xkeyboard-config-Zinoviev","xlock","xpp","xzoom","zlib-acknowledgement"]');
-
-/***/ })
-
-/******/ });
-/************************************************************************/
-/******/ // The module cache
-/******/ var __webpack_module_cache__ = {};
-/******/ 
-/******/ // The require function
-/******/ function __nccwpck_require__(moduleId) {
-/******/ 	// Check if module is in cache
-/******/ 	var cachedModule = __webpack_module_cache__[moduleId];
-/******/ 	if (cachedModule !== undefined) {
-/******/ 		return cachedModule.exports;
-/******/ 	}
-/******/ 	// Create a new module (and put it into the cache)
-/******/ 	var module = __webpack_module_cache__[moduleId] = {
-/******/ 		// no module.id needed
-/******/ 		// no module.loaded needed
-/******/ 		exports: {}
-/******/ 	};
-/******/ 
-/******/ 	// Execute the module function
-/******/ 	var threw = true;
-/******/ 	try {
-/******/ 		__webpack_modules__[moduleId].call(module.exports, module, module.exports, __nccwpck_require__);
-/******/ 		threw = false;
-/******/ 	} finally {
-/******/ 		if(threw) delete __webpack_module_cache__[moduleId];
-/******/ 	}
-/******/ 
-/******/ 	// Return the exports of the module
-/******/ 	return module.exports;
-/******/ }
-/******/ 
-/************************************************************************/
-/******/ /* webpack/runtime/compat */
-/******/ 
-/******/ if (typeof __nccwpck_require__ !== 'undefined') __nccwpck_require__.ab = new URL('.', import.meta.url).pathname.slice(import.meta.url.match(/^file:\/\/\/\w:/) ? 1 : 0, -1) + "/";
-/******/ 
-/************************************************************************/
-var __webpack_exports__ = {};
-
-// EXTERNAL MODULE: ../../.yarn/berry/cache/@actions-core-npm-1.11.1-ad090a2026-10c0.zip/node_modules/@actions/core/lib/core.js
-var core = __nccwpck_require__(7687);
-;// CONCATENATED MODULE: external "node:fs"
-const external_node_fs_namespaceObject = __WEBPACK_EXTERNAL_createRequire(import.meta.url)("node:fs");
-;// CONCATENATED MODULE: external "node:path"
-const external_node_path_namespaceObject = __WEBPACK_EXTERNAL_createRequire(import.meta.url)("node:path");
-// EXTERNAL MODULE: ../../.yarn/berry/cache/yaml-npm-2.9.0-0cdd9bc0bc-10c0.zip/node_modules/yaml/dist/index.js
-var dist = __nccwpck_require__(918);
-;// CONCATENATED MODULE: ./lib/config.js
+/* harmony export */ __nccwpck_require__.d(__webpack_exports__, {
+/* harmony export */   $: () => (/* binding */ headerRules),
+/* harmony export */   Z: () => (/* binding */ loadConfig)
+/* harmony export */ });
+/* harmony import */ var node_fs__WEBPACK_IMPORTED_MODULE_0__ = __nccwpck_require__(3024);
+/* harmony import */ var node_path__WEBPACK_IMPORTED_MODULE_1__ = __nccwpck_require__(6760);
+/* harmony import */ var yaml__WEBPACK_IMPORTED_MODULE_2__ = __nccwpck_require__(918);
 
 
 
@@ -43144,11 +43098,14 @@ function asRecord(value) {
         ? value
         : {};
 }
+function flattenHeader(entry) {
+    if (Array.isArray(entry))
+        return entry;
+    return entry ? [entry] : [];
+}
 function normalizeHeader(value) {
     if (Array.isArray(value)) {
-        return value
-            .map((entry) => normalizeHeader(entry))
-            .flatMap((entry) => Array.isArray(entry) ? entry : entry ? [entry] : []);
+        return value.map((entry) => normalizeHeader(entry)).flatMap(flattenHeader);
     }
     if (!value || typeof value !== "object")
         return undefined;
@@ -43258,11 +43215,11 @@ function normalizeDependencies(value) {
     };
 }
 function loadConfig(root, configPath) {
-    const absolutePath = (0,external_node_path_namespaceObject.resolve)(root, configPath);
-    if (!(0,external_node_fs_namespaceObject.existsSync)(absolutePath))
+    const absolutePath = (0,node_path__WEBPACK_IMPORTED_MODULE_1__.resolve)(root, configPath);
+    if (!(0,node_fs__WEBPACK_IMPORTED_MODULE_0__.existsSync)(absolutePath))
         throw new Error(`Configuration file not found: ${configPath}`);
-    const source = (0,external_node_fs_namespaceObject.readFileSync)(absolutePath, "utf8");
-    const parsed = asRecord((0,dist/* parse */.qg)(source));
+    const source = (0,node_fs__WEBPACK_IMPORTED_MODULE_0__.readFileSync)(absolutePath, "utf8");
+    const parsed = asRecord((0,yaml__WEBPACK_IMPORTED_MODULE_2__/* .parse */ .qg)(source));
     const config = {
         header: normalizeHeader(parsed.header),
         dependency: normalizeDependencies(parsed.dependency),
@@ -43278,8 +43235,26 @@ function headerRules(config) {
     return Array.isArray(config.header) ? config.header : [config.header];
 }
 //# sourceMappingURL=config.js.map
+
+/***/ }),
+
+/***/ 472:
+/***/ ((__unused_webpack___webpack_module__, __webpack_exports__, __nccwpck_require__) => {
+
+
+// EXPORTS
+__nccwpck_require__.d(__webpack_exports__, {
+  q: () => (/* binding */ checkDependencies)
+});
+
+// EXTERNAL MODULE: external "node:fs"
+var external_node_fs_ = __nccwpck_require__(3024);
+// EXTERNAL MODULE: external "node:path"
+var external_node_path_ = __nccwpck_require__(6760);
 // EXTERNAL MODULE: ../../.yarn/berry/cache/@iarna-toml-npm-2.2.5-6da1399e8e-10c0.zip/node_modules/@iarna/toml/toml.js
 var toml = __nccwpck_require__(389);
+// EXTERNAL MODULE: ../../.yarn/berry/cache/yaml-npm-2.9.0-0cdd9bc0bc-10c0.zip/node_modules/yaml/dist/index.js
+var dist = __nccwpck_require__(918);
 ;// CONCATENATED MODULE: ../../.yarn/berry/cache/balanced-match-npm-4.0.4-fd666b3c7f-10c0.zip/node_modules/balanced-match/dist/esm/index.js
 const balanced = (a, b, str) => {
     const ma = a instanceof RegExp ? maybeMatch(a, str) : a;
@@ -45798,6 +45773,8 @@ minimatch.Minimatch = Minimatch;
 minimatch.escape = escape_escape;
 minimatch.unescape = unescape_unescape;
 //# sourceMappingURL=index.js.map
+// EXTERNAL MODULE: ./lib/config.js
+var lib_config = __nccwpck_require__(9651);
 // EXTERNAL MODULE: ../../.yarn/berry/cache/spdx-correct-npm-3.2.0-ffae008484-10c0.zip/node_modules/spdx-correct/index.js
 var spdx_correct = __nccwpck_require__(1854);
 // EXTERNAL MODULE: ../../.yarn/berry/cache/spdx-expression-parse-npm-3.0.1-b718cbb35a-10c0.zip/node_modules/spdx-expression-parse/index.js
@@ -46044,13 +46021,13 @@ function licenseIds(expression) {
 }
 function distributionWarningFor(expression) {
     const ids = licenseIds(parseLicenseExpression(expression));
-    if (ids.some((id) => /^AGPL-/.test(id)))
+    if (ids.some((id) => id.startsWith("AGPL-")))
         return "Distribution review: AGPL terms can require offering corresponding source to network users. Include required notices and review the license before distribution or deployment.";
-    if (ids.some((id) => /^GPL-/.test(id)))
+    if (ids.some((id) => id.startsWith("GPL-")))
         return "Distribution review: GPL terms can require distributing corresponding source and licensing covered combined work under GPL. Include required notices and the license text.";
-    if (ids.some((id) => /^LGPL-/.test(id)))
+    if (ids.some((id) => id.startsWith("LGPL-")))
         return "Distribution review: LGPL terms require preserving notices and providing the license text; distribution of modified or combined work can create source and relinking obligations.";
-    if (ids.some((id) => /^MPL-/.test(id)))
+    if (ids.some((id) => id.startsWith("MPL-")))
         return "Distribution review: MPL terms require preserving notices and making covered source files available when distributing executable form.";
     if (ids.includes("CAL-1.0"))
         return "Distribution review: CAL has reciprocal source, deployment, and user-autonomy obligations. Review its terms before providing the software to third parties.";
@@ -46130,17 +46107,14 @@ function matrixCompatibility(main, dependency, weakCompatible) {
         return weakCompatible ? "weak-compatible" : "unknown";
     return value;
 }
-function compareSingle(main, dependency, weakCompatible, config) {
-    if (dependency === "Unknown")
-        return "incompatible";
+function configuredCompatibility(dependency, config) {
     if (config?.require_fsf_free && !isFree(dependency))
         return "incompatible";
     if (config?.require_osi_approved && !isOsi(dependency))
         return "incompatible";
-    const mainGroup = matrixGroup(main);
-    const dependencyGroup = matrixGroup(dependency);
-    if (mainGroup && dependencyGroup)
-        return matrixCompatibility(mainGroup, dependencyGroup, weakCompatible);
+    return undefined;
+}
+function categoryCompatibility(main, dependency, weakCompatible) {
     if (CATEGORY_A.has(main)) {
         if (CATEGORY_A.has(dependency))
             return "compatible";
@@ -46158,6 +46132,18 @@ function compareSingle(main, dependency, weakCompatible, config) {
         return "incompatible";
     }
     return main === dependency ? "compatible" : "unknown";
+}
+function compareSingle(main, dependency, weakCompatible, config) {
+    if (dependency === "Unknown")
+        return "incompatible";
+    const configured = configuredCompatibility(dependency, config);
+    if (configured)
+        return configured;
+    const mainGroup = matrixGroup(main);
+    const dependencyGroup = matrixGroup(dependency);
+    if (mainGroup && dependencyGroup)
+        return matrixCompatibility(mainGroup, dependencyGroup, weakCompatible);
+    return categoryCompatibility(main, dependency, weakCompatible);
 }
 function combineAnd(left, right) {
     if (left === "incompatible" || right === "incompatible")
@@ -46204,7 +46190,7 @@ function isUnknownLicense(value) {
 
 
 function pathForGlob(path) {
-    return path.split(external_node_path_namespaceObject.sep).join("/");
+    return path.split(external_node_path_.sep).join("/");
 }
 function matchesPath(path, patterns) {
     if (!patterns || patterns.length === 0)
@@ -46222,7 +46208,7 @@ function matchesPath(path, patterns) {
 }
 function readJson(path) {
     try {
-        return JSON.parse((0,external_node_fs_namespaceObject.readFileSync)(path, "utf8"));
+        return JSON.parse((0,external_node_fs_.readFileSync)(path, "utf8"));
     }
     catch {
         return undefined;
@@ -46230,7 +46216,7 @@ function readJson(path) {
 }
 function readText(path) {
     try {
-        return (0,external_node_fs_namespaceObject.readFileSync)(path, "utf8");
+        return (0,external_node_fs_.readFileSync)(path, "utf8");
     }
     catch {
         return undefined;
@@ -46238,7 +46224,7 @@ function readText(path) {
 }
 function isFile(path) {
     try {
-        return (0,external_node_fs_namespaceObject.existsSync)(path) && (0,external_node_fs_namespaceObject.lstatSync)(path).isFile();
+        return (0,external_node_fs_.existsSync)(path) && (0,external_node_fs_.lstatSync)(path).isFile();
     }
     catch {
         return false;
@@ -46331,7 +46317,7 @@ function parseNpmLock(manifest, lockPath, dependencies) {
         visitLegacy(lock.dependencies);
 }
 function parseYarnLock(manifest, lockPath, dependencies) {
-    const text = (0,external_node_fs_namespaceObject.readFileSync)(lockPath, "utf8");
+    const text = (0,external_node_fs_.readFileSync)(lockPath, "utf8");
     let names = [];
     let version = "*";
     let workspaceEntry = false;
@@ -46344,46 +46330,60 @@ function parseYarnLock(manifest, lockPath, dependencies) {
         version = "*";
         workspaceEntry = false;
     };
+    const parseSelector = (selector) => {
+        for (const item of selector.split(",").map((value) => value.trim())) {
+            const normalized = item.replace(/^['"]|['"]$/g, "");
+            if (normalized.includes("@workspace:")) {
+                workspaceEntry = true;
+                continue;
+            }
+            const berryAlias = normalized.indexOf("@npm:");
+            if (berryAlias > 0) {
+                // A Berry descriptor such as `alias@npm:real-package@1.0.0`
+                // installs the target package, rather than `alias`. Keep the
+                // original name for ordinary descriptors like `foo@npm:^1.0.0`.
+                const target = normalized.slice(berryAlias + "@npm:".length);
+                const targetScoped = /^(@[^/]+\/[^@]+)@/.exec(target);
+                const targetPlain = /^([^@/]+)@/.exec(target);
+                names.push(targetScoped?.[1] ??
+                    targetPlain?.[1] ??
+                    normalized.slice(0, berryAlias));
+                continue;
+            }
+            const scoped = /^(@[^/]+\/[^@]+)@/.exec(normalized);
+            const plain = /^([^@]+)@/.exec(normalized);
+            const name = scoped?.[1] ?? plain?.[1];
+            if (name)
+                names.push(name);
+        }
+    };
+    const versionFromLine = (line) => {
+        const trimmed = line.trimStart();
+        if (!trimmed.startsWith("version"))
+            return undefined;
+        let value = trimmed.slice("version".length).trimStart();
+        if (value.startsWith(":"))
+            value = value.slice(1).trimStart();
+        value = value.replace(/^['"]/, "");
+        const end = [...value].findIndex((character) => character === "'" ||
+            character === '"' ||
+            character === " " ||
+            character === "\t");
+        return value.slice(0, end < 0 ? value.length : end);
+    };
     for (const line of text.split(/\r?\n/)) {
         if (line.trim() === "" || line.startsWith("#"))
             continue;
         if (!line.startsWith(" ") && !line.startsWith("\t") && line.endsWith(":")) {
             flush();
-            const selector = line
-                .slice(0, -1)
-                .trim()
-                .replace(/^['"]|['"]$/g, "");
-            for (const item of selector.split(/\s*,\s*/)) {
-                const normalized = item.replace(/^['"]|['"]$/g, "");
-                if (normalized.includes("@workspace:")) {
-                    workspaceEntry = true;
-                    continue;
-                }
-                const berryAlias = normalized.indexOf("@npm:");
-                if (berryAlias > 0) {
-                    // A Berry descriptor such as `alias@npm:real-package@1.0.0`
-                    // installs the target package, rather than `alias`. Keep the
-                    // original name for ordinary descriptors like `foo@npm:^1.0.0`.
-                    const target = normalized.slice(berryAlias + "@npm:".length);
-                    const targetScoped = target.match(/^(@[^/]+\/[^@]+)@/);
-                    const targetPlain = target.match(/^([^@/]+)@/);
-                    names.push(targetScoped?.[1] ??
-                        targetPlain?.[1] ??
-                        normalized.slice(0, berryAlias));
-                    continue;
-                }
-                const scoped = normalized.match(/^(@[^/]+\/[^@]+)@/);
-                const plain = normalized.match(/^([^@]+)@/);
-                const name = scoped?.[1] ?? plain?.[1];
-                if (name)
-                    names.push(name);
-            }
+            parseSelector(line.slice(0, -1).trim());
         }
         else {
-            const match = line.match(/^\s+version(?:\s+|:\s*)['"]?([^'"\s]+)['"]?/);
-            if (match)
-                version = match[1];
-            if (/^\s+resolution:\s+['"]?.+@workspace:/.test(line))
+            const parsedVersion = versionFromLine(line);
+            if (parsedVersion)
+                version = parsedVersion;
+            const trimmed = line.trimStart();
+            if (trimmed.startsWith("resolution:") && trimmed.includes("@workspace:"))
                 workspaceEntry = true;
         }
     }
@@ -46391,16 +46391,16 @@ function parseYarnLock(manifest, lockPath, dependencies) {
 }
 function packageFromLockKey(key) {
     const normalized = key.replace(/^\//, "").replace(/^npm:/, "");
-    const scoped = normalized.match(/^(@[^/]+\/[^@]+)@(.+)$/);
+    const scoped = /^(@[^/]+\/[^@]+)@(.+)$/.exec(normalized);
     if (scoped)
         return { name: scoped[1], version: scoped[2].split("(")[0] };
-    const plain = normalized.match(/^([^@/]+)@(.+)$/);
+    const plain = /^([^@/]+)@(.+)$/.exec(normalized);
     return plain
         ? { name: plain[1], version: plain[2].split("(")[0] }
         : undefined;
 }
 function parsePnpmLock(manifest, lockPath, dependencies) {
-    const parsed = (0,dist/* parse */.qg)((0,external_node_fs_namespaceObject.readFileSync)(lockPath, "utf8"));
+    const parsed = (0,dist/* parse */.qg)((0,external_node_fs_.readFileSync)(lockPath, "utf8"));
     for (const section of ["packages", "snapshots"]) {
         const entries = parsed[section];
         if (!entries || typeof entries !== "object")
@@ -46413,10 +46413,11 @@ function parsePnpmLock(manifest, lockPath, dependencies) {
     }
 }
 function parseGoMod(manifest, path, dependencies) {
-    const text = (0,external_node_fs_namespaceObject.readFileSync)(path, "utf8");
+    const text = (0,external_node_fs_.readFileSync)(path, "utf8");
     let inRequire = false;
     for (const rawLine of text.split(/\r?\n/)) {
-        const line = rawLine.replace(/\/\/.*$/, "").trim();
+        const commentStart = rawLine.indexOf("//");
+        const line = (commentStart < 0 ? rawLine : rawLine.slice(0, commentStart)).trim();
         if (!line)
             continue;
         if (/^require\s*\(/.test(line)) {
@@ -46427,8 +46428,8 @@ function parseGoMod(manifest, path, dependencies) {
             inRequire = false;
             continue;
         }
-        const inline = line.match(/^require\s+(\S+)\s+(\S+)/);
-        const block = inRequire ? line.match(/^(\S+)\s+(\S+)/) : undefined;
+        const inline = /^require\s+(\S+)\s+(\S+)/.exec(line);
+        const block = inRequire ? /^(\S+)\s+(\S+)/.exec(line) : undefined;
         const match = inline ?? block;
         if (!match)
             continue;
@@ -46441,61 +46442,98 @@ function parseGoMod(manifest, path, dependencies) {
     }
 }
 function parseGoSum(manifest, path, dependencies) {
-    for (const rawLine of (0,external_node_fs_namespaceObject.readFileSync)(path, "utf8").split(/\r?\n/)) {
-        const match = rawLine.trim().match(/^(\S+)\s+(\S+)(?:\/go\.mod)?\s+h1:/);
-        if (match)
+    for (const rawLine of (0,external_node_fs_.readFileSync)(path, "utf8").split(/\r?\n/)) {
+        const fields = rawLine.trim().split(/\s+/);
+        const name = fields[0];
+        const rawVersion = fields[1];
+        const checksum = fields[2];
+        if (name && rawVersion && checksum?.startsWith("h1:")) {
+            const version = rawVersion.endsWith("/go.mod")
+                ? rawVersion.slice(0, -"/go.mod".length)
+                : rawVersion;
             dependencies.push({
-                name: match[1],
-                version: match[2],
+                name,
+                version,
                 ecosystem: "go",
                 manifest,
             });
+        }
     }
 }
 function parseRequirements(manifest, path, dependencies) {
-    for (const rawLine of (0,external_node_fs_namespaceObject.readFileSync)(path, "utf8").split(/\r?\n/)) {
-        const line = rawLine.replace(/\s+#.*$/, "").trim();
+    const parseRequirement = (value) => {
+        const nameMatch = /^[A-Za-z0-9][A-Za-z0-9_.-]*/.exec(value);
+        if (!nameMatch)
+            return undefined;
+        const name = nameMatch[0];
+        let remainder = value.slice(name.length).trimStart();
+        if (remainder.startsWith("[")) {
+            const extrasEnd = remainder.indexOf("]");
+            if (extrasEnd < 0)
+                return undefined;
+            remainder = remainder.slice(extrasEnd + 1).trimStart();
+        }
+        const operator = /^(===|==|~=|>=|<=|>|<)/.exec(remainder)?.[0];
+        if (!operator)
+            return { name, version: "*" };
+        remainder = remainder.slice(operator.length).trimStart();
+        const semicolon = remainder.indexOf(";");
+        const whitespace = remainder.search(/\s/);
+        const end = [semicolon, whitespace]
+            .filter((index) => index >= 0)
+            .sort((left, right) => left - right)[0];
+        return {
+            name,
+            version: remainder.slice(0, end ?? remainder.length) || "*",
+        };
+    };
+    for (const rawLine of (0,external_node_fs_.readFileSync)(path, "utf8").split(/\r?\n/)) {
+        const commentStart = rawLine.indexOf("#");
+        const line = (commentStart < 0 ? rawLine : rawLine.slice(0, commentStart)).trim();
         if (!line || line.startsWith("#") || line.startsWith("-"))
             continue;
-        const match = line.match(/^([A-Za-z0-9][A-Za-z0-9_.-]*)(?:\[[^\]]+\])?\s*(?:(===|==|~=|>=|<=|>|<)\s*([^;\s]+))?/);
-        if (match)
+        const requirement = parseRequirement(line);
+        if (requirement)
             dependencies.push({
-                name: match[1],
-                version: match[3] ?? "*",
+                ...requirement,
                 ecosystem: "python",
                 manifest,
             });
     }
 }
 function parsePyproject(manifest, path, dependencies) {
-    const text = (0,external_node_fs_namespaceObject.readFileSync)(path, "utf8");
-    const dependencyLines = text.match(/(?:^|\n)\s*dependencies\s*=\s*\[([\s\S]*?)\]/m)?.[1] ?? "";
-    for (const value of dependencyLines.matchAll(/['"]([^'"]+)['"]/g)) {
-        const match = value[1].match(/^([A-Za-z0-9][A-Za-z0-9_.-]*)(?:\[[^\]]+\])?\s*(.*)$/);
-        if (match)
-            dependencies.push({
-                name: match[1],
-                version: match[2].trim() || "*",
-                ecosystem: "python",
-                manifest,
-            });
+    let parsed;
+    try {
+        parsed = (0,toml.parse)((0,external_node_fs_.readFileSync)(path, "utf8"));
     }
-    const section = text.match(/\[tool\.poetry\.dependencies\]([\s\S]*?)(?=\n\[|$)/)?.[1] ?? "";
-    for (const line of section.split(/\r?\n/)) {
-        const match = line.match(/^\s*([A-Za-z0-9][A-Za-z0-9_.-]*)\s*=\s*(.+)$/);
-        if (match && match[1].toLowerCase() !== "python") {
+    catch {
+        return;
+    }
+    const projectDependencies = parsed.project?.dependencies;
+    if (Array.isArray(projectDependencies)) {
+        for (const value of projectDependencies) {
+            if (typeof value !== "string")
+                continue;
+            const nameMatch = /^[A-Za-z0-9][A-Za-z0-9_.-]*/.exec(value);
+            if (!nameMatch)
+                continue;
             dependencies.push({
-                name: match[1],
-                version: match[2].replace(/^['"]|['"]$/g, ""),
+                name: nameMatch[0],
+                version: value.slice(nameMatch[0].length).trim() || "*",
                 ecosystem: "python",
                 manifest,
             });
         }
     }
+    for (const [name, value] of Object.entries(parsed.tool?.poetry?.dependencies ?? {})) {
+        if (name.toLowerCase() === "python" || typeof value !== "string")
+            continue;
+        dependencies.push({ name, version: value, ecosystem: "python", manifest });
+    }
 }
 function parsePoetryLock(manifest, path, dependencies) {
     try {
-        const lock = (0,toml.parse)((0,external_node_fs_namespaceObject.readFileSync)(path, "utf8"));
+        const lock = (0,toml.parse)((0,external_node_fs_.readFileSync)(path, "utf8"));
         for (const entry of lock.package ?? []) {
             if (entry.name)
                 dependencies.push({
@@ -46525,57 +46563,58 @@ function parsePipfileLock(manifest, path, dependencies) {
         }
     }
 }
+function parsePackageJsonManifest(manifest, absolute, dependencies) {
+    const packageJson = readJson(absolute);
+    const lockParsers = {
+        "package-lock.json": parseNpmLock,
+        "npm-shrinkwrap.json": parseNpmLock,
+        "yarn.lock": parseYarnLock,
+        "pnpm-lock.yaml": parsePnpmLock,
+    };
+    let lockFound = false;
+    for (const [lockName, parser] of Object.entries(lockParsers)) {
+        const lockPath = (0,external_node_path_.join)((0,external_node_path_.dirname)(absolute), lockName);
+        if (!isFile(lockPath))
+            continue;
+        lockFound = true;
+        parser(manifest, lockPath, dependencies);
+    }
+    if (!lockFound && packageJson)
+        addPackageJsonDependencies(dependencies, manifest, packageJson);
+}
+function parsePyprojectManifest(manifest, path, dependencies) {
+    const poetryLockPath = (0,external_node_path_.join)((0,external_node_path_.dirname)(path), "poetry.lock");
+    if (isFile(poetryLockPath) &&
+        parsePoetryLock(manifest, poetryLockPath, dependencies))
+        return;
+    parsePyproject(manifest, path, dependencies);
+}
+const MANIFEST_PARSERS = {
+    "package-lock.json": parseNpmLock,
+    "npm-shrinkwrap.json": parseNpmLock,
+    "yarn.lock": parseYarnLock,
+    "pnpm-lock.yaml": parsePnpmLock,
+    "go.mod": parseGoMod,
+    "go.sum": parseGoSum,
+    "requirements.txt": parseRequirements,
+    "pyproject.toml": parsePyprojectManifest,
+    "poetry.lock": (manifest, path, dependencies) => {
+        parsePoetryLock(manifest, path, dependencies);
+    },
+    "Pipfile.lock": parsePipfileLock,
+};
 function parseManifest(root, path, dependencies) {
     const basename = path.split("/").pop() ?? path;
-    const absolute = (0,external_node_path_namespaceObject.resolve)(root, path);
+    const absolute = (0,external_node_path_.resolve)(root, path);
     if (!isFile(absolute))
         return;
     if (basename === "package.json") {
-        const packageJson = readJson(absolute);
-        const lockFiles = [];
-        for (const lockName of [
-            "package-lock.json",
-            "npm-shrinkwrap.json",
-            "yarn.lock",
-            "pnpm-lock.yaml",
-        ]) {
-            const lockPath = (0,external_node_path_namespaceObject.join)((0,external_node_path_namespaceObject.dirname)(absolute), lockName);
-            if (!isFile(lockPath))
-                continue;
-            lockFiles.push(lockName);
-            if (lockName === "yarn.lock")
-                parseYarnLock(path, lockPath, dependencies);
-            else if (lockName === "pnpm-lock.yaml")
-                parsePnpmLock(path, lockPath, dependencies);
-            else
-                parseNpmLock(path, lockPath, dependencies);
-        }
-        if (lockFiles.length === 0 && packageJson)
-            addPackageJsonDependencies(dependencies, path, packageJson);
+        parsePackageJsonManifest(path, absolute, dependencies);
+        return;
     }
-    else if (basename === "package-lock.json" ||
-        basename === "npm-shrinkwrap.json")
-        parseNpmLock(path, absolute, dependencies);
-    else if (basename === "yarn.lock")
-        parseYarnLock(path, absolute, dependencies);
-    else if (basename === "pnpm-lock.yaml")
-        parsePnpmLock(path, absolute, dependencies);
-    else if (basename === "go.mod")
-        parseGoMod(path, absolute, dependencies);
-    else if (basename === "go.sum")
-        parseGoSum(path, absolute, dependencies);
-    else if (basename === "requirements.txt" || basename.endsWith(".txt"))
-        parseRequirements(path, absolute, dependencies);
-    else if (basename === "pyproject.toml") {
-        const poetryLockPath = (0,external_node_path_namespaceObject.join)((0,external_node_path_namespaceObject.dirname)(absolute), "poetry.lock");
-        if (!isFile(poetryLockPath) ||
-            !parsePoetryLock(path, poetryLockPath, dependencies))
-            parsePyproject(path, absolute, dependencies);
-    }
-    else if (basename === "poetry.lock")
-        parsePoetryLock(path, absolute, dependencies);
-    else if (basename === "Pipfile.lock")
-        parsePipfileLock(path, absolute, dependencies);
+    const parser = MANIFEST_PARSERS[basename] ??
+        (basename.endsWith(".txt") ? parseRequirements : undefined);
+    parser?.(path, absolute, dependencies);
 }
 function overrideFor(config, name, version) {
     for (const override of config.licenses ?? []) {
@@ -46605,11 +46644,11 @@ function excludedBy(config, name, version) {
 }
 function installedNpmPackage(root, manifest, name) {
     const packagePath = name.startsWith("@")
-        ? (0,external_node_path_namespaceObject.join)("node_modules", ...name.split("/"), "package.json")
-        : (0,external_node_path_namespaceObject.join)("node_modules", name, "package.json");
+        ? (0,external_node_path_.join)("node_modules", ...name.split("/"), "package.json")
+        : (0,external_node_path_.join)("node_modules", name, "package.json");
     const candidates = [
-        (0,external_node_path_namespaceObject.join)(root, packagePath),
-        (0,external_node_path_namespaceObject.join)(root, (0,external_node_path_namespaceObject.dirname)(manifest), packagePath),
+        (0,external_node_path_.join)(root, packagePath),
+        (0,external_node_path_.join)(root, (0,external_node_path_.dirname)(manifest), packagePath),
     ];
     for (const candidate of candidates) {
         const packageJson = readJson(candidate);
@@ -46731,8 +46770,13 @@ async function resolveNpm(root, dependency, logger) {
     return { resolution: "unknown" };
 }
 function pythonVersionParts(version) {
-    const match = version.trim().match(/^v?(\d+(?:\.\d+)*)$/i);
-    return match?.[1].split(".").map(Number);
+    let value = version.trim();
+    if (value[0]?.toLowerCase() === "v")
+        value = value.slice(1);
+    const parts = value.split(".");
+    if (parts.length === 0 || parts.some((part) => !/^\d+$/.test(part)))
+        return undefined;
+    return parts.map(Number);
 }
 function comparePythonVersions(left, right) {
     const leftParts = pythonVersionParts(left);
@@ -46748,11 +46792,10 @@ function comparePythonVersions(left, right) {
     return 0;
 }
 function pythonSpecifier(version) {
-    return version
-        .trim()
-        .replace(/^\((.*)\)$/, "$1")
-        .split(";", 1)[0]
-        .trim();
+    let value = version.trim();
+    if (value.startsWith("(") && value.endsWith(")"))
+        value = value.slice(1, -1);
+    return value.split(";", 1)[0].trim();
 }
 function matchesPythonSpecifier(version, specifier) {
     const parts = pythonVersionParts(version);
@@ -46762,9 +46805,7 @@ function matchesPythonSpecifier(version, specifier) {
     if (!constraints || constraints === "*")
         return true;
     return constraints.split(",").every((constraint) => {
-        const match = constraint
-            .trim()
-            .match(/^(===|==|!=|~=|>=|<=|>|<)?\s*v?(\d+(?:\.\d+)*(?:\.\*)?)$/i);
+        const match = /^(===|==|!=|~=|>=|<=|>|<)?\s*v?(\d+(?:\.\d+)*(?:\.\*)?)$/i.exec(constraint.trim());
         if (!match)
             return false;
         const operator = match[1] ?? "==";
@@ -46800,9 +46841,12 @@ function matchesPythonSpecifier(version, specifier) {
     });
 }
 function exactPythonVersion(version) {
-    const specifier = pythonSpecifier(version);
-    const match = specifier.match(/^(?:===|==)?\s*(v?\d+(?:\.\d+)*)$/i);
-    return match?.[1];
+    let specifier = pythonSpecifier(version);
+    if (specifier.startsWith("==="))
+        specifier = specifier.slice(3).trim();
+    else if (specifier.startsWith("=="))
+        specifier = specifier.slice(2).trim();
+    return pythonVersionParts(specifier) ? specifier : undefined;
 }
 function selectPythonRelease(metadata, specifier) {
     return Object.entries(metadata.releases ?? {})
@@ -46815,17 +46859,22 @@ function selectPythonRelease(metadata, specifier) {
 }
 function licenseFromPythonClassifier(classifier) {
     const label = classifier.split("::").pop()?.trim() ?? classifier;
-    if (/lesser general public license v3.*\(lgplv3\+\)/i.test(label))
+    const lower = label.toLowerCase();
+    if (lower.includes("lesser general public license v3") &&
+        lower.includes("(lgplv3+)"))
         return "LGPL-3.0-or-later";
-    if (/lesser general public license v2\.1.*\(lgplv2\.1\+\)/i.test(label))
+    if (lower.includes("lesser general public license v2.1") &&
+        lower.includes("(lgplv2.1+)"))
         return "LGPL-2.1-or-later";
-    if (/lesser general public license v2.*\(lgplv2\+\)/i.test(label))
+    if (lower.includes("lesser general public license v2") &&
+        lower.includes("(lgplv2+)"))
         return "LGPL-2.0-or-later";
-    if (/general public license v3.*\(gplv3\+\)/i.test(label))
+    if (lower.includes("general public license v3") && lower.includes("(gplv3+)"))
         return "GPL-3.0-or-later";
-    if (/general public license v2.*\(gplv2\+\)/i.test(label))
+    if (lower.includes("general public license v2") && lower.includes("(gplv2+)"))
         return "GPL-2.0-or-later";
-    if (/mozilla public license 1\.1.*\(mpl 1\.1\)/i.test(label))
+    if (lower.includes("mozilla public license 1.1") &&
+        lower.includes("(mpl 1.1)"))
         return "MPL-1.1";
     return label;
 }
@@ -46893,87 +46942,107 @@ async function resolveGithubRepositoryLicense(repository, token) {
     }
     return { resolution: "unknown" };
 }
-async function resolvePython(dependency, token, logger) {
-    const packageName = dependency.name.replace(/[-_.]+/g, "-");
-    const packageUrl = `https://pypi.org/pypi/${encodeURIComponent(packageName)}`;
+async function loadPythonMetadata(packageUrl, dependency) {
     const pinnedVersion = exactPythonVersion(dependency.version);
     let resolvedVersion = pinnedVersion;
     let metadata = (await fetchJson(pinnedVersion
-        ? `${packageUrl}/${encodeURIComponent(pinnedVersion)}/json`
-        : `${packageUrl}/json`));
+        ? packageUrl + "/" + encodeURIComponent(pinnedVersion) + "/json"
+        : packageUrl + "/json"));
     if (!pinnedVersion && metadata) {
         resolvedVersion = selectPythonRelease(metadata, dependency.version);
         if (resolvedVersion && resolvedVersion !== metadata.info?.version) {
-            const releaseMetadata = (await fetchJson(`${packageUrl}/${encodeURIComponent(resolvedVersion)}/json`));
+            const releaseMetadata = (await fetchJson(packageUrl + "/" + encodeURIComponent(resolvedVersion) + "/json"));
             if (releaseMetadata)
                 metadata = releaseMetadata;
         }
     }
-    const info = metadata?.info;
-    if (info?.license_expression?.trim())
+    return { metadata, version: resolvedVersion };
+}
+function declaredPythonLicense(info, version) {
+    const expression = info?.license_expression?.trim();
+    if (expression)
         return {
-            license: info.license_expression,
+            license: expression,
             source: "pypi.org",
-            version: resolvedVersion,
+            version,
             resolution: "registry",
         };
     const declaredLicense = info?.license?.trim();
-    if (declaredLicense &&
-        isConciseLicenseMetadata(declaredLicense) &&
-        normalizeLicenseExpression(declaredLicense) !== "Unknown")
-        return {
-            license: declaredLicense,
-            source: "pypi.org",
-            version: resolvedVersion,
-            resolution: "registry",
-        };
+    if (!declaredLicense ||
+        !isConciseLicenseMetadata(declaredLicense) ||
+        normalizeLicenseExpression(declaredLicense) === "Unknown")
+        return undefined;
+    return {
+        license: declaredLicense,
+        source: "pypi.org",
+        version,
+        resolution: "registry",
+    };
+}
+function classifierPythonLicense(classifiers, version) {
+    const licenses = licensesFromPythonClassifiers(classifiers);
+    if (licenses.length === 0)
+        return undefined;
+    let license = licenses[0] ?? "Unknown";
+    if (licenses.length > 1)
+        license = "(" + licenses.join(" OR ") + ")";
+    return {
+        license,
+        source: "pypi.org classifier",
+        version,
+        resolution: "registry",
+    };
+}
+async function repositoryPythonLicense(info, token, version) {
+    const repository = githubRepositoryForPython(info);
+    if (!repository)
+        return undefined;
+    const resolved = await resolveGithubRepositoryLicense(repository, token);
+    return resolved.license ? { ...resolved, version } : undefined;
+}
+async function resolvePython(dependency, token, logger) {
+    const packageName = dependency.name.replace(/[-_.]+/g, "-");
+    const packageUrl = "https://pypi.org/pypi/" + encodeURIComponent(packageName);
+    const { metadata, version } = await loadPythonMetadata(packageUrl, dependency);
+    const info = metadata?.info;
+    const declared = declaredPythonLicense(info, version);
+    if (declared)
+        return declared;
     const classifierLicenses = licensesFromPythonClassifiers(info?.classifiers);
     const repository = githubRepositoryForPython(info);
     if (classifierLicenses.length > 1 && repository) {
-        const resolved = await resolveGithubRepositoryLicense(repository, token);
-        if (resolved.license)
-            return {
-                ...resolved,
-                version: resolvedVersion,
-            };
+        const resolved = await repositoryPythonLicense(info, token, version);
+        if (resolved)
+            return resolved;
     }
-    if (classifierLicenses.length > 0)
-        return {
-            license: classifierLicenses.length === 1
-                ? classifierLicenses[0]
-                : `(${classifierLicenses.join(" OR ")})`,
-            source: "pypi.org classifier",
-            version: resolvedVersion,
-            resolution: "registry",
-        };
+    const classifier = classifierPythonLicense(info?.classifiers, version);
+    if (classifier)
+        return classifier;
     if (repository) {
-        const resolved = await resolveGithubRepositoryLicense(repository, token);
-        if (resolved.license)
-            return {
-                ...resolved,
-                version: resolvedVersion,
-            };
+        const resolved = await repositoryPythonLicense(info, token, version);
+        if (resolved)
+            return resolved;
     }
     logger.debug(`Could not resolve Python license for ${dependency.name}@${dependency.version}`);
     return { resolution: "unknown" };
 }
 function resolveVendoredGoLicense(root, dependency) {
-    const vendorRoot = (0,external_node_path_namespaceObject.join)(root, (0,external_node_path_namespaceObject.dirname)(dependency.manifest), "vendor");
-    let directory = (0,external_node_path_namespaceObject.join)(vendorRoot, ...dependency.name.split("/"));
+    const vendorRoot = (0,external_node_path_.join)(root, (0,external_node_path_.dirname)(dependency.manifest), "vendor");
+    let directory = (0,external_node_path_.join)(vendorRoot, ...dependency.name.split("/"));
     for (;;) {
         for (const filename of LICENSE_FILENAMES) {
-            const path = (0,external_node_path_namespaceObject.join)(directory, filename);
+            const path = (0,external_node_path_.join)(directory, filename);
             const text = readText(path);
             const license = text ? identifyLicenseText(text) : undefined;
             if (license)
                 return {
                     license,
-                    source: (0,external_node_path_namespaceObject.relative)(root, path),
+                    source: (0,external_node_path_.relative)(root, path),
                 };
         }
         if (directory === vendorRoot)
             break;
-        directory = (0,external_node_path_namespaceObject.dirname)(directory);
+        directory = (0,external_node_path_.dirname)(directory);
     }
     return {};
 }
@@ -46984,7 +47053,7 @@ async function resolveGo(root, dependency, token, logger) {
             ...vendored,
             resolution: "manifest",
         };
-    const match = dependency.name.match(/^github\.com\/([^/]+\/[^/]+)(?:\/v\d+)?$/);
+    const match = /^github\.com\/([^/]+\/[^/]+)(?:\/v\d+)?$/.exec(dependency.name);
     if (!match) {
         logger.debug(`No repository resolver for Go module ${dependency.name}`);
         return { resolution: "unknown" };
@@ -47021,6 +47090,13 @@ async function resolveGo(root, dependency, token, logger) {
     }
     return { resolution: "unknown" };
 }
+async function resolveByEcosystem(root, dependency, token, logger) {
+    if (dependency.ecosystem === "npm")
+        return resolveNpm(root, dependency, logger);
+    if (dependency.ecosystem === "python")
+        return resolvePython(dependency, token, logger);
+    return resolveGo(root, dependency, token, logger);
+}
 async function resolveLicense(root, dependency, config, token, logger) {
     const configured = overrideFor(config, dependency.name, dependency.version);
     if (configured)
@@ -47035,11 +47111,7 @@ async function resolveLicense(root, dependency, config, token, logger) {
             resolution: "manifest",
             source: dependency.manifest,
         };
-    const resolved = dependency.ecosystem === "npm"
-        ? await resolveNpm(root, dependency, logger)
-        : dependency.ecosystem === "python"
-            ? await resolvePython(dependency, token, logger)
-            : await resolveGo(root, dependency, token, logger);
+    const resolved = await resolveByEcosystem(root, dependency, token, logger);
     return {
         license: resolved.license ?? "Unknown",
         resolution: resolved.resolution,
@@ -47048,7 +47120,7 @@ async function resolveLicense(root, dependency, config, token, logger) {
     };
 }
 function mainLicenseFor(manifest, config) {
-    const rules = headerRules(config);
+    const rules = (0,lib_config/* headerRules */.$)(config);
     const selected = rules
         .filter((rule) => !rule.path || matchesPath(manifest, [rule.path]))
         .sort((left, right) => (right.path?.length ?? 0) - (left.path?.length ?? 0))[0];
@@ -47056,15 +47128,13 @@ function mainLicenseFor(manifest, config) {
 }
 async function checkDependencies(root, config, token, weakCompatible, logger) {
     const dependencyConfig = config.dependency;
-    if (!dependencyConfig ||
-        !dependencyConfig.files ||
-        dependencyConfig.files.length === 0) {
+    if (!dependencyConfig?.files?.length) {
         return { checked: 0, results: [], failures: [] };
     }
     const dependencies = [];
     for (const configuredPath of dependencyConfig.files) {
         const path = configuredPath.replaceAll("\\", "/");
-        if (!isFile((0,external_node_path_namespaceObject.resolve)(root, path)))
+        if (!isFile((0,external_node_path_.resolve)(root, path)))
             throw new Error(`Dependency file not found: ${path}`);
         parseManifest(root, path, dependencies);
     }
@@ -47131,7 +47201,78 @@ async function checkDependencies(root, config, token, weakCompatible, logger) {
     };
 }
 //# sourceMappingURL=dependencies.js.map
-;// CONCATENATED MODULE: ./lib/logger.js
+
+/***/ }),
+
+/***/ 4145:
+/***/ ((__webpack_module__, __unused_webpack___webpack_exports__, __nccwpck_require__) => {
+
+__nccwpck_require__.a(__webpack_module__, async (__webpack_handle_async_dependencies__, __webpack_async_result__) => { try {
+/* harmony import */ var _actions_core__WEBPACK_IMPORTED_MODULE_0__ = __nccwpck_require__(7687);
+/* harmony import */ var _config_js__WEBPACK_IMPORTED_MODULE_1__ = __nccwpck_require__(9651);
+/* harmony import */ var _dependencies_js__WEBPACK_IMPORTED_MODULE_2__ = __nccwpck_require__(472);
+/* harmony import */ var _logger_js__WEBPACK_IMPORTED_MODULE_3__ = __nccwpck_require__(3953);
+/* harmony import */ var _report_js__WEBPACK_IMPORTED_MODULE_4__ = __nccwpck_require__(431);
+
+
+
+
+
+function commentsEnabled(config) {
+    const rules = (0,_config_js__WEBPACK_IMPORTED_MODULE_1__/* .headerRules */ .$)(config);
+    return rules.length === 0 || rules.some((rule) => rule.comment !== "never");
+}
+function argumentValue(name) {
+    const index = process.argv.indexOf(name);
+    return index >= 0 ? process.argv[index + 1] : undefined;
+}
+async function run() {
+    const root = process.env.GITHUB_WORKSPACE || process.cwd();
+    const logger = new _logger_js__WEBPACK_IMPORTED_MODULE_3__/* .Logger */ .V(_actions_core__WEBPACK_IMPORTED_MODULE_0__.getInput("log") || argumentValue("--log") || "info");
+    const configInput = _actions_core__WEBPACK_IMPORTED_MODULE_0__.getInput("config") || argumentValue("--config") || ".licenserc.yaml";
+    const token = _actions_core__WEBPACK_IMPORTED_MODULE_0__.getInput("token") || argumentValue("--token") || undefined;
+    const weakCompatibleInput = _actions_core__WEBPACK_IMPORTED_MODULE_0__.getInput("weak-compatible") ||
+        argumentValue("--weak-compatible") ||
+        "false";
+    const weakCompatible = weakCompatibleInput.toLowerCase() === "true";
+    const reportAllInput = _actions_core__WEBPACK_IMPORTED_MODULE_0__.getInput("report-all") || argumentValue("--report-all") || "false";
+    const reportAll = reportAllInput.toLowerCase() === "true";
+    logger.info(`Loading configuration from ${configInput}`);
+    const { config } = (0,_config_js__WEBPACK_IMPORTED_MODULE_1__/* .loadConfig */ .Z)(root, configInput);
+    const dependency = await (0,_dependencies_js__WEBPACK_IMPORTED_MODULE_2__/* .checkDependencies */ .q)(root, config, token, weakCompatible, logger);
+    const report = {
+        dependency,
+        failed: dependency.failures.length > 0,
+    };
+    (0,_report_js__WEBPACK_IMPORTED_MODULE_4__/* .annotate */ .fz)(report);
+    await (0,_report_js__WEBPACK_IMPORTED_MODULE_4__/* .writeSummary */ .Sy)(report, reportAll ? "all" : "issues");
+    if ((report.failed || (0,_report_js__WEBPACK_IMPORTED_MODULE_4__/* .distributionWarnings */ .CZ)(report).length > 0) &&
+        commentsEnabled(config))
+        await (0,_report_js__WEBPACK_IMPORTED_MODULE_4__/* .commentOnPullRequest */ .rh)(token, report);
+    logger.info(`Checked ${dependency.checked} dependencies.`);
+    if (report.failed) {
+        throw new Error(`License check failed: ${dependency.failures.length} dependency failure(s).`);
+    }
+}
+try {
+    await run();
+}
+catch (error) {
+    _actions_core__WEBPACK_IMPORTED_MODULE_0__.setFailed(error instanceof Error ? error.message : String(error));
+}
+//# sourceMappingURL=index.js.map
+__webpack_async_result__();
+} catch(e) { __webpack_async_result__(e); } }, 1);
+
+/***/ }),
+
+/***/ 3953:
+/***/ ((__unused_webpack___webpack_module__, __webpack_exports__, __nccwpck_require__) => {
+
+/* harmony export */ __nccwpck_require__.d(__webpack_exports__, {
+/* harmony export */   V: () => (/* binding */ Logger)
+/* harmony export */ });
+/* harmony import */ var _actions_core__WEBPACK_IMPORTED_MODULE_0__ = __nccwpck_require__(7687);
 
 const priorities = {
     error: 0,
@@ -47150,34 +47291,46 @@ class Logger {
     }
     error(message) {
         if (this.enabled("error"))
-            core.error(message);
+            _actions_core__WEBPACK_IMPORTED_MODULE_0__.error(message);
     }
     warn(message) {
         if (this.enabled("warn"))
-            core.warning(message);
+            _actions_core__WEBPACK_IMPORTED_MODULE_0__.warning(message);
     }
     info(message) {
         if (this.enabled("info"))
-            core.info(message);
+            _actions_core__WEBPACK_IMPORTED_MODULE_0__.info(message);
     }
     debug(message) {
         if (!this.enabled("debug"))
             return;
         if (process.env.ACTIONS_STEP_DEBUG === "true")
-            core.debug(message);
+            _actions_core__WEBPACK_IMPORTED_MODULE_0__.debug(message);
         else
-            core.info(`[debug] ${message}`);
+            _actions_core__WEBPACK_IMPORTED_MODULE_0__.info(`[debug] ${message}`);
     }
 }
 //# sourceMappingURL=logger.js.map
-// EXTERNAL MODULE: ../../.yarn/berry/cache/@actions-github-npm-6.0.1-8c12ecff51-10c0.zip/node_modules/@actions/github/lib/github.js
-var github = __nccwpck_require__(2409);
-;// CONCATENATED MODULE: ./lib/report.js
+
+/***/ }),
+
+/***/ 431:
+/***/ ((__unused_webpack___webpack_module__, __webpack_exports__, __nccwpck_require__) => {
+
+/* harmony export */ __nccwpck_require__.d(__webpack_exports__, {
+/* harmony export */   CZ: () => (/* binding */ distributionWarnings),
+/* harmony export */   Sy: () => (/* binding */ writeSummary),
+/* harmony export */   fz: () => (/* binding */ annotate),
+/* harmony export */   rh: () => (/* binding */ commentOnPullRequest)
+/* harmony export */ });
+/* unused harmony exports summaryDependencies, allSummaryDependencies */
+/* harmony import */ var _actions_core__WEBPACK_IMPORTED_MODULE_0__ = __nccwpck_require__(7687);
+/* harmony import */ var _actions_github__WEBPACK_IMPORTED_MODULE_1__ = __nccwpck_require__(2409);
 
 
 const COMMENT_MARKER = "<!-- license-checker-action -->";
 function escapeTableCell(value) {
-    return value.replaceAll("|", "\\|").replaceAll("\n", " ");
+    return value.replaceAll("|", String.raw `\|`).replaceAll("\n", " ");
 }
 function approvalDetails(result) {
     if (!result.approval)
@@ -47198,11 +47351,11 @@ function dependencyRows(results) {
 function distributionWarnings(report) {
     return report.dependency.results.filter((result) => result.distributionWarning);
 }
-function summaryDependencies(report, reportAll) {
-    return reportAll
-        ? report.dependency.results
-        : report.dependency.results.filter((result) => report.dependency.failures.includes(result) ||
-            result.distributionWarning);
+function summaryDependencies(report) {
+    return report.dependency.results.filter((result) => report.dependency.failures.includes(result) || result.distributionWarning);
+}
+function allSummaryDependencies(report) {
+    return report.dependency.results;
 }
 function commentBody(report) {
     const lines = [COMMENT_MARKER, "## License Checker", ""];
@@ -47232,33 +47385,37 @@ function commentBody(report) {
     lines.push(`Checked ${report.dependency.checked} dependencies.`);
     return lines.join("\n");
 }
-async function writeSummary(report, reportAll = false) {
-    const approvals = report.dependency.results.filter((result) => result.compatible === "approved-exception");
-    const warnings = distributionWarnings(report);
-    const dependencyRowsForSummary = report.dependency.failures.length === 0
-        ? warnings.length === 0
-            ? [
-                [
-                    "Dependencies",
-                    "pass",
-                    `${report.dependency.checked} checked; ${approvals.length} manual approval(s)`,
-                ],
-            ]
-            : [
-                [
-                    "Dependencies",
-                    "warning",
-                    `${report.dependency.checked} checked; ${warnings.length} distribution review warning(s)`,
-                ],
-            ]
-        : [
+function dependencySummaryRows(report, warnings, approvals) {
+    if (report.dependency.failures.length > 0)
+        return [
             [
                 "Dependencies",
                 "fail",
                 `${report.dependency.failures.length} failure(s); ${warnings.length} distribution review warning(s)`,
             ],
         ];
-    core.summary.addHeading("License Checker").addTable([
+    if (warnings.length > 0)
+        return [
+            [
+                "Dependencies",
+                "warning",
+                `${report.dependency.checked} checked; ${warnings.length} distribution review warning(s)`,
+            ],
+        ];
+    return [
+        [
+            "Dependencies",
+            "pass",
+            `${report.dependency.checked} checked; ${approvals.length} manual approval(s)`,
+        ],
+    ];
+}
+async function writeSummary(report, summaryMode = "issues") {
+    const reportAll = summaryMode === "all";
+    const approvals = report.dependency.results.filter((result) => result.compatible === "approved-exception");
+    const warnings = distributionWarnings(report);
+    const dependencyRowsForSummary = dependencySummaryRows(report, warnings, approvals);
+    _actions_core__WEBPACK_IMPORTED_MODULE_0__.summary.addHeading("License Checker").addTable([
         [
             { data: "Area", header: true },
             { data: "Result", header: true },
@@ -47266,9 +47423,11 @@ async function writeSummary(report, reportAll = false) {
         ],
         ...dependencyRowsForSummary,
     ]);
-    const displayedDependencies = summaryDependencies(report, reportAll);
+    const displayedDependencies = reportAll
+        ? allSummaryDependencies(report)
+        : summaryDependencies(report);
     if (displayedDependencies.length > 0) {
-        core.summary
+        _actions_core__WEBPACK_IMPORTED_MODULE_0__.summary
             .addHeading(reportAll ? "Dependency licenses" : "Dependency license issues", 3)
             .addTable([
             [
@@ -47284,7 +47443,7 @@ async function writeSummary(report, reportAll = false) {
         ]);
     }
     if (!reportAll && approvals.length > 0) {
-        core.summary.addHeading("Manual license approvals", 3).addTable([
+        _actions_core__WEBPACK_IMPORTED_MODULE_0__.summary.addHeading("Manual license approvals", 3).addTable([
             [
                 { data: "Dependency", header: true },
                 { data: "Version", header: true },
@@ -47298,33 +47457,33 @@ async function writeSummary(report, reportAll = false) {
         ]);
     }
     if (process.env.GITHUB_STEP_SUMMARY)
-        await core.summary.write();
+        await _actions_core__WEBPACK_IMPORTED_MODULE_0__.summary.write();
 }
 function annotate(report) {
     for (const result of report.dependency.failures) {
-        core.error(`${result.name}@${result.version}: ${result.normalized} (${result.compatible})`, {
+        _actions_core__WEBPACK_IMPORTED_MODULE_0__.error(`${result.name}@${result.version}: ${result.normalized} (${result.compatible})`, {
             file: result.manifest,
             startLine: 1,
         });
     }
     for (const result of distributionWarnings(report)) {
-        core.warning(`${result.name}@${result.version}: ${result.distributionWarning}`, {
+        _actions_core__WEBPACK_IMPORTED_MODULE_0__.warning(`${result.name}@${result.version}: ${result.distributionWarning}`, {
             file: result.manifest,
             startLine: 1,
         });
     }
 }
 async function commentOnPullRequest(token, report) {
-    if (!token || !github.context.payload.pull_request)
+    if (!token || !_actions_github__WEBPACK_IMPORTED_MODULE_1__.context.payload.pull_request)
         return;
-    const { owner, repo } = github.context.repo;
-    const octokit = github.getOctokit(token);
+    const { owner, repo } = _actions_github__WEBPACK_IMPORTED_MODULE_1__.context.repo;
+    const octokit = _actions_github__WEBPACK_IMPORTED_MODULE_1__.getOctokit(token);
     const body = commentBody(report);
     try {
         const comments = await octokit.rest.issues.listComments({
             owner,
             repo,
-            issue_number: github.context.issue.number,
+            issue_number: _actions_github__WEBPACK_IMPORTED_MODULE_1__.context.issue.number,
             per_page: 100,
         });
         const existing = comments.data.find((comment) => comment.body?.includes(COMMENT_MARKER));
@@ -47340,60 +47499,168 @@ async function commentOnPullRequest(token, report) {
             await octokit.rest.issues.createComment({
                 owner,
                 repo,
-                issue_number: github.context.issue.number,
+                issue_number: _actions_github__WEBPACK_IMPORTED_MODULE_1__.context.issue.number,
                 body,
             });
         }
     }
     catch (error) {
-        core.warning(`Unable to update the pull-request license comment: ${error instanceof Error ? error.message : String(error)}`);
+        _actions_core__WEBPACK_IMPORTED_MODULE_0__.warning(`Unable to update the pull-request license comment: ${error instanceof Error ? error.message : String(error)}`);
     }
 }
 //# sourceMappingURL=report.js.map
-;// CONCATENATED MODULE: ./lib/index.js
 
+/***/ }),
 
+/***/ 4142:
+/***/ ((module) => {
 
+module.exports = /*#__PURE__*/JSON.parse('["389-exception","Asterisk-exception","Autoconf-exception-2.0","Autoconf-exception-3.0","Autoconf-exception-generic","Autoconf-exception-generic-3.0","Autoconf-exception-macro","Bison-exception-1.24","Bison-exception-2.2","Bootloader-exception","Classpath-exception-2.0","CLISP-exception-2.0","cryptsetup-OpenSSL-exception","DigiRule-FOSS-exception","eCos-exception-2.0","Fawkes-Runtime-exception","FLTK-exception","fmt-exception","Font-exception-2.0","freertos-exception-2.0","GCC-exception-2.0","GCC-exception-2.0-note","GCC-exception-3.1","Gmsh-exception","GNAT-exception","GNOME-examples-exception","GNU-compiler-exception","gnu-javamail-exception","GPL-3.0-interface-exception","GPL-3.0-linking-exception","GPL-3.0-linking-source-exception","GPL-CC-1.0","GStreamer-exception-2005","GStreamer-exception-2008","i2p-gpl-java-exception","KiCad-libraries-exception","LGPL-3.0-linking-exception","libpri-OpenH323-exception","Libtool-exception","Linux-syscall-note","LLGPL","LLVM-exception","LZMA-exception","mif-exception","OCaml-LGPL-linking-exception","OCCT-exception-1.0","OpenJDK-assembly-exception-1.0","openvpn-openssl-exception","PS-or-PDF-font-exception-20170817","QPL-1.0-INRIA-2004-exception","Qt-GPL-exception-1.0","Qt-LGPL-exception-1.1","Qwt-exception-1.0","SANE-exception","SHL-2.0","SHL-2.1","stunnel-exception","SWI-exception","Swift-exception","Texinfo-exception","u-boot-exception-2.0","UBDL-exception","Universal-FOSS-exception-1.0","vsftpd-openssl-exception","WxWindows-exception-3.1","x11vnc-openssl-exception"]');
 
+/***/ }),
 
+/***/ 3587:
+/***/ ((module) => {
 
-function commentsEnabled(config) {
-    const rules = headerRules(config);
-    return rules.length === 0 || rules.some((rule) => rule.comment !== "never");
-}
-function argumentValue(name) {
-    const index = process.argv.indexOf(name);
-    return index >= 0 ? process.argv[index + 1] : undefined;
-}
-async function run() {
-    const root = process.env.GITHUB_WORKSPACE || process.cwd();
-    const logger = new Logger(core.getInput("log") || argumentValue("--log") || "info");
-    const configInput = core.getInput("config") || argumentValue("--config") || ".licenserc.yaml";
-    const token = core.getInput("token") || argumentValue("--token") || undefined;
-    const weakCompatibleInput = core.getInput("weak-compatible") ||
-        argumentValue("--weak-compatible") ||
-        "false";
-    const weakCompatible = weakCompatibleInput.toLowerCase() === "true";
-    const reportAllInput = core.getInput("report-all") || argumentValue("--report-all") || "false";
-    const reportAll = reportAllInput.toLowerCase() === "true";
-    logger.info(`Loading configuration from ${configInput}`);
-    const { config } = loadConfig(root, configInput);
-    const dependency = await checkDependencies(root, config, token, weakCompatible, logger);
-    const report = {
-        dependency,
-        failed: dependency.failures.length > 0,
-    };
-    annotate(report);
-    await writeSummary(report, reportAll);
-    if ((report.failed || distributionWarnings(report).length > 0) &&
-        commentsEnabled(config))
-        await commentOnPullRequest(token, report);
-    logger.info(`Checked ${dependency.checked} dependencies.`);
-    if (report.failed) {
-        throw new Error(`License check failed: ${dependency.failures.length} dependency failure(s).`);
-    }
-}
-run().catch((error) => {
-    core.setFailed(error instanceof Error ? error.message : String(error));
-});
-//# sourceMappingURL=index.js.map
+module.exports = /*#__PURE__*/JSON.parse('["AGPL-1.0","AGPL-3.0","BSD-2-Clause-FreeBSD","BSD-2-Clause-NetBSD","GFDL-1.1","GFDL-1.2","GFDL-1.3","GPL-1.0","GPL-2.0","GPL-2.0-with-GCC-exception","GPL-2.0-with-autoconf-exception","GPL-2.0-with-bison-exception","GPL-2.0-with-classpath-exception","GPL-2.0-with-font-exception","GPL-3.0","GPL-3.0-with-GCC-exception","GPL-3.0-with-autoconf-exception","LGPL-2.0","LGPL-2.1","LGPL-3.0","Net-SNMP","Nunit","StandardML-NJ","bzip2-1.0.5","eCos-2.0","wxWindows"]');
+
+/***/ }),
+
+/***/ 5274:
+/***/ ((module) => {
+
+module.exports = /*#__PURE__*/JSON.parse('["0BSD","3D-Slicer-1.0","AAL","ADSL","AFL-1.1","AFL-1.2","AFL-2.0","AFL-2.1","AFL-3.0","AGPL-1.0-only","AGPL-1.0-or-later","AGPL-3.0-only","AGPL-3.0-or-later","ALGLIB-Documentation","AMD-newlib","AMDPLPA","AML","AML-glslang","AMPAS","ANTLR-PD","ANTLR-PD-fallback","APAFML","APL-1.0","APSL-1.0","APSL-1.1","APSL-1.2","APSL-2.0","ASWF-Digital-Assets-1.0","ASWF-Digital-Assets-1.1","Abstyles","AdaCore-doc","Adobe-2006","Adobe-Display-PostScript","Adobe-Glyph","Adobe-Utopia","Advanced-Cryptics-Dictionary","Afmparse","Aladdin","Apache-1.0","Apache-1.1","Apache-2.0","App-s2p","Arphic-1999","Artistic-1.0","Artistic-1.0-Perl","Artistic-1.0-cl8","Artistic-2.0","Artistic-dist","Aspell-RU","BOLA-1.1","BSD-1-Clause","BSD-2-Clause","BSD-2-Clause-Darwin","BSD-2-Clause-Patent","BSD-2-Clause-Views","BSD-2-Clause-first-lines","BSD-2-Clause-pkgconf-disclaimer","BSD-3-Clause","BSD-3-Clause-Attribution","BSD-3-Clause-Clear","BSD-3-Clause-HP","BSD-3-Clause-LBNL","BSD-3-Clause-Modification","BSD-3-Clause-No-Military-License","BSD-3-Clause-No-Nuclear-License","BSD-3-Clause-No-Nuclear-License-2014","BSD-3-Clause-No-Nuclear-Warranty","BSD-3-Clause-Open-MPI","BSD-3-Clause-Sun","BSD-3-Clause-Tso","BSD-3-Clause-acpica","BSD-3-Clause-flex","BSD-4-Clause","BSD-4-Clause-Shortened","BSD-4-Clause-UC","BSD-4.3RENO","BSD-4.3TAHOE","BSD-Advertising-Acknowledgement","BSD-Attribution-HPND-disclaimer","BSD-Inferno-Nettverk","BSD-Mark-Modifications","BSD-Protection","BSD-Source-Code","BSD-Source-beginning-file","BSD-Systemics","BSD-Systemics-W3Works","BSL-1.0","BUSL-1.1","Baekmuk","Bahyph","Barr","Beerware","BitTorrent-1.0","BitTorrent-1.1","Bitstream-Charter","Bitstream-Vera","BlueOak-1.0.0","Boehm-GC","Boehm-GC-without-fee","Borceux","Brian-Gladman-2-Clause","Brian-Gladman-3-Clause","Buddy","C-UDA-1.0","CAL-1.0","CAL-1.0-Combined-Work-Exception","CAPEC-tou","CATOSL-1.1","CC-BY-1.0","CC-BY-2.0","CC-BY-2.5","CC-BY-2.5-AU","CC-BY-3.0","CC-BY-3.0-AT","CC-BY-3.0-AU","CC-BY-3.0-DE","CC-BY-3.0-IGO","CC-BY-3.0-NL","CC-BY-3.0-US","CC-BY-4.0","CC-BY-NC-1.0","CC-BY-NC-2.0","CC-BY-NC-2.5","CC-BY-NC-3.0","CC-BY-NC-3.0-DE","CC-BY-NC-4.0","CC-BY-NC-ND-1.0","CC-BY-NC-ND-2.0","CC-BY-NC-ND-2.5","CC-BY-NC-ND-3.0","CC-BY-NC-ND-3.0-DE","CC-BY-NC-ND-3.0-IGO","CC-BY-NC-ND-4.0","CC-BY-NC-SA-1.0","CC-BY-NC-SA-2.0","CC-BY-NC-SA-2.0-DE","CC-BY-NC-SA-2.0-FR","CC-BY-NC-SA-2.0-UK","CC-BY-NC-SA-2.5","CC-BY-NC-SA-3.0","CC-BY-NC-SA-3.0-DE","CC-BY-NC-SA-3.0-IGO","CC-BY-NC-SA-4.0","CC-BY-ND-1.0","CC-BY-ND-2.0","CC-BY-ND-2.5","CC-BY-ND-3.0","CC-BY-ND-3.0-DE","CC-BY-ND-4.0","CC-BY-SA-1.0","CC-BY-SA-2.0","CC-BY-SA-2.0-UK","CC-BY-SA-2.1-JP","CC-BY-SA-2.5","CC-BY-SA-3.0","CC-BY-SA-3.0-AT","CC-BY-SA-3.0-DE","CC-BY-SA-3.0-IGO","CC-BY-SA-4.0","CC-PDDC","CC-PDM-1.0","CC-SA-1.0","CC0-1.0","CDDL-1.0","CDDL-1.1","CDL-1.0","CDLA-Permissive-1.0","CDLA-Permissive-2.0","CDLA-Sharing-1.0","CECILL-1.0","CECILL-1.1","CECILL-2.0","CECILL-2.1","CECILL-B","CECILL-C","CERN-OHL-1.1","CERN-OHL-1.2","CERN-OHL-P-2.0","CERN-OHL-S-2.0","CERN-OHL-W-2.0","CFITSIO","CMU-Mach","CMU-Mach-nodoc","CNRI-Jython","CNRI-Python","CNRI-Python-GPL-Compatible","COIL-1.0","CPAL-1.0","CPL-1.0","CPOL-1.02","CUA-OPL-1.0","Caldera","Caldera-no-preamble","Catharon","ClArtistic","Clips","Community-Spec-1.0","Condor-1.1","Cornell-Lossless-JPEG","Cronyx","Crossword","CryptoSwift","CrystalStacker","Cube","D-FSL-1.0","DEC-3-Clause","DL-DE-BY-2.0","DL-DE-ZERO-2.0","DOC","DRL-1.0","DRL-1.1","DSDP","DocBook-DTD","DocBook-Schema","DocBook-Stylesheet","DocBook-XML","Dotseqn","ECL-1.0","ECL-2.0","EFL-1.0","EFL-2.0","EPICS","EPL-1.0","EPL-2.0","ESA-PL-permissive-2.4","ESA-PL-strong-copyleft-2.4","ESA-PL-weak-copyleft-2.4","EUDatagrid","EUPL-1.0","EUPL-1.1","EUPL-1.2","Elastic-2.0","Entessa","ErlPL-1.1","Eurosym","FBM","FDK-AAC","FSFAP","FSFAP-no-warranty-disclaimer","FSFUL","FSFULLR","FSFULLRSD","FSFULLRWD","FSL-1.1-ALv2","FSL-1.1-MIT","FTL","Fair","Ferguson-Twofish","Frameworx-1.0","FreeBSD-DOC","FreeImage","Furuseth","GCR-docs","GD","GFDL-1.1-invariants-only","GFDL-1.1-invariants-or-later","GFDL-1.1-no-invariants-only","GFDL-1.1-no-invariants-or-later","GFDL-1.1-only","GFDL-1.1-or-later","GFDL-1.2-invariants-only","GFDL-1.2-invariants-or-later","GFDL-1.2-no-invariants-only","GFDL-1.2-no-invariants-or-later","GFDL-1.2-only","GFDL-1.2-or-later","GFDL-1.3-invariants-only","GFDL-1.3-invariants-or-later","GFDL-1.3-no-invariants-only","GFDL-1.3-no-invariants-or-later","GFDL-1.3-only","GFDL-1.3-or-later","GL2PS","GLWTPL","GPL-1.0-only","GPL-1.0-or-later","GPL-2.0-only","GPL-2.0-or-later","GPL-3.0-only","GPL-3.0-or-later","Game-Programming-Gems","Giftware","Glide","Glulxe","Graphics-Gems","Gutmann","HDF5","HIDAPI","HP-1986","HP-1989","HPND","HPND-DEC","HPND-Fenneberg-Livingston","HPND-INRIA-IMAG","HPND-Intel","HPND-Kevlin-Henney","HPND-MIT-disclaimer","HPND-Markus-Kuhn","HPND-Netrek","HPND-Pbmplus","HPND-SMC","HPND-UC","HPND-UC-export-US","HPND-doc","HPND-doc-sell","HPND-export-US","HPND-export-US-acknowledgement","HPND-export-US-modify","HPND-export2-US","HPND-merchantability-variant","HPND-sell-MIT-disclaimer-xserver","HPND-sell-regexpr","HPND-sell-variant","HPND-sell-variant-MIT-disclaimer","HPND-sell-variant-MIT-disclaimer-rev","HPND-sell-variant-critical-systems","HTMLTIDY","HaskellReport","Hippocratic-2.1","IBM-pibs","ICU","IEC-Code-Components-EULA","IJG","IJG-short","IPA","IPL-1.0","ISC","ISC-Veillard","ISO-permission","ImageMagick","Imlib2","Info-ZIP","Inner-Net-2.0","InnoSetup","Intel","Intel-ACPI","Interbase-1.0","JPL-image","JPNIC","JSON","Jam","JasPer-2.0","Kastrup","Kazlib","Knuth-CTAN","LAL-1.2","LAL-1.3","LGPL-2.0-only","LGPL-2.0-or-later","LGPL-2.1-only","LGPL-2.1-or-later","LGPL-3.0-only","LGPL-3.0-or-later","LGPLLR","LOOP","LPD-document","LPL-1.0","LPL-1.02","LPPL-1.0","LPPL-1.1","LPPL-1.2","LPPL-1.3a","LPPL-1.3c","LZMA-SDK-9.11-to-9.20","LZMA-SDK-9.22","Latex2e","Latex2e-translated-notice","Leptonica","LiLiQ-P-1.1","LiLiQ-R-1.1","LiLiQ-Rplus-1.1","Libpng","Linux-OpenIB","Linux-man-pages-1-para","Linux-man-pages-copyleft","Linux-man-pages-copyleft-2-para","Linux-man-pages-copyleft-var","Lucida-Bitmap-Fonts","MIPS","MIT","MIT-0","MIT-CMU","MIT-Click","MIT-Festival","MIT-Khronos-old","MIT-Modern-Variant","MIT-STK","MIT-Wu","MIT-advertising","MIT-enna","MIT-feh","MIT-open-group","MIT-testregex","MITNFA","MMIXware","MMPL-1.0.1","MPEG-SSG","MPL-1.0","MPL-1.1","MPL-2.0","MPL-2.0-no-copyleft-exception","MS-LPL","MS-PL","MS-RL","MTLL","Mackerras-3-Clause","Mackerras-3-Clause-acknowledgment","MakeIndex","Martin-Birgmeier","McPhee-slideshow","Minpack","MirOS","Motosoto","MulanPSL-1.0","MulanPSL-2.0","Multics","Mup","NAIST-2003","NASA-1.3","NBPL-1.0","NCBI-PD","NCGL-UK-2.0","NCL","NCSA","NGPL","NICTA-1.0","NIST-PD","NIST-PD-TNT","NIST-PD-fallback","NIST-Software","NLOD-1.0","NLOD-2.0","NLPL","NOSL","NPL-1.0","NPL-1.1","NPOSL-3.0","NRL","NTIA-PD","NTP","NTP-0","Naumen","NetCDF","Newsletr","Nokia","Noweb","O-UDA-1.0","OAR","OCCT-PL","OCLC-2.0","ODC-By-1.0","ODbL-1.0","OFFIS","OFL-1.0","OFL-1.0-RFN","OFL-1.0-no-RFN","OFL-1.1","OFL-1.1-RFN","OFL-1.1-no-RFN","OGC-1.0","OGDL-Taiwan-1.0","OGL-Canada-2.0","OGL-UK-1.0","OGL-UK-2.0","OGL-UK-3.0","OGTSL","OLDAP-1.1","OLDAP-1.2","OLDAP-1.3","OLDAP-1.4","OLDAP-2.0","OLDAP-2.0.1","OLDAP-2.1","OLDAP-2.2","OLDAP-2.2.1","OLDAP-2.2.2","OLDAP-2.3","OLDAP-2.4","OLDAP-2.5","OLDAP-2.6","OLDAP-2.7","OLDAP-2.8","OLFL-1.3","OML","OPL-1.0","OPL-UK-3.0","OPUBL-1.0","OSC-1.0","OSET-PL-2.1","OSL-1.0","OSL-1.1","OSL-2.0","OSL-2.1","OSL-3.0","OSSP","OpenMDW-1.0","OpenPBS-2.3","OpenSSL","OpenSSL-standalone","OpenVision","PADL","PDDL-1.0","PHP-3.0","PHP-3.01","PPL","PSF-2.0","ParaType-Free-Font-1.3","Parity-6.0.0","Parity-7.0.0","Pixar","Plexus","PolyForm-Noncommercial-1.0.0","PolyForm-Small-Business-1.0.0","PostgreSQL","Python-2.0","Python-2.0.1","QPL-1.0","QPL-1.0-INRIA-2004","Qhull","RHeCos-1.1","RPL-1.1","RPL-1.5","RPSL-1.0","RSA-MD","RSCPL","Rdisc","Ruby","Ruby-pty","SAX-PD","SAX-PD-2.0","SCEA","SGI-B-1.0","SGI-B-1.1","SGI-B-2.0","SGI-OpenGL","SGMLUG-PM","SGP4","SHL-0.5","SHL-0.51","SISSL","SISSL-1.2","SL","SMAIL-GPL","SMLNJ","SMPPL","SNIA","SOFA","SPL-1.0","SSH-OpenSSH","SSH-short","SSLeay-standalone","SSPL-1.0","SUL-1.0","SWL","Saxpath","SchemeReport","Sendmail","Sendmail-8.23","Sendmail-Open-Source-1.1","SimPL-2.0","Sleepycat","Soundex","Spencer-86","Spencer-94","Spencer-99","SugarCRM-1.1.3","Sun-PPP","Sun-PPP-2000","SunPro","Symlinks","TAPR-OHL-1.0","TCL","TCP-wrappers","TGPPL-1.0","TMate","TORQUE-1.1","TOSL","TPDL","TPL-1.0","TTWL","TTYP0","TU-Berlin-1.0","TU-Berlin-2.0","TekHVC","TermReadKey","ThirdEye","TrustedQSL","UCAR","UCL-1.0","UMich-Merit","UPL-1.0","URT-RLE","Ubuntu-font-1.0","UnRAR","Unicode-3.0","Unicode-DFS-2015","Unicode-DFS-2016","Unicode-TOU","UnixCrypt","Unlicense","Unlicense-libtelnet","Unlicense-libwhirlpool","VOSTROM","VSL-1.0","Vim","Vixie-Cron","W3C","W3C-19980720","W3C-20150513","WTFNMFPL","WTFPL","Watcom-1.0","Widget-Workshop","WordNet","Wsuipa","X11","X11-distribute-modifications-variant","X11-no-permit-persons","X11-swapped","XFree86-1.1","XSkat","Xdebug-1.03","Xerox","Xfig","Xnet","YPL-1.0","YPL-1.1","ZPL-1.1","ZPL-2.0","ZPL-2.1","Zed","Zeeff","Zend-2.0","Zimbra-1.3","Zimbra-1.4","Zlib","any-OSI","any-OSI-perl-modules","bcrypt-Solar-Designer","blessing","bzip2-1.0.6","check-cvs","checkmk","copyleft-next-0.3.0","copyleft-next-0.3.1","curl","cve-tou","diffmark","dtoa","dvipdfm","eGenix","etalab-2.0","fwlw","gSOAP-1.3b","generic-xts","gnuplot","gtkbook","hdparm","hyphen-bulgarian","iMatix","jove","libpng-1.6.35","libpng-2.0","libselinux-1.0","libtiff","libutil-David-Nugent","lsof","magaz","mailprio","man2html","metamail","mpi-permissive","mpich2","mplus","ngrep","pkgconf","pnmstitch","psfrag","psutils","python-ldap","radvd","snprintf","softSurfer","ssh-keyscan","swrule","threeparttable","ulem","w3m","wwl","xinetd","xkeyboard-config-Zinoviev","xlock","xpp","xzoom","zlib-acknowledgement"]');
+
+/***/ })
+
+/******/ });
+/************************************************************************/
+/******/ // The module cache
+/******/ var __webpack_module_cache__ = {};
+/******/ 
+/******/ // The require function
+/******/ function __nccwpck_require__(moduleId) {
+/******/ 	// Check if module is in cache
+/******/ 	var cachedModule = __webpack_module_cache__[moduleId];
+/******/ 	if (cachedModule !== undefined) {
+/******/ 		return cachedModule.exports;
+/******/ 	}
+/******/ 	// Create a new module (and put it into the cache)
+/******/ 	var module = __webpack_module_cache__[moduleId] = {
+/******/ 		// no module.id needed
+/******/ 		// no module.loaded needed
+/******/ 		exports: {}
+/******/ 	};
+/******/ 
+/******/ 	// Execute the module function
+/******/ 	var threw = true;
+/******/ 	try {
+/******/ 		__webpack_modules__[moduleId].call(module.exports, module, module.exports, __nccwpck_require__);
+/******/ 		threw = false;
+/******/ 	} finally {
+/******/ 		if(threw) delete __webpack_module_cache__[moduleId];
+/******/ 	}
+/******/ 
+/******/ 	// Return the exports of the module
+/******/ 	return module.exports;
+/******/ }
+/******/ 
+/************************************************************************/
+/******/ /* webpack/runtime/async module */
+/******/ (() => {
+/******/ 	var webpackQueues = typeof Symbol === "function" ? Symbol("webpack queues") : "__webpack_queues__";
+/******/ 	var webpackExports = typeof Symbol === "function" ? Symbol("webpack exports") : "__webpack_exports__";
+/******/ 	var webpackError = typeof Symbol === "function" ? Symbol("webpack error") : "__webpack_error__";
+/******/ 	var resolveQueue = (queue) => {
+/******/ 		if(queue && queue.d < 1) {
+/******/ 			queue.d = 1;
+/******/ 			queue.forEach((fn) => (fn.r--));
+/******/ 			queue.forEach((fn) => (fn.r-- ? fn.r++ : fn()));
+/******/ 		}
+/******/ 	}
+/******/ 	var wrapDeps = (deps) => (deps.map((dep) => {
+/******/ 		if(dep !== null && typeof dep === "object") {
+/******/ 			if(dep[webpackQueues]) return dep;
+/******/ 			if(dep.then) {
+/******/ 				var queue = [];
+/******/ 				queue.d = 0;
+/******/ 				dep.then((r) => {
+/******/ 					obj[webpackExports] = r;
+/******/ 					resolveQueue(queue);
+/******/ 				}, (e) => {
+/******/ 					obj[webpackError] = e;
+/******/ 					resolveQueue(queue);
+/******/ 				});
+/******/ 				var obj = {};
+/******/ 				obj[webpackQueues] = (fn) => (fn(queue));
+/******/ 				return obj;
+/******/ 			}
+/******/ 		}
+/******/ 		var ret = {};
+/******/ 		ret[webpackQueues] = x => {};
+/******/ 		ret[webpackExports] = dep;
+/******/ 		return ret;
+/******/ 	}));
+/******/ 	__nccwpck_require__.a = (module, body, hasAwait) => {
+/******/ 		var queue;
+/******/ 		hasAwait && ((queue = []).d = -1);
+/******/ 		var depQueues = new Set();
+/******/ 		var exports = module.exports;
+/******/ 		var currentDeps;
+/******/ 		var outerResolve;
+/******/ 		var reject;
+/******/ 		var promise = new Promise((resolve, rej) => {
+/******/ 			reject = rej;
+/******/ 			outerResolve = resolve;
+/******/ 		});
+/******/ 		promise[webpackExports] = exports;
+/******/ 		promise[webpackQueues] = (fn) => (queue && fn(queue), depQueues.forEach(fn), promise["catch"](x => {}));
+/******/ 		module.exports = promise;
+/******/ 		body((deps) => {
+/******/ 			currentDeps = wrapDeps(deps);
+/******/ 			var fn;
+/******/ 			var getResult = () => (currentDeps.map((d) => {
+/******/ 				if(d[webpackError]) throw d[webpackError];
+/******/ 				return d[webpackExports];
+/******/ 			}))
+/******/ 			var promise = new Promise((resolve) => {
+/******/ 				fn = () => (resolve(getResult));
+/******/ 				fn.r = 0;
+/******/ 				var fnQueue = (q) => (q !== queue && !depQueues.has(q) && (depQueues.add(q), q && !q.d && (fn.r++, q.push(fn))));
+/******/ 				currentDeps.map((dep) => (dep[webpackQueues](fnQueue)));
+/******/ 			});
+/******/ 			return fn.r ? promise : getResult();
+/******/ 		}, (err) => ((err ? reject(promise[webpackError] = err) : outerResolve(exports)), resolveQueue(queue)));
+/******/ 		queue && queue.d < 0 && (queue.d = 0);
+/******/ 	};
+/******/ })();
+/******/ 
+/******/ /* webpack/runtime/define property getters */
+/******/ (() => {
+/******/ 	// define getter functions for harmony exports
+/******/ 	__nccwpck_require__.d = (exports, definition) => {
+/******/ 		for(var key in definition) {
+/******/ 			if(__nccwpck_require__.o(definition, key) && !__nccwpck_require__.o(exports, key)) {
+/******/ 				Object.defineProperty(exports, key, { enumerable: true, get: definition[key] });
+/******/ 			}
+/******/ 		}
+/******/ 	};
+/******/ })();
+/******/ 
+/******/ /* webpack/runtime/hasOwnProperty shorthand */
+/******/ (() => {
+/******/ 	__nccwpck_require__.o = (obj, prop) => (Object.prototype.hasOwnProperty.call(obj, prop))
+/******/ })();
+/******/ 
+/******/ /* webpack/runtime/compat */
+/******/ 
+/******/ if (typeof __nccwpck_require__ !== 'undefined') __nccwpck_require__.ab = new URL('.', import.meta.url).pathname.slice(import.meta.url.match(/^file:\/\/\/\w:/) ? 1 : 0, -1) + "/";
+/******/ 
+/************************************************************************/
+/******/ 
+/******/ // startup
+/******/ // Load entry module and return exports
+/******/ // This entry module used 'module' so it can't be inlined
+/******/ var __webpack_exports__ = __nccwpck_require__(4145);
+/******/ __webpack_exports__ = await __webpack_exports__;
+/******/ 

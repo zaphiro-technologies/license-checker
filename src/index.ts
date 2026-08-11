@@ -1,5 +1,5 @@
 import * as core from "@actions/core";
-import { loadConfig } from "./config.js";
+import { headerRules, loadConfig } from "./config.js";
 import { checkDependencies } from "./dependencies.js";
 import { Logger } from "./logger.js";
 import {
@@ -8,7 +8,6 @@ import {
   distributionWarnings,
   writeSummary,
 } from "./report.js";
-import { headerRules } from "./config.js";
 import type { CheckReport, LicenseEyeConfig } from "./types.js";
 
 function commentsEnabled(config: LicenseEyeConfig): boolean {
@@ -53,7 +52,7 @@ async function run(): Promise<void> {
   };
 
   annotate(report);
-  await writeSummary(report, reportAll);
+  await writeSummary(report, reportAll ? "all" : "issues");
   if (
     (report.failed || distributionWarnings(report).length > 0) &&
     commentsEnabled(config)
@@ -68,6 +67,8 @@ async function run(): Promise<void> {
   }
 }
 
-run().catch((error: unknown) => {
+try {
+  await run();
+} catch (error: unknown) {
   core.setFailed(error instanceof Error ? error.message : String(error));
-});
+}

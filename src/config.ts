@@ -13,15 +13,18 @@ function asRecord(value: unknown): Record<string, unknown> {
     : {};
 }
 
+function flattenHeader(
+  entry: HeaderRule | HeaderRule[] | undefined,
+): HeaderRule[] {
+  if (Array.isArray(entry)) return entry;
+  return entry ? [entry] : [];
+}
+
 function normalizeHeader(
   value: unknown,
 ): HeaderRule | HeaderRule[] | undefined {
   if (Array.isArray(value)) {
-    return value
-      .map((entry) => normalizeHeader(entry))
-      .flatMap((entry) =>
-        Array.isArray(entry) ? entry : entry ? [entry] : [],
-      );
+    return value.map((entry) => normalizeHeader(entry)).flatMap(flattenHeader);
   }
   if (!value || typeof value !== "object") return undefined;
 

@@ -13,4 +13,4 @@ jobs:
     uses: zaphiro-technologies/github-workflows/.github/workflows/add-to-project.yaml@main
     secrets: inherit
     with:
-      reviewers-team: docs
+      reviewers-team: backend-devs

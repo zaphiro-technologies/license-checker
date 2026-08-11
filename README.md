@@ -1,6 +1,9 @@
 # License Checker GitHub Action
 
-License Checker is a cross-platform Node 24 GitHub Action that checks dependency license compatibility. It accepts the dependency-related parts of the License Eye configuration shape and normalizes license metadata to SPDX identifiers and expressions.
+License Checker is a cross-platform Node 24 GitHub Action that checks dependency
+license compatibility. It accepts the dependency-related parts of the License
+Eye configuration shape and normalizes license metadata to SPDX identifiers and
+expressions.
 
 ## Usage
 
@@ -18,11 +21,15 @@ steps:
       log: info
 ```
 
-The action is dependency check-only. It does not modify files or scan source-file headers. It writes a job summary and workflow annotations. When a pull request has a failure or distribution-review warning and a token is available, it creates or updates one managed pull-request comment.
+The action is dependency check-only. It does not modify files or scan
+source-file headers. It writes a job summary and workflow annotations. When a
+pull request has a failure or distribution-review warning and a token is
+available, it creates or updates one managed pull-request comment.
 
 ## Configuration
 
-The default configuration file is `.licenserc.yaml`. The following License Eye-style configuration is supported:
+The default configuration file is `.licenserc.yaml`. The following License
+Eye-style configuration is supported:
 
 ```yaml
 header:
@@ -46,20 +53,43 @@ dependency:
 Supported dependency inputs are:
 
 - JavaScript: `package.json`, npm lockfiles, `yarn.lock`, and `pnpm-lock.yaml`
-- Go: `go.mod` and `go.sum`; vendored module LICENSE files are preferred when `vendor/` is present
-- Python: `requirements.txt`, `pyproject.toml`, `poetry.lock`, and `Pipfile.lock`
+- Go: `go.mod` and `go.sum`; vendored module LICENSE files are preferred when
+  `vendor/` is present
+- Python: `requirements.txt`, `pyproject.toml`, `poetry.lock`, and
+  `Pipfile.lock`
 
-Yarn `workspace:` entries represent local packages and are ignored; only third-party dependencies are checked.
+Yarn `workspace:` entries represent local packages and are ignored; only
+third-party dependencies are checked.
 
-When `pyproject.toml` has an adjacent `poetry.lock`, the lockfile is preferred and its exact direct and transitive package versions are checked. Without a lockfile, standard numeric PyPI constraints such as `>=1.0,<2.0`, `~=1.4`, and `==1.4.*` are resolved to the latest non-yanked matching release. Python license resolution uses PyPI's SPDX `license_expression` metadata when available.
+When `pyproject.toml` has an adjacent `poetry.lock`, the lockfile is preferred
+and its exact direct and transitive package versions are checked. Without a
+lockfile, standard numeric PyPI constraints such as `>=1.0,<2.0`, `~=1.4`, and
+`==1.4.*` are resolved to the latest non-yanked matching release. Python license
+resolution uses PyPI's SPDX `license_expression` metadata when available.
 
-License resolution uses configured overrides first, then manifest or lockfile metadata, installed npm metadata, public package registries, and repository license files. When PyPI metadata has no usable license, the checker follows a linked public GitHub repository and uses its license metadata or LICENSE text. Unresolved licenses remain `Unknown` and fail compatibility checks until an override is supplied.
+License resolution uses configured overrides first, then manifest or lockfile
+metadata, installed npm metadata, public package registries, and repository
+license files. When PyPI metadata has no usable license, the checker follows a
+linked public GitHub repository and uses its license metadata or LICENSE text.
+Unresolved licenses remain `Unknown` and fail compatibility checks until an
+override is supplied.
 
-Use `dependency.exceptions` only for a manually reviewed non-SPDX license. Every entry requires an exact dependency `name` and `version`, a reference `url`, and an audit `reason`. It takes precedence over registry resolution and is reported as `approved-exception` with the provided terms link and reason; it is not represented as SPDX-compatible. Add a separate exception for each package, such as `@gsap/react`.
+Use `dependency.exceptions` only for a manually reviewed non-SPDX license. Every
+entry requires an exact dependency `name` and `version`, a reference `url`, and
+an audit `reason`. It takes precedence over registry resolution and is reported
+as `approved-exception` with the provided terms link and reason; it is not
+represented as SPDX-compatible. Add a separate exception for each package, such
+as `@gsap/react`.
 
-The `dependency.require_fsf_free`, `dependency.require_osi_approved`, and `dependency.excludes` fields are accepted. The `header.license.spdx-id` field identifies the project license used for compatibility. SPDX `AND`, `OR`, and `WITH` expressions are supported.
+The `dependency.require_fsf_free`, `dependency.require_osi_approved`, and
+`dependency.excludes` fields are accepted. The `header.license.spdx-id` field
+identifies the project license used for compatibility. SPDX `AND`, `OR`, and
+`WITH` expressions are supported.
 
-Compatibility decisions for the supported license families follow the [LicenseCheck.io compatibility matrix](https://licensecheck.io/compatibility-matrix). Matrix warnings are reported as `unknown` by default and as `weak-compatible` when `weak-compatible: true`.
+Compatibility decisions for the supported license families follow the
+[LicenseCheck.io compatibility matrix](https://licensecheck.io/compatibility-matrix).
+Matrix warnings are reported as `unknown` by default and as `weak-compatible`
+when `weak-compatible: true`.
 
 ## Action inputs
 
@@ -71,11 +101,21 @@ Compatibility decisions for the supported license families follow the [LicenseCh
 | `weak-compatible` | `false`               | Enable License Eye weak-compatible compatibility entries |
 | `report-all`      | `false`               | Include compatible dependencies in the job summary       |
 
-By default, the job summary and pull-request comment show dependency issues only. Manually approved non-SPDX exceptions remain visible in a separate audit section. Set `report-all: true` to include every compatible dependency in the job summary.
+By default, the job summary and pull-request comment show dependency issues
+only. Manually approved non-SPDX exceptions remain visible in a separate audit
+section. Set `report-all: true` to include every compatible dependency in the
+job summary.
 
-Compatible reciprocal/copyleft dependencies are also reported by default as non-blocking **Distribution review** warnings. LGPL, MPL, GPL/AGPL, CAL, and related reciprocal licenses can require notices, license copies, source availability, relinking, or other conditions when software is distributed. These warnings do not fail the action, but they do appear in the job summary, pull-request comment, and GitHub Actions warning annotations.
+Compatible reciprocal/copyleft dependencies are also reported by default as
+non-blocking **Distribution review** warnings. LGPL, MPL, GPL/AGPL, CAL, and
+related reciprocal licenses can require notices, license copies, source
+availability, relinking, or other conditions when software is distributed. These
+warnings do not fail the action, but they do appear in the job summary,
+pull-request comment, and GitHub Actions warning annotations.
 
-The generated `dist/index.js` bundle is committed because JavaScript GitHub Actions run from the checked-out action repository without installing its Node dependencies.
+The generated `dist/index.js` bundle is committed because JavaScript GitHub
+Actions run from the checked-out action repository without installing its Node
+dependencies.
 
 ## Local usage
 
@@ -87,11 +127,16 @@ yarn install --immutable
 yarn run check --config .github/config/.licenserc.yaml --log debug
 ```
 
-The local command checks dependency licenses and exits non-zero on failures. It does not create pull-request comments. Network access may be needed for registry and repository license resolution; configured `dependency.licenses` entries work offline.
+The local command checks dependency licenses and exits non-zero on failures. It
+does not create pull-request comments. Network access may be needed for registry
+and repository license resolution; configured `dependency.licenses` entries work
+offline.
 
 ## Checking another repository locally
 
-Run the checker from its own checkout and point `GITHUB_WORKSPACE` at the repository you want to inspect. Dependency file paths in the configuration are resolved relative to that target repository.
+Run the checker from its own checkout and point `GITHUB_WORKSPACE` at the
+repository you want to inspect. Dependency file paths in the configuration are
+resolved relative to that target repository.
 
 ```sh
 TARGET_REPO=/path/to/other-repository
@@ -112,7 +157,11 @@ GITHUB_WORKSPACE=/Users/ffacca/Code/documentation \
   --log debug
 ```
 
-The target repository must already be checked out and contain the dependency files listed in its configuration. The checker does not install dependencies or modify the target repository. It exits with code `1` when incompatible or unresolved licenses are found. Use `--token` when private GitHub repository metadata must be queried:
+The target repository must already be checked out and contain the dependency
+files listed in its configuration. The checker does not install dependencies or
+modify the target repository. It exits with code `1` when incompatible or
+unresolved licenses are found. Use `--token` when private GitHub repository
+metadata must be queried:
 
 ```sh
 GITHUB_WORKSPACE="$TARGET_REPO" \
@@ -121,4 +170,5 @@ GITHUB_WORKSPACE="$TARGET_REPO" \
   --token "$GITHUB_TOKEN"
 ```
 
-Local runs produce annotations in supported GitHub environments but do not create pull-request comments.
+Local runs produce annotations in supported GitHub environments but do not
+create pull-request comments.

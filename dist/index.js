@@ -1,19 +1,3 @@
-/*
- * Copyright 2026 Zaphiro Technologies
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
 import { createRequire as __WEBPACK_EXTERNAL_createRequire } from "module";
 /******/ var __webpack_modules__ = ({
 
@@ -43345,7 +43329,7 @@ function headerRules(config) {
 
 /***/ }),
 
-/***/ 6312:
+/***/ 9985:
 /***/ ((__unused_webpack___webpack_module__, __webpack_exports__, __nccwpck_require__) => {
 
 
@@ -43360,8 +43344,6 @@ var external_node_path_ = __nccwpck_require__(6760);
 var lib_config = __nccwpck_require__(9651);
 // EXTERNAL MODULE: external "node:fs"
 var external_node_fs_ = __nccwpck_require__(3024);
-;// CONCATENATED MODULE: external "node:url"
-const external_node_url_namespaceObject = __WEBPACK_EXTERNAL_createRequire(import.meta.url)("node:url");
 // EXTERNAL MODULE: ../../.yarn/berry/cache/spdx-correct-npm-3.2.0-ffae008484-10c0.zip/node_modules/spdx-correct/index.js
 var spdx_correct = __nccwpck_require__(1854);
 // EXTERNAL MODULE: ../../.yarn/berry/cache/spdx-expression-parse-npm-3.0.1-b718cbb35a-10c0.zip/node_modules/spdx-expression-parse/index.js
@@ -43388,12 +43370,11 @@ var dist = __nccwpck_require__(918);
 
 
 
-
 function isRecord(value) {
     return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 function loadLicenseCompatibilityRules() {
-    const rulesPath = (0,external_node_url_namespaceObject.fileURLToPath)(__nccwpck_require__.ab + "license-compatibility.yaml");
+    const rulesPath = __nccwpck_require__.ab + "license-compatibility.yaml";
     const parsed = (0,dist/* parse */.qg)((0,external_node_fs_.readFileSync)(rulesPath, "utf8"));
     if (!isRecord(parsed))
         throw new Error("Invalid license compatibility YAML.");
@@ -46525,12 +46506,11 @@ function collectGoDependencies(context) {
  */
 
 
-
 function default_license_rules_isRecord(value) {
     return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 function loadDefaultLicenseRules() {
-    const rulesPath = (0,external_node_url_namespaceObject.fileURLToPath)(__nccwpck_require__.ab + "default-license-rules.yaml");
+    const rulesPath = __nccwpck_require__.ab + "default-license-rules.yaml";
     const parsed = (0,dist/* parse */.qg)((0,external_node_fs_.readFileSync)(rulesPath, "utf8"));
     if (!default_license_rules_isRecord(parsed))
         throw new Error("Invalid default license rules YAML.");
@@ -48624,7 +48604,7 @@ async function checkDependencies(root, config, token, weakCompatible, logger, go
 __nccwpck_require__.a(__webpack_module__, async (__webpack_handle_async_dependencies__, __webpack_async_result__) => { try {
 /* harmony import */ var _actions_core__WEBPACK_IMPORTED_MODULE_0__ = __nccwpck_require__(7687);
 /* harmony import */ var _config_js__WEBPACK_IMPORTED_MODULE_1__ = __nccwpck_require__(9651);
-/* harmony import */ var _dependencies_js__WEBPACK_IMPORTED_MODULE_2__ = __nccwpck_require__(6312);
+/* harmony import */ var _dependencies_js__WEBPACK_IMPORTED_MODULE_2__ = __nccwpck_require__(9985);
 /* harmony import */ var _logger_js__WEBPACK_IMPORTED_MODULE_3__ = __nccwpck_require__(3953);
 /* harmony import */ var _report_js__WEBPACK_IMPORTED_MODULE_4__ = __nccwpck_require__(431);
 /*

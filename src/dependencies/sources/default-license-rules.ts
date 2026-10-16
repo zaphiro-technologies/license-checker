@@ -15,7 +15,6 @@
  */
 
 import { readFileSync } from "node:fs";
-import { fileURLToPath } from "node:url";
 import { parse as parseYaml } from "yaml";
 import type { LicenseRule, LicenseRuleSource } from "../../types.js";
 
@@ -24,8 +23,9 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 }
 
 function loadDefaultLicenseRules(): Record<LicenseRuleSource, LicenseRule[]> {
-  const rulesPath = fileURLToPath(
-    new URL("../../../config/default-license-rules.yaml", import.meta.url),
+  const rulesPath = new URL(
+    "../../../config/default-license-rules.yaml",
+    import.meta.url,
   );
   const parsed: unknown = parseYaml(readFileSync(rulesPath, "utf8"));
   if (!isRecord(parsed)) throw new Error("Invalid default license rules YAML.");

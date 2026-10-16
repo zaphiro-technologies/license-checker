@@ -15,7 +15,6 @@
  */
 
 import { readFileSync } from "node:fs";
-import { fileURLToPath } from "node:url";
 import spdxCorrect from "spdx-correct";
 import parseExpression from "spdx-expression-parse";
 import { parse as parseYaml } from "yaml";
@@ -68,8 +67,9 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 }
 
 function loadLicenseCompatibilityRules(): LicenseCompatibilityRules {
-  const rulesPath = fileURLToPath(
-    new URL("../config/license-compatibility.yaml", import.meta.url),
+  const rulesPath = new URL(
+    "../config/license-compatibility.yaml",
+    import.meta.url,
   );
   const parsed: unknown = parseYaml(readFileSync(rulesPath, "utf8"));
   if (!isRecord(parsed)) throw new Error("Invalid license compatibility YAML.");

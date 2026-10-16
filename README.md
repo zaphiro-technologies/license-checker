@@ -90,11 +90,11 @@ Development dependencies are excluded by default. Set
 `dependency.include-dev-dependencies: true` to include JavaScript
 `devDependencies`, Poetry non-main groups, `Pipfile.lock`'s `develop` section,
 and Go test imports for the package patterns in `dependency.go.packages`.
-JavaScript lockfiles are traversed from runtime dependency roots so
-transitive production dependencies remain included even when also used by
-development tools. A `requirements.txt` is treated as the complete dependency
-set explicitly listed in that file; split runtime and development requirements
-into separate files and list the desired inputs in `dependency.files`.
+JavaScript lockfiles are traversed from runtime dependency roots so transitive
+production dependencies remain included even when also used by development
+tools. A `requirements.txt` is treated as the complete dependency set explicitly
+listed in that file; split runtime and development requirements into separate
+files and list the desired inputs in `dependency.files`.
 
 Go dependencies are collected from the selected packages' `.Module` data and
 deduplicated by module. By default, the checker scans production packages under
@@ -103,12 +103,11 @@ builds, such as `./cmd` for a service executable. Set
 `dependency.go.test-packages` to opt in to test imports independently and/or
 check a separate set of patterns with `go list -deps -test -json`. If omitted,
 enabling `include-dev-dependencies` checks tests for the production package
-patterns.
-The action environment must have Go
-installed, and its OS, architecture, and build tags should match the build being
-checked. `go.sum` contains integrity hashes and is not a dependency graph; a
-`go.sum`-only configuration fails. Replaced Go modules are reported unresolved
-because the replacement source may have different license terms.
+patterns. The action environment must have Go installed, and its OS,
+architecture, and build tags should match the build being checked. `go.sum`
+contains integrity hashes and is not a dependency graph; a `go.sum`-only
+configuration fails. Replaced Go modules are reported unresolved because the
+replacement source may have different license terms.
 
 When `pyproject.toml` has an adjacent `poetry.lock`, its exact direct and
 transitive package versions are checked. Python license resolution uses PyPI's

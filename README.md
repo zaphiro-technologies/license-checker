@@ -119,8 +119,8 @@ a license.
 
 ### Compatibility reference
 
-The table below is transcribed from the [archived LicenseCheck.io compatibility
-matrix](https://web.archive.org/web/20260613002524/https://licensecheck.io/compatibility-matrix)
+The table below is transcribed from the
+[archived LicenseCheck.io compatibility matrix](https://web.archive.org/web/20260613002524/https://licensecheck.io/compatibility-matrix)
 for reference. Rows are the project license; columns are the dependency license.
 `✓` means compatible, `!` means review the terms, and `✗` means incompatible
 according to that source. This historical table is not the checker's policy or
@@ -128,20 +128,20 @@ legal advice; the checker's compatibility rules are implemented in
 [`src/spdx.ts`](src/spdx.ts).
 
 | Project license ↓ / dependency license → | MIT | Apache 2.0 | BSD 3-Clause | BSD 2-Clause | ISC | GPL 3.0 | GPL 2.0 | LGPL 3.0 | LGPL 2.1 | MPL 2.0 | AGPL 3.0 | CC0 1.0 | Unlicense |
-|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| MIT | ✓ | ✓ | ✓ | ✓ | ✓ | ✗ | ✗ | ✓ | ✓ | ✓ | ✗ | ✓ | ✓ |
-| Apache 2.0 | ✓ | ✓ | ✓ | ✓ | ✓ | ✗ | ✗ | ✓ | ✓ | ✓ | ✗ | ✓ | ✓ |
-| BSD 3-Clause | ✓ | ✓ | ✓ | ✓ | ✓ | ✗ | ✗ | ✓ | ✓ | ✓ | ✗ | ✓ | ✓ |
-| BSD 2-Clause | ✓ | ✓ | ✓ | ✓ | ✓ | ✗ | ✗ | ✓ | ✓ | ✓ | ✗ | ✓ | ✓ |
-| ISC | ✓ | ✓ | ✓ | ✓ | ✓ | ✗ | ✗ | ✓ | ✓ | ✓ | ✗ | ✓ | ✓ |
-| GPL 3.0 | ✗ | ✗ | ✗ | ✗ | ✗ | ✓ | ! | ✗ | ✗ | ✗ | ! | ✓ | ✓ |
-| GPL 2.0 | ✗ | ✗ | ✗ | ✗ | ✗ | ! | ✓ | ✗ | ✗ | ✗ | ! | ✓ | ✓ |
-| LGPL 3.0 | ✓ | ✓ | ✓ | ✓ | ✓ | ✗ | ✗ | ✓ | ! | ! | ✗ | ✓ | ✓ |
-| LGPL 2.1 | ✓ | ✓ | ✓ | ✓ | ✓ | ✗ | ✗ | ! | ✓ | ! | ✗ | ✓ | ✓ |
-| MPL 2.0 | ✓ | ✓ | ✓ | ✓ | ✓ | ✗ | ✗ | ! | ! | ✓ | ✗ | ✓ | ✓ |
-| AGPL 3.0 | ✗ | ✗ | ✗ | ✗ | ✗ | ! | ! | ✗ | ✗ | ✗ | ✓ | ✓ | ✓ |
-| CC0 1.0 | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
-| Unlicense | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| ---------------------------------------- | --- | ---------- | ------------ | ------------ | --- | ------- | ------- | -------- | -------- | ------- | -------- | ------- | --------- |
+| MIT                                      | ✓   | ✓          | ✓            | ✓            | ✓   | ✗       | ✗       | ✓        | ✓        | ✓       | ✗        | ✓       | ✓         |
+| Apache 2.0                               | ✓   | ✓          | ✓            | ✓            | ✓   | ✗       | ✗       | ✓        | ✓        | ✓       | ✗        | ✓       | ✓         |
+| BSD 3-Clause                             | ✓   | ✓          | ✓            | ✓            | ✓   | ✗       | ✗       | ✓        | ✓        | ✓       | ✗        | ✓       | ✓         |
+| BSD 2-Clause                             | ✓   | ✓          | ✓            | ✓            | ✓   | ✗       | ✗       | ✓        | ✓        | ✓       | ✗        | ✓       | ✓         |
+| ISC                                      | ✓   | ✓          | ✓            | ✓            | ✓   | ✗       | ✗       | ✓        | ✓        | ✓       | ✗        | ✓       | ✓         |
+| GPL 3.0                                  | ✗   | ✗          | ✗            | ✗            | ✗   | ✓       | !       | ✗        | ✗        | ✗       | !        | ✓       | ✓         |
+| GPL 2.0                                  | ✗   | ✗          | ✗            | ✗            | ✗   | !       | ✓       | ✗        | ✗        | ✗       | !        | ✓       | ✓         |
+| LGPL 3.0                                 | ✓   | ✓          | ✓            | ✓            | ✓   | ✗       | ✗       | ✓        | !        | !       | ✗        | ✓       | ✓         |
+| LGPL 2.1                                 | ✓   | ✓          | ✓            | ✓            | ✓   | ✗       | ✗       | !        | ✓        | !       | ✗        | ✓       | ✓         |
+| MPL 2.0                                  | ✓   | ✓          | ✓            | ✓            | ✓   | ✗       | ✗       | !        | !        | ✓       | ✗        | ✓       | ✓         |
+| AGPL 3.0                                 | ✗   | ✗          | ✗            | ✗            | ✗   | !       | !       | ✗        | ✗        | ✗       | ✓        | ✓       | ✓         |
+| CC0 1.0                                  | ✓   | ✓          | ✓            | ✓            | ✓   | ✓       | ✓       | ✓        | ✓        | ✓       | ✓        | ✓       | ✓         |
+| Unlicense                                | ✓   | ✓          | ✓            | ✓            | ✓   | ✓       | ✓       | ✓        | ✓        | ✓       | ✓        | ✓       | ✓         |
 
 For a separate, interactive compatibility check, see the European Commission's
 [Licensing Assistant compatibility checker](https://interoperable-europe.ec.europa.eu/collection/eupl/solution/licensing-assistant/compatibility-checker).

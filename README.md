@@ -133,10 +133,10 @@ when `weak-compatible: true`.
 | `report-all`      | `false`               | Include compatible dependencies in the job summary       |
 
 By default, the job summary and pull-request comment show dependency issues
-only. Distribution review warnings and manually approved non-SPDX exceptions
-are included in the job summary; they are omitted from the pull-request comment.
-The pull-request comment links to the workflow run summary for the full report.
-Set `report-all: true` to include every compatible dependency in the job summary.
+only. Distribution review warnings and manually approved non-SPDX exceptions are
+included in the job summary; they are omitted from the pull-request comment. The
+pull-request comment links to the workflow run summary for the full report. Set
+`report-all: true` to include every compatible dependency in the job summary.
 
 Compatible reciprocal/copyleft dependencies are also reported by default as
 non-blocking **Distribution review** warnings. LGPL, MPL, GPL/AGPL, CAL, and

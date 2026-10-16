@@ -1288,16 +1288,11 @@ function parseManifest(
       dependencies,
       goPackageList,
     );
-    const testPackages = goConfig?.testPackages?.length
-      ? goConfig.testPackages
-      : includeDevDependencies
-        ? packages
-        : [];
-    if (testPackages.length > 0) {
+    if (includeDevDependencies) {
       parseGoPackages(
         path,
         dirname(absolute),
-        testPackages,
+        packages,
         true,
         dependencies,
         goPackageList,

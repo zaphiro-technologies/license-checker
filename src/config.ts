@@ -140,16 +140,19 @@ function normalizeDependencies(value: unknown): DependencyConfig | undefined {
   ) {
     throw new Error("dependency.include-dev-dependencies must be a boolean.");
   }
-  for (const field of ["packages", "test-packages"] as const) {
-    if (go[field] !== undefined && !Array.isArray(go[field])) {
-      throw new Error(`dependency.go.${field} must be a list.`);
-    }
-    if (
-      Array.isArray(go[field]) &&
-      go[field].some((item) => typeof item !== "string" || !item.trim())
-    ) {
-      throw new Error(`dependency.go.${field} must contain non-empty strings.`);
-    }
+  if (go.packages !== undefined && !Array.isArray(go.packages)) {
+    throw new Error("dependency.go.packages must be a list.");
+  }
+  if (
+    Array.isArray(go.packages) &&
+    go.packages.some((item) => typeof item !== "string" || !item.trim())
+  ) {
+    throw new Error("dependency.go.packages must contain non-empty strings.");
+  }
+  if (go["test-packages"] !== undefined) {
+    throw new Error(
+      "dependency.go.test-packages is not supported; use dependency.include-dev-dependencies.",
+    );
   }
   return {
     files: Array.isArray(record.files)
@@ -160,9 +163,6 @@ function normalizeDependencies(value: unknown): DependencyConfig | undefined {
         ? {
             packages: Array.isArray(go.packages)
               ? (go.packages as string[])
-              : undefined,
-            testPackages: Array.isArray(go["test-packages"])
-              ? (go["test-packages"] as string[])
               : undefined,
           }
         : undefined,

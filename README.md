@@ -1,9 +1,11 @@
 # License Checker GitHub Action
 
-License Checker is a cross-platform Node 24 GitHub Action that checks dependency
-license compatibility. It accepts the dependency-related parts of the License
-Eye configuration shape and normalizes license metadata to SPDX identifiers and
-expressions.
+A GitHub Action for checking dependency license compatibility in
+JavaScript, Python, and Go projects.
+
+It uses License Eye-style YAML config and SPDX license expressions.
+This because we started from that tool, and keeping the same config file avoid
+us to rework all our repos.
 
 ## Usage
 
@@ -28,8 +30,7 @@ available, it creates or updates one managed pull-request comment.
 
 ## Configuration
 
-The default configuration file is `.licenserc.yaml`. The following License
-Eye-style configuration is supported:
+The default config path is `.licenserc.yaml`. Example:
 
 ```yaml
 header:
@@ -40,15 +41,12 @@ header:
 dependency:
   files:
     - go.mod
-  # Optional; JavaScript/Python development dependencies and Go test imports are excluded by default.
+  # Optional; includes JS/Python dev dependencies and Go test imports.
   # include-dev-dependencies: true
   go:
-    # Defaults to ["./..."]. Set the package patterns CI builds for a narrower graph.
+    # Defaults to ["./..."]. Set to the package patterns CI builds.
     packages:
       - ./cmd
-    # Optional: use these patterns for test imports; otherwise the dev flag uses packages above.
-    test-packages:
-      - ./...
   licenses:
     - name: github.com/zaphiro-technologies/roger
       license: Apache-2.0
@@ -62,7 +60,7 @@ dependency:
       reason: Approved by legal for use outside prohibited GSAP uses.
 ```
 
-Supported dependency inputs are:
+The supported dependency inputs are:
 
 - JavaScript: `package.json` with `package-lock.json`, `npm-shrinkwrap.json`,
   `yarn.lock`, or `pnpm-lock.yaml`
@@ -71,86 +69,32 @@ Supported dependency inputs are:
   `requirements.txt`; `pyproject.toml` is supported with an adjacent
   `poetry.lock`
 
-Copyable configuration and workflow examples are in [`examples/`](examples/).
-Each ecosystem example shows the dependency file entry to use in
-`dependency.files`; lockfiles should be generated and maintained by that
-ecosystem's package manager.
+Examples are in [`examples/`](examples/).
 
-Yarn `workspace:` entries represent local packages and are ignored; only
-third-party dependencies are checked.
+## Configuration reference
 
-The checker requires exact resolved versions before evaluating dependency
-licenses. JavaScript dependencies without a supported lockfile, Python ranges
-without a supported lockfile or exact `==`/`===` pin, and incomplete Go module
-graphs are reported as unresolved and fail the check. `requirements.txt` must
-list the complete resolved set; includes, constraints, and options must be
-expanded before checking.
+| Setting                               | Purpose                                                                                                                                                                               |
+| ------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `header.license.spdx-id`              | Project license used for compatibility checks.                                                                                                                                        |
+| `dependency.files`                    | Manifests and lockfiles to scan. Versions must be exact; Python requirements must pin and list every dependency. Unresolved inputs fail the check.                                    |
+| `dependency.include-dev-dependencies` | Defaults to `false`. Includes JS `devDependencies`, Python non-main groups and Pipfile `develop`, and Go tests.                                                                       |
+| `dependency.go.packages`              | Go build targets; defaults to `./...`.                                                                                                                                                |
+| `dependency.licenses`                 | License override by package name or glob and optional version. `match` adds a regex over declared license metadata or downloaded LICENSE text. Unconditional entries take precedence. |
+| `dependency.exceptions`               | Manual non-SPDX approval. Requires exact package name/version, terms `url`, and review `reason`; reported as `approved-exception`.                                                    |
+| `dependency.excludes`                 | Skip package names or globs, optionally limited to comma-separated exact versions.                                                                                                    |
+| `dependency.require_fsf_free`         | Fail dependencies not recognized as FSF-free.                                                                                                                                         |
+| `dependency.require_osi_approved`     | Fail dependencies not recognized as OSI-approved.                                                                                                                                     |
+| SPDX expressions                      | `AND`, `OR`, and `WITH` are supported in license values.                                                                                                                              |
 
-Development dependencies are excluded by default. Set
-`dependency.include-dev-dependencies: true` to include JavaScript
-`devDependencies`, Poetry non-main groups, `Pipfile.lock`'s `develop` section,
-and Go test imports for the package patterns in `dependency.go.packages`.
-JavaScript lockfiles are traversed from runtime dependency roots so transitive
-production dependencies remain included even when also used by development
-tools. A `requirements.txt` is treated as the complete dependency set explicitly
-listed in that file; split runtime and development requirements into separate
-files and list the desired inputs in `dependency.files`.
-
-Go dependencies are collected from the selected packages' `.Module` data and
-deduplicated by module. By default, the checker scans production packages under
-`./...`; configure `dependency.go.packages` to match the package patterns CI
-builds, such as `./cmd` for a service executable. Set
-`dependency.go.test-packages` to opt in to test imports independently and/or
-check a separate set of patterns with `go list -deps -test -json`. If omitted,
-enabling `include-dev-dependencies` checks tests for the production package
-patterns. The action environment must have Go installed, and its OS,
-architecture, and build tags should match the build being checked. `go.sum`
-contains integrity hashes and is not a dependency graph; a `go.sum`-only
-configuration fails. Replaced Go modules are reported unresolved because the
-replacement source may have different license terms.
-
-When `pyproject.toml` has an adjacent `poetry.lock`, its exact direct and
-transitive package versions are checked. Python license resolution uses PyPI's
-SPDX `license_expression` metadata when available.
-
-For dependencies with exact versions, license resolution uses configured
-overrides first, then lockfile metadata, installed npm metadata, public package
-registries, and repository license files. When PyPI metadata has no usable
-license, the checker follows a linked public GitHub repository and uses its
-license metadata or LICENSE text. Unresolved versions or licenses are reported
-as `Unknown` and fail compatibility checks.
-
-Use `dependency.exceptions` only for a manually reviewed non-SPDX license. Every
-entry requires an exact dependency `name` and `version`, a reference `url`, and
-an audit `reason`. It takes precedence over registry resolution and is reported
-as `approved-exception` with the provided terms link and reason; it is not
-represented as SPDX-compatible. Add a separate exception for each package, such
-as `@gsap/react`.
-
-The `dependency.require_fsf_free`, `dependency.require_osi_approved`, and
-`dependency.excludes` fields are accepted. The `header.license.spdx-id` field
-identifies the project license used for compatibility. SPDX `AND`, `OR`, and
-`WITH` expressions are supported.
-
-Entries in `dependency.licenses` can include an optional `match` regular
-expression. A license entry with `match` applies only when the dependency name
-and optional version match and the expression matches available license data.
-The checker tries declared license metadata first, then downloaded repository
-LICENSE text when that text is available. Entries without `match` remain
-unconditional name/version overrides and take precedence over pattern entries.
-Pattern entries are checked in configuration order for each source. Invalid
-regular expressions fail configuration loading. Use this for reviewed,
-package-specific cases; a copyright notice alone does not establish the terms of
-a license.
+Review license text before assigning a license with `match`; a copyright notice
+alone does not establish license terms.
 
 ### Compatibility reference
 
-The table below is transcribed from the
-[archived LicenseCheck.io compatibility matrix](https://web.archive.org/web/20260613002524/https://licensecheck.io/compatibility-matrix)
-for reference. Rows are the project license; columns are the dependency license.
-`✓` means compatible, `!` means review the terms, and `✗` means incompatible
-according to that source. This historical table is not the checker's policy or
-legal advice; the checker's compatibility rules are implemented in
+This table is transcribed from the
+[archived LicenseCheck.io matrix](https://web.archive.org/web/20260613002524/https://licensecheck.io/compatibility-matrix).
+Rows are project licenses; columns are dependency licenses. `✓` is compatible,
+`!` needs review, and `✗` is incompatible. The action's rules are in
 [`src/spdx.ts`](src/spdx.ts).
 
 | Project license ↓ / dependency license → | MIT | Apache 2.0 | BSD 3-Clause | BSD 2-Clause | ISC | GPL 3.0 | GPL 2.0 | LGPL 3.0 | LGPL 2.1 | MPL 2.0 | AGPL 3.0 | CC0 1.0 | Unlicense |
@@ -169,29 +113,27 @@ legal advice; the checker's compatibility rules are implemented in
 | CC0 1.0                                  | ✓   | ✓          | ✓            | ✓            | ✓   | ✓       | ✓       | ✓        | ✓        | ✓       | ✓        | ✓       | ✓         |
 | Unlicense                                | ✓   | ✓          | ✓            | ✓            | ✓   | ✓       | ✓       | ✓        | ✓        | ✓       | ✓        | ✓       | ✓         |
 
-For a separate, interactive compatibility check, see the European Commission's
-[Licensing Assistant compatibility checker](https://interoperable-europe.ec.europa.eu/collection/eupl/solution/licensing-assistant/compatibility-checker).
-Choose the dependency license as the inbound license and the project's license
-as the outbound license. The assistant covers a different set of licenses and
-does not replace legal review.
+The European Commission's [Licensing Assistant](https://interoperable-europe.ec.europa.eu/collection/eupl/solution/licensing-assistant/compatibility-checker)
+provides an interactive check. Select the dependency license as inbound and the
+project license as outbound.
 
 Matrix warnings are reported as `unknown` by default and as `weak-compatible`
 when `weak-compatible: true`.
 
 ## Comparison with alternatives
 
-These tools overlap, but they make different trade-offs:
+We tested different tools. Some are surely more complete, and that was one of
+the problems: they do much more than just checking license compatibility.
+Other have a weak support for the ecosystem we care about, so in the end, rather
+than applying different tools to different ecosystem, we came up with our own
+tool.
 
-| Tool                                                                                   | Stronger at                                                                                                   | Trade-off compared with this action                                                                                                                                                               |
-| -------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| This action                                                                            | Exact-version checks for supported JavaScript, Python, and Go inputs; unresolved dependencies fail the check. | Narrower ecosystem coverage and a smaller compliance workflow.                                                                                                                                    |
-| [GitHub Dependency Review](https://github.com/actions/dependency-review-action)        | Native PR checks for newly introduced dependencies with an SPDX allowlist.                                    | Checks dependency changes through GitHub's dependency graph; an unknown license is reported but does not fail the action. Private repositories require GitHub Code Security or Advanced Security. |
-| [OSS Review Toolkit (ORT)](https://github.com/oss-review-toolkit/ort-ci-github-action) | Broader license, security, and policy evaluation, with reports and SBOM generation.                           | More configuration and tooling than a focused license check. It supports allowing dynamic versions, so configure that carefully when exact versions are required.                                 |
-| [FOSSA Action](https://github.com/fossas/fossa-action)                                 | Hosted license and security compliance with policy review, license corrections, and attribution reports.      | Requires a FOSSA account and API key; it uses a separate service rather than this action's self-contained workflow.                                                                               |
-
-The earlier ORT evaluation is not documented here, so this table compares the
-current documented feature sets rather than claiming why ORT was previously
-unsatisfactory.
+| Tool                                                                            | Strength                                                                                   | Trade-off                                                                                            |
+| ------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------- |
+| This action                                                                     | Exact-version license checks for JavaScript, Python, and Go. Unresolved dependencies fail. | Focused ecosystem and policy coverage.                                                               |
+| [GitHub Dependency Review](https://github.com/actions/dependency-review-action) | Native PR review of dependency changes with an SPDX allowlist.                             | Uses GitHub's dependency graph; private repositories may require Code Security or Advanced Security. |
+| [ORT](https://github.com/oss-review-toolkit/ort-ci-github-action)               | License and security policy evaluation, reports, and SBOMs.                                | Broader setup and configuration.                                                                     |
+| [FOSSA](https://github.com/fossas/fossa-action)                                 | Hosted compliance with policy review and attribution reports.                              | Requires a FOSSA account and API key.                                                                |
 
 ## Action inputs
 
@@ -203,22 +145,11 @@ unsatisfactory.
 | `weak-compatible` | `false`               | Enable License Eye weak-compatible compatibility entries |
 | `report-all`      | `false`               | Include compatible dependencies in the job summary       |
 
-By default, the job summary and pull-request comment show dependency issues
-only. Distribution review warnings and manually approved non-SPDX exceptions are
-included in the job summary; they are omitted from the pull-request comment. The
-pull-request comment links to the workflow run summary for the full report. Set
-`report-all: true` to include every compatible dependency in the job summary.
-
-Compatible reciprocal/copyleft dependencies are also reported by default as
-non-blocking **Distribution review** warnings. LGPL, MPL, GPL/AGPL, CAL, and
-related reciprocal licenses can require notices, license copies, source
-availability, relinking, or other conditions when software is distributed. These
-warnings do not fail the action. They appear in the job summary and as GitHub
-Actions warning annotations.
-
-The generated `dist/index.js` bundle is committed because JavaScript GitHub
-Actions run from the checked-out action repository without installing its Node
-dependencies.
+The summary shows the full report. PR comments show dependency issues and link
+to the summary; distribution warnings and approved exceptions appear only in
+the summary. `report-all: true` includes compatible dependencies in the
+summary. Reciprocal licenses such as LGPL, MPL, GPL/AGPL, and CAL produce
+non-blocking distribution warnings.
 
 ## Local usage
 
@@ -230,16 +161,13 @@ yarn install --immutable
 yarn run check --config .github/config/.licenserc.yaml --log debug
 ```
 
-The local command checks dependency licenses and exits non-zero on failures. It
-does not create pull-request comments. Network access may be needed for registry
+The local command checks dependency licenses and exits non-zero on failures. Network access may be needed for registry
 and repository license resolution; configured `dependency.licenses` entries work
 offline.
 
 ## Checking another repository locally
 
-Run the checker from its own checkout and point `GITHUB_WORKSPACE` at the
-repository you want to inspect. Dependency file paths in the configuration are
-resolved relative to that target repository.
+Set `GITHUB_WORKSPACE` to the target checkout. Config paths are relative to it.
 
 ```sh
 TARGET_REPO=/path/to/other-repository
@@ -251,11 +179,7 @@ GITHUB_WORKSPACE="$TARGET_REPO" \
   --log info
 ```
 
-The target repository must already be checked out and contain the dependency
-files listed in its configuration. The checker does not install dependencies or
-modify the target repository. It exits with code `1` when incompatible or
-unresolved licenses are found. Use `--token` when private GitHub repository
-metadata must be queried:
+Use `--token` when the checker needs to read private GitHub repository metadata:
 
 ```sh
 GITHUB_WORKSPACE="$TARGET_REPO" \
@@ -264,12 +188,7 @@ GITHUB_WORKSPACE="$TARGET_REPO" \
   --token "$GITHUB_TOKEN"
 ```
 
-Local runs produce annotations in supported GitHub environments but do not
-create pull-request comments.
-
 ## Usage examples
 
-The [`examples/README.md`](examples/README.md) describes the example files and
-how to copy them into a project. It includes configurations for JavaScript, Go,
-Python with Poetry, and fully pinned Python requirements, plus a GitHub Actions
-workflow and an optional license-text pattern example.
+See [`examples/README.md`](examples/README.md) for the example configs and
+workflow.

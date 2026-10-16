@@ -43199,14 +43199,15 @@ function normalizeDependencies(value) {
         typeof record["include-dev-dependencies"] !== "boolean") {
         throw new Error("dependency.include-dev-dependencies must be a boolean.");
     }
-    for (const field of ["packages", "test-packages"]) {
-        if (go[field] !== undefined && !Array.isArray(go[field])) {
-            throw new Error(`dependency.go.${field} must be a list.`);
-        }
-        if (Array.isArray(go[field]) &&
-            go[field].some((item) => typeof item !== "string" || !item.trim())) {
-            throw new Error(`dependency.go.${field} must contain non-empty strings.`);
-        }
+    if (go.packages !== undefined && !Array.isArray(go.packages)) {
+        throw new Error("dependency.go.packages must be a list.");
+    }
+    if (Array.isArray(go.packages) &&
+        go.packages.some((item) => typeof item !== "string" || !item.trim())) {
+        throw new Error("dependency.go.packages must contain non-empty strings.");
+    }
+    if (go["test-packages"] !== undefined) {
+        throw new Error("dependency.go.test-packages is not supported; use dependency.include-dev-dependencies.");
     }
     return {
         files: Array.isArray(record.files)
@@ -43216,9 +43217,6 @@ function normalizeDependencies(value) {
             ? {
                 packages: Array.isArray(go.packages)
                     ? go.packages
-                    : undefined,
-                testPackages: Array.isArray(go["test-packages"])
-                    ? go["test-packages"]
                     : undefined,
             }
             : undefined,
@@ -47304,13 +47302,8 @@ function parseManifest(root, path, dependencies, goPackageList, dependencyConfig
         const goConfig = dependencyConfig.go;
         const packages = goConfig?.packages?.length ? goConfig.packages : ["./..."];
         parseGoPackages(path, (0,external_node_path_.dirname)(absolute), packages, false, dependencies, goPackageList);
-        const testPackages = goConfig?.testPackages?.length
-            ? goConfig.testPackages
-            : includeDevDependencies
-                ? packages
-                : [];
-        if (testPackages.length > 0) {
-            parseGoPackages(path, (0,external_node_path_.dirname)(absolute), testPackages, true, dependencies, goPackageList);
+        if (includeDevDependencies) {
+            parseGoPackages(path, (0,external_node_path_.dirname)(absolute), packages, true, dependencies, goPackageList);
         }
         return;
     }

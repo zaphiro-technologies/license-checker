@@ -57,7 +57,6 @@ export interface DependencyException {
 
 export interface GoDependencyConfig {
   packages?: string[];
-  testPackages?: string[];
 }
 
 export interface DependencyConfig {

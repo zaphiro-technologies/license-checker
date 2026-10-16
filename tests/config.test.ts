@@ -21,7 +21,7 @@ import { describe, expect, it } from "vitest";
 import { headerRules, loadConfig } from "../src/config.js";
 
 describe("configuration", () => {
-  it("loads Go package targets and opt-in test targets", () => {
+  it("loads Go package targets and the development dependency flag", () => {
     const root = mkdtempSync(join(tmpdir(), "license-checker-config-"));
     writeFileSync(
       join(root, ".licenserc.yaml"),
@@ -30,18 +30,32 @@ describe("configuration", () => {
   include-dev-dependencies: true
   go:
     packages: [./cmd]
-    test-packages: [./...]
 `,
     );
 
     expect(loadConfig(root, ".licenserc.yaml").config.dependency?.go).toEqual({
       packages: ["./cmd"],
-      testPackages: ["./..."],
     });
     expect(
       loadConfig(root, ".licenserc.yaml").config.dependency
         ?.includeDevDependencies,
     ).toBe(true);
+  });
+
+  it("rejects the removed Go test-packages setting", () => {
+    const root = mkdtempSync(join(tmpdir(), "license-checker-config-"));
+    writeFileSync(
+      join(root, ".licenserc.yaml"),
+      `dependency:
+  files: [go.mod]
+  go:
+    test-packages: [./...]
+`,
+    );
+
+    expect(() => loadConfig(root, ".licenserc.yaml")).toThrow(
+      "dependency.go.test-packages is not supported",
+    );
   });
 
   it("requires complete non-SPDX exception audit details", () => {

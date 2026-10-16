@@ -1,43 +1,26 @@
 # Usage examples
 
-These examples include configurations and small dependency input samples. The
-checker reads dependency files from the target repository root, so copy the
-selected example files there (or update the paths and pass the config location
-with the action's `config` input).
+Copy the files you need into your repository and set the action's `config` input
+to the copied config. Dependency paths are relative to the repository root.
 
-| Example                                                                | Use it when                                                                                               |
-| ---------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
-| [`javascript/`](javascript/)                                           | `package.json`, `package-lock.json`, and a config with an exact-version override.                         |
-| [`go/`](go/)                                                           | `go.mod` and a config; the checker reads selected package imports with `go list -deps -json`.             |
-| [`python-poetry/`](python-poetry/)                                     | `pyproject.toml` and a config; generate the adjacent lockfile with `poetry lock`.                         |
-| [`python-requirements/`](python-requirements/)                         | An exhaustive `requirements.txt` with every dependency pinned using `==` or `===`.                        |
-| [`match-pattern/.licenserc.yaml`](match-pattern/.licenserc.yaml)       | A reviewed package-specific rule needs to recognize declared license metadata or downloaded LICENSE text. |
-| [`github-actions/license-check.yml`](github-actions/license-check.yml) | A starter workflow for running the action on pull requests and pushes.                                    |
+| Example                                                                | Use it for                                            |
+| ---------------------------------------------------------------------- | ----------------------------------------------------- |
+| [`javascript/`](javascript/)                                           | npm lockfile and config                               |
+| [`go/`](go/)                                                           | Go module and package targets                         |
+| [`python-poetry/`](python-poetry/)                                     | Poetry lockfile and config                            |
+| [`python-requirements/`](python-requirements/)                         | Fully pinned requirements                             |
+| [`match-pattern/.licenserc.yaml`](match-pattern/.licenserc.yaml)       | Matching a package's declared license or LICENSE text |
+| [`github-actions/license-check.yml`](github-actions/license-check.yml) | PR and push workflow                                  |
 
-The ecosystem configurations refer to conventional filenames. If a project
-stores them elsewhere, change `dependency.files` to the correct repository-
-relative path. For JavaScript, keep the lockfile in the same directory as
-`package.json`; regenerate it with the package manager after changing
-dependencies. For Poetry, run `poetry lock` to create and update `poetry.lock`.
-For Go, the runner must have Go installed. The checker defaults to production
-packages under `./...`; set `dependency.go.packages` to the package patterns
-your build uses. Set `dependency.include-dev-dependencies: true` to include test
-imports for those same patterns. Set `dependency.go.test-packages` to opt in
-independently and/or check tests for a separate set of patterns. A `go.sum` file
-may remain in the project, but it is not a substitute for `go.mod`.
+Use the filenames shown, or update `dependency.files`. Keep JavaScript lockfiles
+beside `package.json`; run `poetry lock` after Poetry dependency changes. The Go
+runner needs Go installed. Go scans `./...` by default; set `dependency.go.packages`
+to your build targets. `dependency.include-dev-dependencies: true` includes JS
+and Python dev dependencies and Go test imports for those same targets.
+`go.sum` does not replace `go.mod`.
 
-JavaScript and Python development dependency groups are excluded by default; Go
-test imports are excluded too. Set `dependency.include-dev-dependencies: true`
-to include them. For requirements files, `dependency.files` explicitly selects
-which complete lists are checked.
-
-The requirements example uses `idna`, which has no transitive dependencies. For
-a real project, include every direct and transitive dependency in the
-requirements file and pin each one.
-
-The pattern example uses a placeholder package name and notice. Replace both
-with a real dependency and a reviewed match expression before using the rule.
-
-The workflow example expects `.licenserc.yaml` at the repository root. Copy it
-to `.github/workflows/license-check.yml` and adjust the action version and
-configuration path to match the project.
+The requirements example is complete only for its sample. List and pin every
+direct and transitive package in a real requirements file. Replace the pattern
+example's placeholder package and expression with a reviewed rule. The workflow
+example expects `.licenserc.yaml` at the repository root; adjust its config path
+and action version as needed.

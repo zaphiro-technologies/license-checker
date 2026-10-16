@@ -441,51 +441,6 @@ describe("dependency checker", () => {
     });
   });
 
-  it("checks Go test dependencies only when test packages are configured", async () => {
-    const root = mkdtempSync(
-      join(tmpdir(), "license-checker-go-test-targets-"),
-    );
-    writeFileSync(join(root, "go.mod"), "module example.com/app\n\ngo 1.23\n");
-    const packageList: GoPackageListRunner = vi.fn(
-      (_directory, _packages, includeTests) =>
-        JSON.stringify({
-          Module: {
-            Path: includeTests
-              ? "example.com/test-dependency"
-              : "example.com/runtime-dependency",
-            Version: "v1.0.0",
-          },
-        }),
-    );
-    const config: LicenseEyeConfig = {
-      header: { license: { "spdx-id": "Apache-2.0" } },
-      dependency: {
-        files: ["go.mod"],
-        go: { packages: ["./cmd"], testPackages: ["./..."] },
-        licenses: [
-          { name: "example.com/runtime-dependency", license: "MIT" },
-          { name: "example.com/test-dependency", license: "MIT" },
-        ],
-      },
-    };
-
-    const report = await checkDependencies(
-      root,
-      config,
-      undefined,
-      false,
-      new Logger("error"),
-      packageList,
-    );
-
-    expect(packageList).toHaveBeenNthCalledWith(1, root, ["./cmd"], false);
-    expect(packageList).toHaveBeenNthCalledWith(2, root, ["./..."], true);
-    expect(report.results.map((result) => result.name).sort()).toEqual([
-      "example.com/runtime-dependency",
-      "example.com/test-dependency",
-    ]);
-  });
-
   it("includes Go test dependencies when development dependencies are opted in", async () => {
     const root = mkdtempSync(join(tmpdir(), "license-checker-go-dev-opt-in-"));
     writeFileSync(join(root, "go.mod"), "module example.com/app\n\ngo 1.23\n");

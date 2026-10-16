@@ -53,6 +53,14 @@ dependency:
     - name: acme-package
       match: 'Copyright \(c\) Acme.*All rights reserved'
       license: LicenseRef-Acme-Proprietary
+  # Source-scoped regex rules for license metadata.
+  license-rules:
+    - source: python-classifier
+      match: "Acme Public License"
+      license: LicenseRef-Acme
+    - source: license-text
+      match: "Your custom license fingerprint"
+      license: LicenseRef-Custom-License
   exceptions:
     - name: gsap
       version: "3.15.0"
@@ -73,29 +81,40 @@ Examples are in [`examples/`](examples/).
 
 ## Configuration reference
 
-| Setting                               | Purpose                                                                                                                                                                               |
-| ------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `header.license.spdx-id`              | Project license used for compatibility checks.                                                                                                                                        |
-| `dependency.files`                    | Manifests and lockfiles to scan. Versions must be exact; Python requirements must pin and list every dependency. Unresolved inputs fail the check.                                    |
-| `dependency.include-dev-dependencies` | Defaults to `false`. Includes JS `devDependencies`, Python non-main groups and Pipfile `develop`, and Go tests.                                                                       |
-| `dependency.go.packages`              | Go build targets; defaults to `./...`.                                                                                                                                                |
-| `dependency.licenses`                 | License override by package name or glob and optional version. `match` adds a regex over declared license metadata or downloaded LICENSE text. Unconditional entries take precedence. |
-| `dependency.exceptions`               | Manual non-SPDX approval. Requires exact package name/version, terms `url`, and review `reason`; reported as `approved-exception`.                                                    |
-| `dependency.excludes`                 | Skip package names or globs, optionally limited to comma-separated exact versions.                                                                                                    |
-| `dependency.require_fsf_free`         | Fail dependencies not recognized as FSF-free.                                                                                                                                         |
-| `dependency.require_osi_approved`     | Fail dependencies not recognized as OSI-approved.                                                                                                                                     |
-| SPDX expressions                      | `AND`, `OR`, and `WITH` are supported in license values.                                                                                                                              |
+| Setting                               | Purpose                                                                                                                                                                                                             |
+| ------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `header.license.spdx-id`              | Project license used for compatibility checks.                                                                                                                                                                      |
+| `dependency.files`                    | Manifests and lockfiles to scan. Versions must be exact; Python requirements must pin and list every dependency. Unresolved inputs fail the check.                                                                  |
+| `dependency.include-dev-dependencies` | Defaults to `false`. Includes JS `devDependencies`, Python non-main groups and Pipfile `develop`, and Go tests.                                                                                                     |
+| `dependency.go.packages`              | Go build targets; defaults to `./...`.                                                                                                                                                                              |
+| `dependency.licenses`                 | License override by package name or glob and optional version. `match` adds a regex over declared license metadata or downloaded LICENSE text. Unconditional entries take precedence.                               |
+| `dependency.license-rules`            | Ordered, case-insensitive regexes scoped by `source`: `license-text` or `python-classifier`. Custom rules run before built-in mappings in [`config/default-license-rules.yaml`](config/default-license-rules.yaml). |
+| `dependency.exceptions`               | Manual non-SPDX approval. Requires exact package name/version, terms `url`, and review `reason`; reported as `approved-exception`.                                                                                  |
+| `dependency.excludes`                 | Skip package names or globs, optionally limited to comma-separated exact versions.                                                                                                                                  |
+| `dependency.require_fsf_free`         | Fail dependencies not recognized as FSF-free.                                                                                                                                                                       |
+| `dependency.require_osi_approved`     | Fail dependencies not recognized as OSI-approved.                                                                                                                                                                   |
+| SPDX expressions                      | `AND`, `OR`, and `WITH` are supported in license values.                                                                                                                                                            |
 
 Review license text before assigning a license with `match`; a copyright notice
 alone does not establish license terms.
 
 ### Compatibility reference
 
-This table is transcribed from the
-[archived LicenseCheck.io matrix](https://web.archive.org/web/20260613002524/https://licensecheck.io/compatibility-matrix).
+The table starts from the
+[archived LicenseCheck.io matrix](https://web.archive.org/web/20260613002524/https://licensecheck.io/compatibility-matrix),
+with GPL/LGPL relationships aligned to the [GNU license compatibility table](https://www.gnu.org/licenses/gpl-faq.en.html)
+and MPL/GPL combinations marked for review under [MPL Section 3.3](https://www.mozilla.org/en-US/MPL/2.0/FAQ/).
 Rows are project licenses; columns are dependency licenses. `✓` is compatible,
 `!` needs review, and `✗` is incompatible. The action's rules are in
-[`src/spdx.ts`](src/spdx.ts).
+[`config/license-compatibility.yaml`](config/license-compatibility.yaml); it
+defines the matrix, fallback compatibility families, aliases, FSF/OSI
+classifications, and ordered distribution warning rules.
+FSF-free and OSI-approved identifiers are exact snapshots from the SPDX
+[License List v3.29.0](https://github.com/spdx/license-list-data/blob/main/json/licenses.json).
+CC-BY-3.0 and CC-BY-4.0 software dependencies require manual review; they do
+not pass through the permissive fallback family. This follows
+[Mozilla's MPL license policy](https://www.mozilla.org/en-US/MPL/license-policy/)
+and [Creative Commons' advice against using CC licenses for software](https://creativecommons.org/faq/).
 
 | Project license ↓ / dependency license → | MIT | Apache 2.0 | BSD 3-Clause | BSD 2-Clause | ISC | GPL 3.0 | GPL 2.0 | LGPL 3.0 | LGPL 2.1 | MPL 2.0 | AGPL 3.0 | CC0 1.0 | Unlicense |
 | ---------------------------------------- | --- | ---------- | ------------ | ------------ | --- | ------- | ------- | -------- | -------- | ------- | -------- | ------- | --------- |
@@ -104,11 +123,11 @@ Rows are project licenses; columns are dependency licenses. `✓` is compatible,
 | BSD 3-Clause                             | ✓   | ✓          | ✓            | ✓            | ✓   | ✗       | ✗       | ✓        | ✓        | ✓       | ✗        | ✓       | ✓         |
 | BSD 2-Clause                             | ✓   | ✓          | ✓            | ✓            | ✓   | ✗       | ✗       | ✓        | ✓        | ✓       | ✗        | ✓       | ✓         |
 | ISC                                      | ✓   | ✓          | ✓            | ✓            | ✓   | ✗       | ✗       | ✓        | ✓        | ✓       | ✗        | ✓       | ✓         |
-| GPL 3.0                                  | ✗   | ✗          | ✗            | ✗            | ✗   | ✓       | !       | ✗        | ✗        | ✗       | !        | ✓       | ✓         |
-| GPL 2.0                                  | ✗   | ✗          | ✗            | ✗            | ✗   | !       | ✓       | ✗        | ✗        | ✗       | !        | ✓       | ✓         |
+| GPL 3.0                                  | ✗   | ✗          | ✗            | ✗            | ✗   | ✓       | !       | ✓        | ✓        | !       | !        | !       | ✓         |
+| GPL 2.0                                  | ✗   | ✗          | ✗            | ✗            | ✗   | !       | ✓       | ✗        | ✓        | !       | !        | !       | ✓         |
 | LGPL 3.0                                 | ✓   | ✓          | ✓            | ✓            | ✓   | ✗       | ✗       | ✓        | !        | !       | ✗        | ✓       | ✓         |
 | LGPL 2.1                                 | ✓   | ✓          | ✓            | ✓            | ✓   | ✗       | ✗       | !        | ✓        | !       | ✗        | ✓       | ✓         |
-| MPL 2.0                                  | ✓   | ✓          | ✓            | ✓            | ✓   | ✗       | ✗       | !        | !        | ✓       | ✗        | ✓       | ✓         |
+| MPL 2.0                                  | ✓   | ✓          | ✓            | ✓            | ✓   | !       | !       | !        | !        | ✓       | ✗        | ✓       | ✓         |
 | AGPL 3.0                                 | ✗   | ✗          | ✗            | ✗            | ✗   | !       | !       | ✗        | ✗        | ✗       | ✓        | ✓       | ✓         |
 | CC0 1.0                                  | ✓   | ✓          | ✓            | ✓            | ✓   | ✓       | ✓       | ✓        | ✓        | ✓       | ✓        | ✓       | ✓         |
 | Unlicense                                | ✓   | ✓          | ✓            | ✓            | ✓   | ✓       | ✓       | ✓        | ✓        | ✓       | ✓        | ✓       | ✓         |
@@ -192,3 +211,5 @@ GITHUB_WORKSPACE="$TARGET_REPO" \
 
 See [`examples/README.md`](examples/README.md) for the example configs and
 workflow.
+
+For contributor workflows, see the [development guide](DEVELOPMENT.md).

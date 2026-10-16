@@ -49,8 +49,6 @@ describe("SPDX normalization", () => {
     for (const license of [
       "BlueOak-1.0.0",
       "MPL-1.1",
-      "CC-BY-3.0",
-      "CC-BY-4.0",
       "CC0-1.0",
       "PSF-2.0",
       "CNRI-Python",
@@ -69,6 +67,12 @@ describe("SPDX normalization", () => {
     expect(checkCompatibility("Apache-2.0", "BSD-4-Clause", false)).toBe(
       "unknown",
     );
+    for (const license of ["CC-BY-3.0", "CC-BY-4.0"]) {
+      expect(checkCompatibility("Apache-2.0", license, false)).toBe("unknown");
+      expect(checkCompatibility("MPL-2.0", license, false)).toBe("unknown");
+      expect(checkCompatibility("Apache-2.0", license, true)).toBe("unknown");
+      expect(checkCompatibility(license, "MIT", false)).toBe("unknown");
+    }
     expect(checkCompatibility("Apache-2.0", "GPL-3.0-only OR MIT", false)).toBe(
       "compatible",
     );
@@ -77,7 +81,7 @@ describe("SPDX normalization", () => {
     expect(distributionWarningFor("GPL-3.0-only OR MIT")).toContain("GPL");
   });
 
-  it("follows the published compatibility matrix", () => {
+  it("follows the configured compatibility matrix", () => {
     const licenses = [
       "MIT",
       "GPL-3.0-only",
@@ -91,11 +95,11 @@ describe("SPDX normalization", () => {
     ];
     const matrix = [
       ["c", "i", "i", "c", "c", "c", "i", "c", "c"],
-      ["i", "c", "w", "i", "i", "i", "w", "w", "c"],
-      ["i", "w", "c", "i", "i", "i", "w", "w", "c"],
+      ["i", "c", "w", "c", "c", "w", "w", "w", "c"],
+      ["i", "w", "c", "i", "c", "w", "w", "w", "c"],
       ["c", "i", "i", "c", "w", "w", "i", "i", "c"],
       ["c", "i", "i", "w", "c", "w", "i", "i", "c"],
-      ["c", "i", "i", "w", "w", "c", "i", "i", "c"],
+      ["c", "w", "w", "w", "w", "c", "i", "i", "c"],
       ["i", "w", "w", "i", "i", "i", "i", "c", "c"],
       ["c", "c", "c", "c", "c", "c", "c", "c", "c"],
       ["c", "c", "c", "c", "c", "c", "c", "c", "c"],

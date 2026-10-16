@@ -21,6 +21,8 @@ import type {
   DependencyConfig,
   HeaderRule,
   LicenseEyeConfig,
+  LicenseRule,
+  LicenseRuleSource,
 } from "./types.js";
 
 function asRecord(value: unknown): Record<string, unknown> {
@@ -156,6 +158,38 @@ function normalizeLicenseOverrides(
   });
 }
 
+function normalizeLicenseRules(value: unknown): LicenseRule[] | undefined {
+  if (value === undefined) return undefined;
+  if (!Array.isArray(value)) {
+    throw new Error("dependency.license-rules must be a list.");
+  }
+  return value.map((item, index) => {
+    const entry = asRecord(item);
+    if (
+      typeof entry.source !== "string" ||
+      !["license-text", "python-classifier"].includes(entry.source) ||
+      typeof entry.match !== "string" ||
+      typeof entry.license !== "string"
+    ) {
+      throw new Error(
+        `dependency.license-rules[${index}] requires a supported source, match, and license.`,
+      );
+    }
+    try {
+      new RegExp(entry.match, "is");
+    } catch {
+      throw new Error(
+        `dependency.license-rules[${index}].match must be a valid regular expression.`,
+      );
+    }
+    return {
+      source: entry.source as LicenseRuleSource,
+      match: entry.match,
+      license: entry.license,
+    };
+  });
+}
+
 function normalizeExcludes(value: unknown): DependencyConfig["excludes"] {
   if (!Array.isArray(value)) return [];
   return value.flatMap((item) => {
@@ -216,6 +250,7 @@ function normalizeDependencies(value: unknown): DependencyConfig | undefined {
     go,
     includeDevDependencies: record["include-dev-dependencies"] === true,
     licenses: normalizeLicenseOverrides(record.licenses),
+    licenseRules: normalizeLicenseRules(record["license-rules"]),
     threshold:
       typeof record.threshold === "number" ? record.threshold : undefined,
     excludes: normalizeExcludes(record.excludes),

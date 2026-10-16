@@ -42,6 +42,14 @@ export interface DependencyLicenseOverride {
   license: string;
 }
 
+export type LicenseRuleSource = "license-text" | "python-classifier";
+
+export interface LicenseRule {
+  source: LicenseRuleSource;
+  match: string;
+  license: string;
+}
+
 export interface DependencyExclude {
   name: string;
   version?: string;
@@ -64,6 +72,7 @@ export interface DependencyConfig {
   go?: GoDependencyConfig;
   includeDevDependencies?: boolean;
   licenses?: DependencyLicenseOverride[];
+  licenseRules?: LicenseRule[];
   threshold?: number;
   excludes?: DependencyExclude[];
   exceptions?: DependencyException[];

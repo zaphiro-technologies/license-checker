@@ -145,6 +145,67 @@ describe("configuration", () => {
     );
   });
 
+  it("loads source-scoped license rules", () => {
+    const root = mkdtempSync(join(tmpdir(), "license-checker-config-"));
+    writeFileSync(
+      join(root, ".licenserc.yaml"),
+      `dependency:
+  license-rules:
+    - source: license-text
+      match: 'custom fingerprint'
+      license: LicenseRef-Custom
+    - source: python-classifier
+      match: 'Acme Public License'
+      license: LicenseRef-Acme
+`,
+    );
+
+    expect(
+      loadConfig(root, ".licenserc.yaml").config.dependency?.licenseRules,
+    ).toEqual([
+      {
+        source: "license-text",
+        match: "custom fingerprint",
+        license: "LicenseRef-Custom",
+      },
+      {
+        source: "python-classifier",
+        match: "Acme Public License",
+        license: "LicenseRef-Acme",
+      },
+    ]);
+  });
+
+  it("rejects unsupported license rule sources and invalid expressions", () => {
+    const root = mkdtempSync(join(tmpdir(), "license-checker-config-"));
+    writeFileSync(
+      join(root, ".licenserc.yaml"),
+      `dependency:
+  license-rules:
+    - source: unknown
+      match: '['
+      license: MIT
+`,
+    );
+
+    expect(() => loadConfig(root, ".licenserc.yaml")).toThrow(
+      "dependency.license-rules[0] requires a supported source, match, and license.",
+    );
+
+    writeFileSync(
+      join(root, ".licenserc.yaml"),
+      `dependency:
+  license-rules:
+    - source: python-classifier
+      match: '['
+      license: MIT
+`,
+    );
+    expect(() => loadConfig(root, ".licenserc.yaml")).toThrow(
+      "dependency.license-rules[0].match must be a valid regular expression.",
+    );
+  });
+
   it("normalizes License Eye header and dependency configuration", () => {
     const root = mkdtempSync(join(tmpdir(), "license-checker-config-"));
     writeFileSync(

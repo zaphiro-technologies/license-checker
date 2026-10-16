@@ -1,19 +1,3 @@
-/*
- * Copyright 2026 Zaphiro Technologies
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
 import { createRequire as __WEBPACK_EXTERNAL_createRequire } from "module";
 /******/ var __webpack_modules__ = ({
 
@@ -43176,15 +43160,12 @@ function normalizeHeader(value) {
         language: asRecord(record.language),
     };
 }
-function normalizeDependencies(value) {
-    if (!value || typeof value !== "object")
-        return undefined;
-    const record = asRecord(value);
-    if (record.exceptions !== undefined && !Array.isArray(record.exceptions)) {
+function normalizeExceptions(value) {
+    if (value !== undefined && !Array.isArray(value)) {
         throw new Error("dependency.exceptions must be a list.");
     }
-    const exceptions = Array.isArray(record.exceptions)
-        ? record.exceptions.map((item, index) => {
+    return Array.isArray(value)
+        ? value.map((item, index) => {
             const entry = asRecord(item);
             const name = typeof entry.name === "string" ? entry.name.trim() : "";
             const version = typeof entry.version === "string" ? entry.version.trim() : "";
@@ -43206,15 +43187,83 @@ function normalizeDependencies(value) {
             return { name, version, url, reason };
         })
         : [];
-    if (record.go !== undefined &&
-        (!record.go || typeof record.go !== "object" || Array.isArray(record.go))) {
+}
+function normalizeLicenseOverrides(value) {
+    if (!Array.isArray(value))
+        return [];
+    return value.flatMap((item, index) => {
+        const entry = asRecord(item);
+        if (typeof entry.name !== "string" || typeof entry.license !== "string")
+            return [];
+        const match = typeof entry.match === "string" ? entry.match : undefined;
+        if (match !== undefined) {
+            try {
+                new RegExp(match);
+            }
+            catch {
+                throw new Error(`dependency.licenses[${index}].match must be a valid regular expression.`);
+            }
+        }
+        return [
+            {
+                name: entry.name,
+                version: typeof entry.version === "string" ? entry.version : undefined,
+                ...(match !== undefined ? { match } : {}),
+                license: entry.license,
+            },
+        ];
+    });
+}
+function normalizeLicenseRules(value) {
+    if (value === undefined)
+        return undefined;
+    if (!Array.isArray(value)) {
+        throw new Error("dependency.license-rules must be a list.");
+    }
+    return value.map((item, index) => {
+        const entry = asRecord(item);
+        if (typeof entry.source !== "string" ||
+            !["license-text", "python-classifier"].includes(entry.source) ||
+            typeof entry.match !== "string" ||
+            typeof entry.license !== "string") {
+            throw new Error(`dependency.license-rules[${index}] requires a supported source, match, and license.`);
+        }
+        try {
+            new RegExp(entry.match, "is");
+        }
+        catch {
+            throw new Error(`dependency.license-rules[${index}].match must be a valid regular expression.`);
+        }
+        return {
+            source: entry.source,
+            match: entry.match,
+            license: entry.license,
+        };
+    });
+}
+function normalizeExcludes(value) {
+    if (!Array.isArray(value))
+        return [];
+    return value.flatMap((item) => {
+        const entry = asRecord(item);
+        if (typeof entry.name !== "string")
+            return [];
+        return [
+            {
+                name: entry.name,
+                version: typeof entry.version === "string" ? entry.version : undefined,
+                recursive: entry.recursive === true,
+            },
+        ];
+    });
+}
+function normalizeGoConfig(value) {
+    if (value === undefined)
+        return undefined;
+    if (!value || typeof value !== "object" || Array.isArray(value)) {
         throw new Error("dependency.go must be a mapping.");
     }
-    const go = asRecord(record.go);
-    if (record["include-dev-dependencies"] !== undefined &&
-        typeof record["include-dev-dependencies"] !== "boolean") {
-        throw new Error("dependency.include-dev-dependencies must be a boolean.");
-    }
+    const go = asRecord(value);
     if (go.packages !== undefined && !Array.isArray(go.packages)) {
         throw new Error("dependency.go.packages must be a list.");
     }
@@ -43226,57 +43275,31 @@ function normalizeDependencies(value) {
         throw new Error("dependency.go.test-packages is not supported; use dependency.include-dev-dependencies.");
     }
     return {
+        packages: Array.isArray(go.packages)
+            ? go.packages
+            : undefined,
+    };
+}
+function normalizeDependencies(value) {
+    if (!value || typeof value !== "object")
+        return undefined;
+    const record = asRecord(value);
+    const exceptions = normalizeExceptions(record.exceptions);
+    const go = normalizeGoConfig(record.go);
+    if (record["include-dev-dependencies"] !== undefined &&
+        typeof record["include-dev-dependencies"] !== "boolean") {
+        throw new Error("dependency.include-dev-dependencies must be a boolean.");
+    }
+    return {
         files: Array.isArray(record.files)
             ? record.files.filter((item) => typeof item === "string")
             : [],
-        go: record.go !== undefined
-            ? {
-                packages: Array.isArray(go.packages)
-                    ? go.packages
-                    : undefined,
-            }
-            : undefined,
+        go,
         includeDevDependencies: record["include-dev-dependencies"] === true,
-        licenses: Array.isArray(record.licenses)
-            ? record.licenses.flatMap((item, index) => {
-                const entry = asRecord(item);
-                if (typeof entry.name !== "string" ||
-                    typeof entry.license !== "string")
-                    return [];
-                const match = typeof entry.match === "string" ? entry.match : undefined;
-                if (match !== undefined) {
-                    try {
-                        new RegExp(match);
-                    }
-                    catch {
-                        throw new Error(`dependency.licenses[${index}].match must be a valid regular expression.`);
-                    }
-                }
-                return [
-                    {
-                        name: entry.name,
-                        version: typeof entry.version === "string" ? entry.version : undefined,
-                        ...(match !== undefined ? { match } : {}),
-                        license: entry.license,
-                    },
-                ];
-            })
-            : [],
+        licenses: normalizeLicenseOverrides(record.licenses),
+        licenseRules: normalizeLicenseRules(record["license-rules"]),
         threshold: typeof record.threshold === "number" ? record.threshold : undefined,
-        excludes: Array.isArray(record.excludes)
-            ? record.excludes.flatMap((item) => {
-                const entry = asRecord(item);
-                if (typeof entry.name !== "string")
-                    return [];
-                return [
-                    {
-                        name: entry.name,
-                        version: typeof entry.version === "string" ? entry.version : undefined,
-                        recursive: entry.recursive === true,
-                    },
-                ];
-            })
-            : [],
+        excludes: normalizeExcludes(record.excludes),
         exceptions,
         require_fsf_free: record.require_fsf_free === true,
         require_osi_approved: record.require_osi_approved === true,
@@ -43306,25 +43329,338 @@ function headerRules(config) {
 
 /***/ }),
 
-/***/ 493:
+/***/ 6312:
 /***/ ((__unused_webpack___webpack_module__, __webpack_exports__, __nccwpck_require__) => {
 
 
 // EXPORTS
 __nccwpck_require__.d(__webpack_exports__, {
-  q: () => (/* binding */ checkDependencies)
+  q: () => (/* reexport */ checkDependencies)
 });
 
-// EXTERNAL MODULE: external "node:fs"
-var external_node_fs_ = __nccwpck_require__(3024);
-;// CONCATENATED MODULE: external "node:child_process"
-const external_node_child_process_namespaceObject = __WEBPACK_EXTERNAL_createRequire(import.meta.url)("node:child_process");
 // EXTERNAL MODULE: external "node:path"
 var external_node_path_ = __nccwpck_require__(6760);
-// EXTERNAL MODULE: ../../.yarn/berry/cache/@iarna-toml-npm-2.2.5-6da1399e8e-10c0.zip/node_modules/@iarna/toml/toml.js
-var toml = __nccwpck_require__(389);
+// EXTERNAL MODULE: ./lib/config.js
+var lib_config = __nccwpck_require__(9651);
+// EXTERNAL MODULE: external "node:fs"
+var external_node_fs_ = __nccwpck_require__(3024);
+;// CONCATENATED MODULE: external "node:url"
+const external_node_url_namespaceObject = __WEBPACK_EXTERNAL_createRequire(import.meta.url)("node:url");
+// EXTERNAL MODULE: ../../.yarn/berry/cache/spdx-correct-npm-3.2.0-ffae008484-10c0.zip/node_modules/spdx-correct/index.js
+var spdx_correct = __nccwpck_require__(1854);
+// EXTERNAL MODULE: ../../.yarn/berry/cache/spdx-expression-parse-npm-3.0.1-b718cbb35a-10c0.zip/node_modules/spdx-expression-parse/index.js
+var spdx_expression_parse = __nccwpck_require__(7487);
 // EXTERNAL MODULE: ../../.yarn/berry/cache/yaml-npm-2.9.0-0cdd9bc0bc-10c0.zip/node_modules/yaml/dist/index.js
 var dist = __nccwpck_require__(918);
+;// CONCATENATED MODULE: ./lib/spdx.js
+/*
+ * Copyright 2026 Zaphiro Technologies
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+
+
+
+
+function isRecord(value) {
+    return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+function loadLicenseCompatibilityRules() {
+    const rulesPath = (0,external_node_url_namespaceObject.fileURLToPath)(__nccwpck_require__.ab + "license-compatibility.yaml");
+    const parsed = (0,dist/* parse */.qg)((0,external_node_fs_.readFileSync)(rulesPath, "utf8"));
+    if (!isRecord(parsed))
+        throw new Error("Invalid license compatibility YAML.");
+    const { aliases, matrix } = parsed;
+    if (!isRecord(aliases) ||
+        !isRecord(parsed["review-required"]) ||
+        !Array.isArray(parsed["review-required"].licenses) ||
+        !parsed["review-required"].licenses.every((id) => typeof id === "string") ||
+        !isRecord(parsed["license-families"]) ||
+        !isRecord(matrix) ||
+        !isRecord(matrix.groups) ||
+        !isRecord(matrix.values)) {
+        throw new Error("License compatibility YAML is missing required sections.");
+    }
+    const groupNames = Object.keys(matrix.groups);
+    for (const group of groupNames) {
+        const rule = matrix.groups[group];
+        const row = matrix.values[group];
+        if (!isRecord(rule) ||
+            !Array.isArray(row) ||
+            row.length !== groupNames.length) {
+            throw new Error(`Invalid license compatibility matrix row: ${group}.`);
+        }
+        if (row.some((value) => value !== "compatible" &&
+            value !== "warning" &&
+            value !== "incompatible")) {
+            throw new Error(`Invalid license compatibility value in row: ${group}.`);
+        }
+    }
+    for (const key of [
+        "permissive-compatible",
+        "reciprocal-compatible",
+        "incompatible-with-permissive",
+    ]) {
+        if (!Array.isArray(parsed["license-families"][key]) ||
+            !parsed["license-families"][key].every((id) => typeof id === "string")) {
+            throw new Error(`Invalid license family in compatibility YAML: ${key}.`);
+        }
+    }
+    for (const key of ["fsf-free", "osi-approved"]) {
+        const classification = parsed[key];
+        if (!isRecord(classification) ||
+            !Array.isArray(classification.licenses) ||
+            !classification.licenses.every((id) => typeof id === "string")) {
+            throw new Error(`Invalid ${key} license list in compatibility YAML.`);
+        }
+    }
+    if (!Array.isArray(parsed["distribution-warnings"]) ||
+        parsed["distribution-warnings"].some((rule) => !isRecord(rule) ||
+            typeof rule.message !== "string" ||
+            (!Array.isArray(rule.licenses) && !Array.isArray(rule.prefixes)) ||
+            (Array.isArray(rule.licenses) &&
+                !rule.licenses.every((id) => typeof id === "string")) ||
+            (Array.isArray(rule.prefixes) &&
+                !rule.prefixes.every((prefix) => typeof prefix === "string")))) {
+        throw new Error("Invalid distribution warning rules in compatibility YAML.");
+    }
+    if (!Array.isArray(parsed["conditional-exceptions"]) ||
+        parsed["conditional-exceptions"].some((rule) => !isRecord(rule) ||
+            typeof rule["license-prefix"] !== "string" ||
+            typeof rule.exception !== "string")) {
+        throw new Error("Invalid conditional exception rules in compatibility YAML.");
+    }
+    return parsed;
+}
+const LICENSE_RULES = loadLicenseCompatibilityRules();
+const REVIEW_REQUIRED = new Set(LICENSE_RULES["review-required"].licenses);
+const PERMISSIVE_COMPATIBLE = new Set(LICENSE_RULES["license-families"]["permissive-compatible"]);
+const RECIPROCAL_COMPATIBLE = new Set(LICENSE_RULES["license-families"]["reciprocal-compatible"]);
+const INCOMPATIBLE_WITH_PERMISSIVE = new Set(LICENSE_RULES["license-families"]["incompatible-with-permissive"]);
+const MATRIX_GROUPS = Object.keys(LICENSE_RULES.matrix.groups);
+const FSF_FREE = new Set(LICENSE_RULES["fsf-free"].licenses);
+const OSI_APPROVED = new Set(LICENSE_RULES["osi-approved"].licenses);
+const ALIASES = LICENSE_RULES.aliases;
+function normalizeLicenseId(value) {
+    const trimmed = value.trim();
+    if (!trimmed || /^unknown$/i.test(trimmed) || /^noassertion$/i.test(trimmed))
+        return "Unknown";
+    if (/^LicenseRef-[A-Za-z0-9.-]+$/.test(trimmed))
+        return trimmed;
+    if (ALIASES[trimmed])
+        return ALIASES[trimmed];
+    try {
+        const corrected = spdx_correct(trimmed);
+        return corrected ?? "Unknown";
+    }
+    catch {
+        return "Unknown";
+    }
+}
+function convertParsed(value) {
+    const node = value;
+    if (node.license && node.exception) {
+        return {
+            type: "with",
+            license: { type: "license", id: normalizeLicenseId(node.license) },
+            exception: node.exception,
+        };
+    }
+    if (node.license)
+        return { type: "license", id: normalizeLicenseId(node.license) };
+    if (node.left && node.right && node.conjunction) {
+        return {
+            type: node.conjunction.toLowerCase() === "and" ? "and" : "or",
+            left: convertParsed(node.left),
+            right: convertParsed(node.right),
+        };
+    }
+    return { type: "license", id: "Unknown" };
+}
+function normalizeExpressionTokens(value) {
+    let exception = false;
+    return value.replace(/[A-Za-z0-9][A-Za-z0-9.+_-]*/g, (token) => {
+        if (/^(AND|OR|WITH)$/i.test(token)) {
+            exception = token.toUpperCase() === "WITH";
+            return token.toUpperCase();
+        }
+        if (exception) {
+            exception = false;
+            return token;
+        }
+        return normalizeLicenseId(token);
+    });
+}
+function parseLicenseExpression(value) {
+    if (!value)
+        return { type: "license", id: "Unknown" };
+    const normalized = normalizeExpressionTokens(value);
+    try {
+        return convertParsed(spdx_expression_parse(normalized));
+    }
+    catch {
+        return { type: "license", id: normalizeLicenseId(value) };
+    }
+}
+function normalizeLicenseExpression(value) {
+    const expression = parseLicenseExpression(value);
+    const render = (node) => {
+        if (node.type === "license")
+            return node.id;
+        if (node.type === "with")
+            return `${render(node.license)} WITH ${node.exception}`;
+        return `(${render(node.left)} ${node.type.toUpperCase()} ${render(node.right)})`;
+    };
+    return render(expression);
+}
+function licenseIds(expression) {
+    if (expression.type === "license")
+        return [expression.id];
+    if (expression.type === "with")
+        return licenseIds(expression.license);
+    return [...licenseIds(expression.left), ...licenseIds(expression.right)];
+}
+function distributionWarningFor(expression) {
+    const ids = licenseIds(parseLicenseExpression(expression));
+    for (const rule of LICENSE_RULES["distribution-warnings"]) {
+        if (ids.some((id) => rule.licenses?.includes(id) ||
+            rule.prefixes?.some((prefix) => id.startsWith(prefix))))
+            return rule.message;
+    }
+    return undefined;
+}
+function isFree(id) {
+    return FSF_FREE.has(id);
+}
+function isOsi(id) {
+    return OSI_APPROVED.has(id);
+}
+function matrixGroup(id) {
+    for (const [group, rule] of Object.entries(LICENSE_RULES.matrix.groups)) {
+        if (rule.family &&
+            LICENSE_RULES["license-families"][rule.family].includes(id))
+            return group;
+        if (rule.exact?.includes(id))
+            return group;
+        if (rule.prefixes?.some((prefix) => prefix.endsWith("-")
+            ? id.startsWith(prefix)
+            : id === prefix || id.startsWith(`${prefix}-`)))
+            return group;
+    }
+    return undefined;
+}
+function matrixCompatibility(main, dependency, weakCompatible) {
+    const dependencyIndex = MATRIX_GROUPS.indexOf(dependency);
+    const value = LICENSE_RULES.matrix.values[main][dependencyIndex];
+    if (value === "warning")
+        return weakCompatible ? "weak-compatible" : "unknown";
+    return value;
+}
+function configuredCompatibility(dependency, config) {
+    if (config?.require_fsf_free && !isFree(dependency))
+        return "incompatible";
+    if (config?.require_osi_approved && !isOsi(dependency))
+        return "incompatible";
+    return undefined;
+}
+function categoryCompatibility(main, dependency, weakCompatible) {
+    if (PERMISSIVE_COMPATIBLE.has(main)) {
+        if (PERMISSIVE_COMPATIBLE.has(dependency))
+            return "compatible";
+        if (RECIPROCAL_COMPATIBLE.has(dependency))
+            return weakCompatible ? "weak-compatible" : "unknown";
+        if (INCOMPATIBLE_WITH_PERMISSIVE.has(dependency))
+            return "incompatible";
+        return "unknown";
+    }
+    if (RECIPROCAL_COMPATIBLE.has(main)) {
+        if (RECIPROCAL_COMPATIBLE.has(dependency))
+            return "compatible";
+        if (PERMISSIVE_COMPATIBLE.has(dependency))
+            return weakCompatible ? "weak-compatible" : "unknown";
+        return "incompatible";
+    }
+    return main === dependency ? "compatible" : "unknown";
+}
+function compareSingle(main, dependency, weakCompatible, config) {
+    if (dependency === "Unknown")
+        return "incompatible";
+    if (REVIEW_REQUIRED.has(main) || REVIEW_REQUIRED.has(dependency))
+        return "unknown";
+    const configured = configuredCompatibility(dependency, config);
+    if (configured)
+        return configured;
+    const mainGroup = matrixGroup(main);
+    const dependencyGroup = matrixGroup(dependency);
+    if (mainGroup && dependencyGroup)
+        return matrixCompatibility(mainGroup, dependencyGroup, weakCompatible);
+    return categoryCompatibility(main, dependency, weakCompatible);
+}
+function combineAnd(left, right) {
+    if (left === "incompatible" || right === "incompatible")
+        return "incompatible";
+    if (left === "unknown" || right === "unknown")
+        return "unknown";
+    if (left === "weak-compatible" || right === "weak-compatible")
+        return "weak-compatible";
+    return "compatible";
+}
+function combineOr(left, right) {
+    if (left === "compatible" || right === "compatible")
+        return "compatible";
+    if (left === "weak-compatible" || right === "weak-compatible")
+        return "weak-compatible";
+    if (left === "unknown" || right === "unknown")
+        return "unknown";
+    return "incompatible";
+}
+function checkCompatibility(mainExpression, dependencyExpression, weakCompatible, config) {
+    const main = parseLicenseExpression(mainExpression);
+    const dependency = parseLicenseExpression(dependencyExpression);
+    const applyConditionalException = (license, exception, compatibility) => {
+        if (compatibility !== "incompatible")
+            return compatibility;
+        const configuredAsConditional = LICENSE_RULES["conditional-exceptions"].some((rule) => rule.exception === exception &&
+            (license === rule["license-prefix"] ||
+                license.startsWith(`${rule["license-prefix"]}-`)));
+        if (configuredAsConditional && weakCompatible)
+            return "weak-compatible";
+        return "unknown";
+    };
+    const compare = (project, packageLicense) => {
+        if (project.type === "and")
+            return combineAnd(compare(project.left, packageLicense), compare(project.right, packageLicense));
+        if (project.type === "or")
+            return combineOr(compare(project.left, packageLicense), compare(project.right, packageLicense));
+        if (project.type === "with")
+            return applyConditionalException(project.license.id, project.exception, compare(project.license, packageLicense));
+        if (packageLicense.type === "and")
+            return combineAnd(compare(project, packageLicense.left), compare(project, packageLicense.right));
+        if (packageLicense.type === "or")
+            return combineOr(compare(project, packageLicense.left), compare(project, packageLicense.right));
+        if (packageLicense.type === "with")
+            return applyConditionalException(packageLicense.license.id, packageLicense.exception, compare(project, packageLicense.license));
+        if (project.type === "license" && packageLicense.type === "license")
+            return compareSingle(project.id, packageLicense.id, weakCompatible, config);
+        return "unknown";
+    };
+    return compare(main, dependency);
+}
+function isUnknownLicense(value) {
+    return normalizeLicenseExpression(value) === "Unknown";
+}
+//# sourceMappingURL=spdx.js.map
 ;// CONCATENATED MODULE: ../../.yarn/berry/cache/balanced-match-npm-4.0.4-fd666b3c7f-10c0.zip/node_modules/balanced-match/dist/esm/index.js
 const balanced = (a, b, str) => {
     const ma = a instanceof RegExp ? maybeMatch(a, str) : a;
@@ -45843,435 +46179,6 @@ minimatch.Minimatch = Minimatch;
 minimatch.escape = escape_escape;
 minimatch.unescape = unescape_unescape;
 //# sourceMappingURL=index.js.map
-// EXTERNAL MODULE: ./lib/config.js
-var lib_config = __nccwpck_require__(9651);
-// EXTERNAL MODULE: ../../.yarn/berry/cache/spdx-correct-npm-3.2.0-ffae008484-10c0.zip/node_modules/spdx-correct/index.js
-var spdx_correct = __nccwpck_require__(1854);
-// EXTERNAL MODULE: ../../.yarn/berry/cache/spdx-expression-parse-npm-3.0.1-b718cbb35a-10c0.zip/node_modules/spdx-expression-parse/index.js
-var spdx_expression_parse = __nccwpck_require__(7487);
-;// CONCATENATED MODULE: ./lib/spdx.js
-/*
- * Copyright 2026 Zaphiro Technologies
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
-
-const CATEGORY_A = new Set([
-    "Apache-2.0",
-    "PHP-3.01",
-    "0BSD",
-    "BSD-3-Clause",
-    "BSD-2-Clause",
-    "BSD-2-Clause-Views",
-    "PostgreSQL",
-    "EDL-1.0",
-    "ISC",
-    "SMLNJ",
-    "ICU",
-    "NCSA",
-    "W3C",
-    "Xnet",
-    "Zlib",
-    "Libpng",
-    "AFL-3.0",
-    "MS-PL",
-    "Python-2.0",
-    "PSF-2.0",
-    "CNRI-Python",
-    "BSL-1.0",
-    "WTFPL",
-    "Unicode-DFS-2016",
-    "Unicode-DFS-2015",
-    "ZPL-2.0",
-    "Unlicense",
-    "HPND",
-    "MulanPSL-2.0",
-    "MIT",
-    "MIT-0",
-    "MIT-CMU",
-    "BlueOak-1.0.0",
-    "CC-BY-3.0",
-    "CC-BY-4.0",
-    "CC0-1.0",
-]);
-const CATEGORY_B = new Set([
-    "CDDL-1.0",
-    "CDDL-1.1",
-    "CPL-1.0",
-    "EPL-1.0",
-    "EPL-2.0",
-    "ErlPL-1.1",
-    "IPA",
-    "IPL-1.0",
-    "UFL-1.0",
-    "UnRAR",
-    "MPL-1.0",
-    "MPL-1.1",
-    "MPL-2.0",
-    "OFL-1.1",
-    "OSL-3.0",
-    "Ruby",
-    "SPL-1.0",
-]);
-const CATEGORY_A_INCOMPATIBLE = new Set([
-    "CAL-1.0",
-    "LGPL-2.0+",
-    "LGPL-2.0",
-    "LGPL-2.0-only",
-    "LGPL-2.0-or-later",
-    "LGPL-2.1+",
-    "LGPL-2.1",
-    "LGPL-2.1-only",
-    "LGPL-2.1-or-later",
-    "LGPL-3.0+",
-    "LGPL-3.0",
-    "LGPL-3.0-linking-exception",
-    "LGPL-3.0-only",
-    "LGPL-3.0-or-later",
-    "LGPLLR",
-    "GPL-1.0+",
-    "GPL-1.0",
-    "GPL-1.0-only",
-    "GPL-1.0-or-later",
-    "GPL-2.0+",
-    "GPL-2.0",
-    "GPL-2.0-only",
-    "GPL-2.0-or-later",
-    "GPL-2.0-with-autoconf-exception",
-    "GPL-2.0-with-bison-exception",
-    "GPL-2.0-with-classpath-exception",
-    "GPL-2.0-with-font-exception",
-    "GPL-2.0-with-GCC-exception",
-    "GPL-3.0+",
-    "GPL-3.0",
-    "GPL-3.0-linking-exception",
-    "GPL-3.0-linking-source-exception",
-    "GPL-3.0-only",
-    "GPL-3.0-or-later",
-    "GPL-3.0-with-autoconf-exception",
-    "GPL-3.0-with-GCC-exception",
-    "GPL-CC-1.0",
-    "QPL-1.0",
-    "Sleepycat",
-    "SSPL-1.0",
-    "CPOL-1.02",
-    "NPL-1.0",
-    "NPL-1.1",
-]);
-const FSF_FREE = new Set([
-    ...CATEGORY_A,
-    ...CATEGORY_B,
-    "GPL-2.0-only",
-    "GPL-2.0-or-later",
-    "GPL-3.0-only",
-    "GPL-3.0-or-later",
-    "LGPL-2.0-only",
-    "LGPL-2.0-or-later",
-    "LGPL-2.1-only",
-    "LGPL-2.1-or-later",
-    "LGPL-3.0-only",
-    "LGPL-3.0-or-later",
-    "AGPL-3.0-only",
-    "AGPL-3.0-or-later",
-]);
-const OSI_APPROVED = new Set([
-    ...CATEGORY_A,
-    ...CATEGORY_B,
-    "GPL-2.0-only",
-    "GPL-2.0-or-later",
-    "GPL-3.0-only",
-    "GPL-3.0-or-later",
-    "LGPL-2.0-only",
-    "LGPL-2.0-or-later",
-    "LGPL-2.1-only",
-    "LGPL-2.1-or-later",
-    "LGPL-3.0-only",
-    "LGPL-3.0-or-later",
-    "AGPL-3.0-only",
-    "AGPL-3.0-or-later",
-    "BSD-3-Clause-Clear",
-    "BSD-3-Clause-LBNL",
-    "BSD-2-Clause-Patent",
-    "EUPL-1.2",
-    "CAL-1.0",
-]);
-const ALIASES = {
-    "Apache 2": "Apache-2.0",
-    "Apache 2.0": "Apache-2.0",
-    "Apache License 2.0": "Apache-2.0",
-    "Apache License, Version 2.0": "Apache-2.0",
-    "MIT License": "MIT",
-    "ISC license": "ISC",
-    "ISC License": "ISC",
-    "ISC License (ISCL)": "ISC",
-    "BSD License": "BSD-3-Clause",
-    BSD: "BSD-3-Clause",
-    "GPL-2.0+": "GPL-2.0-or-later",
-    "GPL-3.0+": "GPL-3.0-or-later",
-    "LGPL-2.1+": "LGPL-2.1-or-later",
-    "LGPL-3.0+": "LGPL-3.0-or-later",
-    "MPL 2.0": "MPL-2.0",
-    "Mozilla Public License 2.0": "MPL-2.0",
-    "MPL 1.1": "MPL-1.1",
-    "Mozilla Public License 1.1": "MPL-1.1",
-    "Public Domain": "CC0-1.0",
-};
-function normalizeLicenseId(value) {
-    const trimmed = value.trim();
-    if (!trimmed || /^unknown$/i.test(trimmed) || /^noassertion$/i.test(trimmed))
-        return "Unknown";
-    if (/^LicenseRef-[A-Za-z0-9.-]+$/.test(trimmed))
-        return trimmed;
-    if (ALIASES[trimmed])
-        return ALIASES[trimmed];
-    try {
-        const corrected = spdx_correct(trimmed);
-        return corrected ?? "Unknown";
-    }
-    catch {
-        return "Unknown";
-    }
-}
-function convertParsed(value) {
-    const node = value;
-    if (node.license && node.exception) {
-        return {
-            type: "with",
-            license: { type: "license", id: normalizeLicenseId(node.license) },
-            exception: node.exception,
-        };
-    }
-    if (node.license)
-        return { type: "license", id: normalizeLicenseId(node.license) };
-    if (node.left && node.right && node.conjunction) {
-        return {
-            type: node.conjunction.toLowerCase() === "and" ? "and" : "or",
-            left: convertParsed(node.left),
-            right: convertParsed(node.right),
-        };
-    }
-    return { type: "license", id: "Unknown" };
-}
-function normalizeExpressionTokens(value) {
-    let exception = false;
-    return value.replace(/[A-Za-z0-9][A-Za-z0-9.+_-]*/g, (token) => {
-        if (/^(AND|OR|WITH)$/i.test(token)) {
-            exception = token.toUpperCase() === "WITH";
-            return token.toUpperCase();
-        }
-        if (exception) {
-            exception = false;
-            return token;
-        }
-        return normalizeLicenseId(token);
-    });
-}
-function parseLicenseExpression(value) {
-    if (!value)
-        return { type: "license", id: "Unknown" };
-    const normalized = normalizeExpressionTokens(value);
-    try {
-        return convertParsed(spdx_expression_parse(normalized));
-    }
-    catch {
-        return { type: "license", id: normalizeLicenseId(value) };
-    }
-}
-function normalizeLicenseExpression(value) {
-    const expression = parseLicenseExpression(value);
-    const render = (node) => {
-        if (node.type === "license")
-            return node.id;
-        if (node.type === "with")
-            return `${render(node.license)} WITH ${node.exception}`;
-        return `(${render(node.left)} ${node.type.toUpperCase()} ${render(node.right)})`;
-    };
-    return render(expression);
-}
-function licenseIds(expression) {
-    if (expression.type === "license")
-        return [expression.id];
-    if (expression.type === "with")
-        return licenseIds(expression.license);
-    return [...licenseIds(expression.left), ...licenseIds(expression.right)];
-}
-function distributionWarningFor(expression) {
-    const ids = licenseIds(parseLicenseExpression(expression));
-    if (ids.some((id) => id.startsWith("AGPL-")))
-        return "Distribution review: AGPL terms can require offering corresponding source to network users. Include required notices and review the license before distribution or deployment.";
-    if (ids.some((id) => id.startsWith("GPL-")))
-        return "Distribution review: GPL terms can require distributing corresponding source and licensing covered combined work under GPL. Include required notices and the license text.";
-    if (ids.some((id) => id.startsWith("LGPL-")))
-        return "Distribution review: LGPL terms require preserving notices and providing the license text; distribution of modified or combined work can create source and relinking obligations.";
-    if (ids.some((id) => id.startsWith("MPL-")))
-        return "Distribution review: MPL terms require preserving notices and making covered source files available when distributing executable form.";
-    if (ids.includes("CAL-1.0"))
-        return "Distribution review: CAL has reciprocal source, deployment, and user-autonomy obligations. Review its terms before providing the software to third parties.";
-    if (ids.some((id) => [
-        "CDDL-1.0",
-        "CDDL-1.1",
-        "CPL-1.0",
-        "EPL-1.0",
-        "EPL-2.0",
-        "EUPL-1.2",
-        "OSL-3.0",
-        "CPAL-1.0",
-    ].includes(id)))
-        return "Distribution review: This reciprocal license can impose notice and source-availability obligations when distributing covered software. Review its terms before release.";
-    return undefined;
-}
-function isFree(id) {
-    return FSF_FREE.has(id);
-}
-function isOsi(id) {
-    return OSI_APPROVED.has(id);
-}
-const MATRIX_GROUPS = [
-    "permissive",
-    "gpl-3",
-    "gpl-2",
-    "lgpl-3",
-    "lgpl-2.1",
-    "mpl-2",
-    "agpl-3",
-    "cc0",
-    "unlicense",
-];
-const MATRIX_VALUES = {
-    c: "compatible",
-    w: "warning",
-    i: "incompatible",
-};
-// Rows and columns follow MATRIX_GROUPS. c = compatible, w = warning, i = incompatible.
-const COMPATIBILITY_MATRIX = [
-    "ciicccicc",
-    "icwiiiwwc",
-    "iwciiiwwc",
-    "ciicwwiic",
-    "ciiwcwiic",
-    "ciiwwciic",
-    "iwwiiiicc",
-    "ccccccccc",
-    "ccccccccc",
-];
-function matrixGroup(id) {
-    if (id === "CC0-1.0")
-        return "cc0";
-    if (id === "Unlicense")
-        return "unlicense";
-    if (["MPL-1.0", "MPL-1.1", "MPL-2.0"].includes(id))
-        return "mpl-2";
-    if (/^GPL-3\.0(?:$|-)/.test(id))
-        return "gpl-3";
-    if (/^GPL-2\.0(?:$|-)/.test(id))
-        return "gpl-2";
-    if (/^LGPL-3\.0(?:$|-)/.test(id))
-        return "lgpl-3";
-    if (/^LGPL-2\.1(?:$|-)/.test(id))
-        return "lgpl-2.1";
-    if (/^AGPL-3\.0(?:$|-)/.test(id))
-        return "agpl-3";
-    if (CATEGORY_A.has(id))
-        return "permissive";
-    return undefined;
-}
-function matrixCompatibility(main, dependency, weakCompatible) {
-    const mainIndex = MATRIX_GROUPS.indexOf(main);
-    const dependencyIndex = MATRIX_GROUPS.indexOf(dependency);
-    const value = MATRIX_VALUES[COMPATIBILITY_MATRIX[mainIndex][dependencyIndex]];
-    if (value === "warning")
-        return weakCompatible ? "weak-compatible" : "unknown";
-    return value;
-}
-function configuredCompatibility(dependency, config) {
-    if (config?.require_fsf_free && !isFree(dependency))
-        return "incompatible";
-    if (config?.require_osi_approved && !isOsi(dependency))
-        return "incompatible";
-    return undefined;
-}
-function categoryCompatibility(main, dependency, weakCompatible) {
-    if (CATEGORY_A.has(main)) {
-        if (CATEGORY_A.has(dependency))
-            return "compatible";
-        if (CATEGORY_B.has(dependency))
-            return weakCompatible ? "weak-compatible" : "unknown";
-        if (CATEGORY_A_INCOMPATIBLE.has(dependency))
-            return "incompatible";
-        return "unknown";
-    }
-    if (CATEGORY_B.has(main)) {
-        if (CATEGORY_B.has(dependency))
-            return "compatible";
-        if (CATEGORY_A.has(dependency))
-            return weakCompatible ? "weak-compatible" : "unknown";
-        return "incompatible";
-    }
-    return main === dependency ? "compatible" : "unknown";
-}
-function compareSingle(main, dependency, weakCompatible, config) {
-    if (dependency === "Unknown")
-        return "incompatible";
-    const configured = configuredCompatibility(dependency, config);
-    if (configured)
-        return configured;
-    const mainGroup = matrixGroup(main);
-    const dependencyGroup = matrixGroup(dependency);
-    if (mainGroup && dependencyGroup)
-        return matrixCompatibility(mainGroup, dependencyGroup, weakCompatible);
-    return categoryCompatibility(main, dependency, weakCompatible);
-}
-function combineAnd(left, right) {
-    if (left === "incompatible" || right === "incompatible")
-        return "incompatible";
-    if (left === "unknown" || right === "unknown")
-        return "unknown";
-    if (left === "weak-compatible" || right === "weak-compatible")
-        return "weak-compatible";
-    return "compatible";
-}
-function combineOr(left, right) {
-    if (left === "compatible" || right === "compatible")
-        return "compatible";
-    if (left === "weak-compatible" || right === "weak-compatible")
-        return "weak-compatible";
-    if (left === "unknown" || right === "unknown")
-        return "unknown";
-    return "incompatible";
-}
-function checkCompatibility(mainExpression, dependencyExpression, weakCompatible, config) {
-    const main = parseLicenseExpression(mainExpression);
-    const dependency = parseLicenseExpression(dependencyExpression);
-    const mainId = main.type === "license" ? main.id : "Unknown";
-    const visit = (expression) => {
-        switch (expression.type) {
-            case "license":
-                return compareSingle(mainId, expression.id, weakCompatible, config);
-            case "with":
-                return visit(expression.license);
-            case "and":
-                return combineAnd(visit(expression.left), visit(expression.right));
-            case "or":
-                return combineOr(visit(expression.left), visit(expression.right));
-        }
-    };
-    return visit(dependency);
-}
-function isUnknownLicense(value) {
-    return normalizeLicenseExpression(value) === "Unknown";
-}
-//# sourceMappingURL=spdx.js.map
 ;// CONCATENATED MODULE: ./lib/util.js
 /*
  * Copyright 2026 Zaphiro Technologies
@@ -46343,7 +46250,512 @@ function uniqueBy(items, key) {
     });
 }
 //# sourceMappingURL=util.js.map
-;// CONCATENATED MODULE: ./lib/dependencies.js
+;// CONCATENATED MODULE: ./lib/dependencies/checker.js
+/*
+ * Copyright 2026 Zaphiro Technologies
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+class DependencyChecker {
+}
+//# sourceMappingURL=checker.js.map
+;// CONCATENATED MODULE: external "node:child_process"
+const external_node_child_process_namespaceObject = __WEBPACK_EXTERNAL_createRequire(import.meta.url)("node:child_process");
+;// CONCATENATED MODULE: ./lib/dependencies/go/parsers/package-graph.js
+/*
+ * Copyright 2026 Zaphiro Technologies
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+
+
+function goExecutablePath() {
+    const executable = process.platform === "win32" ? "go.exe" : "go";
+    const goRoot = process.env.GOROOT;
+    const runnerGoRoot = process.env.RUNNER_TOOL_CACHE
+        ? (0,external_node_path_.join)(process.env.RUNNER_TOOL_CACHE, "go")
+        : undefined;
+    const cachedPathCandidates = runnerGoRoot
+        ? (process.env.PATH ?? "")
+            .split(external_node_path_.delimiter)
+            .filter((directory) => (0,external_node_path_.isAbsolute)(directory))
+            .map((directory) => (0,external_node_path_.join)(directory, executable))
+            .filter((candidate) => {
+            const relativeCandidate = (0,external_node_path_.relative)((0,external_node_path_.resolve)(runnerGoRoot), (0,external_node_path_.resolve)(candidate));
+            return (relativeCandidate !== "" &&
+                relativeCandidate !== ".." &&
+                !relativeCandidate.startsWith(`..${external_node_path_.sep}`) &&
+                !(0,external_node_path_.isAbsolute)(relativeCandidate));
+        })
+        : [];
+    const candidates = [
+        goRoot && (0,external_node_path_.isAbsolute)(goRoot) ? (0,external_node_path_.join)(goRoot, "bin", executable) : undefined,
+        ...cachedPathCandidates,
+        ...(process.platform === "win32"
+            ? [String.raw `C:\Program Files\Go\bin\go.exe`]
+            : [
+                "/usr/local/go/bin/go",
+                "/usr/local/bin/go",
+                "/opt/homebrew/bin/go",
+                "/usr/bin/go",
+            ]),
+    ];
+    const executablePath = candidates.find((candidate) => candidate && (0,external_node_fs_.existsSync)(candidate));
+    if (!executablePath) {
+        throw new Error("Could not locate Go; set GOROOT or install Go in a standard location.");
+    }
+    return executablePath;
+}
+function systemGoPackageList(moduleDirectory, packages, includeTests) {
+    return (0,external_node_child_process_namespaceObject.execFileSync)(goExecutablePath(), [
+        "list",
+        "-mod=readonly",
+        "-deps",
+        "-json",
+        ...(includeTests ? ["-test"] : []),
+        ...packages,
+    ], { cwd: moduleDirectory, encoding: "utf8", maxBuffer: 64 * 1024 * 1024 });
+}
+function updateGoJSONState(character, state) {
+    if (state.start < 0)
+        return false;
+    if (state.inString) {
+        if (state.escaped)
+            state.escaped = false;
+        else if (character === "\\")
+            state.escaped = true;
+        else if (character === '"')
+            state.inString = false;
+        return false;
+    }
+    if (character === '"')
+        state.inString = true;
+    else if (character === "{")
+        state.depth++;
+    else if (character === "}")
+        state.depth--;
+    return state.depth === 0;
+}
+function appendGoObject(output, start, end, objects) {
+    const parsed = JSON.parse(output.slice(start, end + 1));
+    if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+        objects.push(parsed);
+    }
+}
+function parseGoPackageObjects(output) {
+    const objects = [];
+    const state = {
+        start: -1,
+        depth: 0,
+        inString: false,
+        escaped: false,
+    };
+    for (let index = 0; index < output.length; index++) {
+        const character = output[index];
+        if (state.start < 0) {
+            if (character === "{") {
+                state.start = index;
+                state.depth = 1;
+            }
+            continue;
+        }
+        if (!updateGoJSONState(character, state))
+            continue;
+        appendGoObject(output, state.start, index, objects);
+        state.start = -1;
+    }
+    if (state.start >= 0)
+        throw new Error("Go returned incomplete package JSON.");
+    return objects;
+}
+function goModuleDependency(manifest, packageObject) {
+    const module = packageObject.Module;
+    if (!module || module.Main === true || typeof module.Path !== "string")
+        return undefined;
+    const name = module.Path;
+    const version = typeof module.Version === "string" ? module.Version : "";
+    const replaced = Boolean(module.Replace);
+    const versionResolved = !replaced && /^v\d+\.\d+\.\d+(?:-[\w.-]+)?(?:\+[\w.-]+)?$/.test(version);
+    let versionResolutionError;
+    if (replaced) {
+        versionResolutionError =
+            "The Go module is replaced; its effective source version is not established.";
+    }
+    else if (!versionResolved) {
+        versionResolutionError =
+            "The Go package graph did not provide an exact module version.";
+    }
+    return {
+        name,
+        version: version || "unresolved",
+        ecosystem: "go",
+        manifest,
+        versionResolved,
+        versionResolutionError,
+    };
+}
+function addGoGraphFailure(manifest, dependencies, message) {
+    dependencies.push({
+        name: "(Go package graph)",
+        version: "unresolved",
+        ecosystem: "go",
+        manifest,
+        versionResolved: false,
+        versionResolutionError: message,
+    });
+}
+function parseGoPackages(manifest, moduleDirectory, packages, includeTests, dependencies, goPackageList) {
+    if (!packages.length)
+        return;
+    let output;
+    try {
+        output = goPackageList(moduleDirectory, packages, includeTests);
+    }
+    catch (error) {
+        const detail = error instanceof Error ? error.message.split("\n")[0] : String(error);
+        addGoGraphFailure(manifest, dependencies, `Unable to resolve Go packages ${packages.join(", ")}${includeTests ? " including tests" : ""}: ${detail}`);
+        return;
+    }
+    let packageObjects;
+    try {
+        packageObjects = parseGoPackageObjects(output);
+    }
+    catch (error) {
+        const detail = error instanceof Error ? error.message : String(error);
+        addGoGraphFailure(manifest, dependencies, `Unable to parse Go package data: ${detail}`);
+        return;
+    }
+    if (!packageObjects.length) {
+        addGoGraphFailure(manifest, dependencies, `Go returned no package data for ${packages.join(", ")}.`);
+        return;
+    }
+    const modules = new Map();
+    for (const packageObject of packageObjects) {
+        const dependency = goModuleDependency(manifest, packageObject);
+        if (dependency)
+            modules.set(dependency.name, dependency);
+    }
+    dependencies.push(...modules.values());
+}
+function collectGoDependencies(context) {
+    const { path, absolutePath, dependencyConfig, goPackageList } = context;
+    const dependencies = [];
+    const basename = path.split("/").pop() ?? path;
+    if (basename === "go.sum") {
+        const adjacentModule = (0,external_node_path_.join)((0,external_node_path_.dirname)(path), "go.mod").replaceAll("\\", "/");
+        const configuredPaths = (dependencyConfig.files ?? []).map((file) => file.replaceAll("\\", "/"));
+        if (!configuredPaths.includes(adjacentModule)) {
+            dependencies.push({
+                name: "(Go module graph)",
+                version: "unresolved",
+                ecosystem: "go",
+                manifest: path,
+                versionResolved: false,
+                versionResolutionError: "go.sum contains checksums, not the selected module graph; configure the adjacent go.mod.",
+            });
+        }
+        return dependencies;
+    }
+    if (basename !== "go.mod")
+        return dependencies;
+    const packages = dependencyConfig.go?.packages?.length
+        ? dependencyConfig.go.packages
+        : ["./..."];
+    parseGoPackages(path, (0,external_node_path_.dirname)(absolutePath), packages, false, dependencies, goPackageList);
+    if (dependencyConfig.includeDevDependencies === true) {
+        parseGoPackages(path, (0,external_node_path_.dirname)(absolutePath), packages, true, dependencies, goPackageList);
+    }
+    return dependencies;
+}
+//# sourceMappingURL=package-graph.js.map
+;// CONCATENATED MODULE: ./lib/dependencies/sources/default-license-rules.js
+/*
+ * Copyright 2026 Zaphiro Technologies
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+
+
+function default_license_rules_isRecord(value) {
+    return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+function loadDefaultLicenseRules() {
+    const rulesPath = (0,external_node_url_namespaceObject.fileURLToPath)(__nccwpck_require__.ab + "default-license-rules.yaml");
+    const parsed = (0,dist/* parse */.qg)((0,external_node_fs_.readFileSync)(rulesPath, "utf8"));
+    if (!default_license_rules_isRecord(parsed))
+        throw new Error("Invalid default license rules YAML.");
+    const loadSource = (source) => {
+        const entries = parsed[source];
+        if (!Array.isArray(entries)) {
+            throw new Error(`Missing default license rules for ${source}.`);
+        }
+        return entries.map((entry) => {
+            if (!default_license_rules_isRecord(entry) ||
+                typeof entry.match !== "string" ||
+                typeof entry.license !== "string") {
+                throw new Error(`Invalid default license rule for ${source}.`);
+            }
+            return {
+                source,
+                match: entry.match,
+                license: entry.license,
+            };
+        });
+    };
+    return {
+        "license-text": loadSource("license-text"),
+        "python-classifier": loadSource("python-classifier"),
+    };
+}
+const DEFAULT_RULES = loadDefaultLicenseRules();
+const DEFAULT_LICENSE_TEXT_RULES = DEFAULT_RULES["license-text"];
+const DEFAULT_PYTHON_CLASSIFIER_RULES = DEFAULT_RULES["python-classifier"];
+//# sourceMappingURL=default-license-rules.js.map
+;// CONCATENATED MODULE: ./lib/dependencies/sources/metadata.js
+/*
+ * Copyright 2026 Zaphiro Technologies
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+const jsonCache = new Map();
+const textCache = new Map();
+const LICENSE_FILENAMES = [
+    "LICENSE",
+    "LICENCE",
+    "LICENSE.txt",
+    "LICENCE.txt",
+    "LICENSE.md",
+    "LICENCE.md",
+    "COPYING",
+];
+async function fetchJson(url, token) {
+    const cacheKey = `${token ? "authenticated" : "anonymous"}:${url}`;
+    const cached = jsonCache.get(cacheKey);
+    if (cached)
+        return cached;
+    const request = (async () => {
+        try {
+            const response = await fetch(url, {
+                headers: token
+                    ? { authorization: `Bearer ${token}`, accept: "application/json" }
+                    : { accept: "application/json" },
+                signal: AbortSignal.timeout(8000),
+            });
+            if (!response.ok)
+                return undefined;
+            return (await response.json());
+        }
+        catch {
+            return undefined;
+        }
+    })();
+    jsonCache.set(cacheKey, request);
+    return request;
+}
+async function fetchText(url) {
+    const cached = textCache.get(url);
+    if (cached)
+        return cached;
+    const request = (async () => {
+        try {
+            const response = await fetch(url, { signal: AbortSignal.timeout(8000) });
+            return response.ok ? response.text() : undefined;
+        }
+        catch {
+            return undefined;
+        }
+    })();
+    textCache.set(url, request);
+    return request;
+}
+function identifyLicenseText(text, customRules = []) {
+    const applicableRules = customRules.filter((rule) => rule.source === "license-text");
+    for (const rule of [...applicableRules, ...DEFAULT_LICENSE_TEXT_RULES]) {
+        if (new RegExp(rule.match, "is").test(text))
+            return rule.license;
+    }
+    return undefined;
+}
+function githubRepositoryFromUrl(url) {
+    try {
+        const parsed = new URL(url.replace(/^git\+/, ""));
+        if (parsed.hostname.toLowerCase() !== "github.com" &&
+            parsed.hostname.toLowerCase() !== "www.github.com")
+            return undefined;
+        const [owner, repository] = parsed.pathname.split("/").filter(Boolean);
+        return owner && repository
+            ? `${owner}/${repository.replace(/\.git$/, "")}`
+            : undefined;
+    }
+    catch {
+        return undefined;
+    }
+}
+async function resolveGithubRepositoryLicense(repository, token, includeMatchText = false, licenseRules = []) {
+    const apiUrl = `https://api.github.com/repos/${repository}/license`;
+    const metadata = (await fetchJson(apiUrl, token));
+    const apiLicense = metadata?.license?.spdx_id;
+    if (apiLicense && apiLicense !== "NOASSERTION") {
+        const matchText = includeMatchText && metadata?.download_url
+            ? await fetchText(metadata.download_url)
+            : undefined;
+        return {
+            license: apiLicense,
+            source: apiUrl,
+            matchText,
+            resolution: "repository",
+        };
+    }
+    if (metadata?.download_url) {
+        const text = await fetchText(metadata.download_url);
+        const license = text ? identifyLicenseText(text, licenseRules) : undefined;
+        if (license || text)
+            return {
+                license,
+                source: metadata.html_url ?? metadata.download_url,
+                matchText: text,
+                resolution: "repository",
+            };
+    }
+    return { resolution: "unknown" };
+}
+//# sourceMappingURL=metadata.js.map
+;// CONCATENATED MODULE: ./lib/dependencies/go/license-resolver.js
+/*
+ * Copyright 2026 Zaphiro Technologies
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+
+
+function resolveVendoredGoLicense(root, dependency, includeMatchText, licenseRules) {
+    const vendorRoot = (0,external_node_path_.join)(root, (0,external_node_path_.dirname)(dependency.manifest), "vendor");
+    let directory = (0,external_node_path_.join)(vendorRoot, ...dependency.name.split("/"));
+    for (;;) {
+        for (const filename of LICENSE_FILENAMES) {
+            const path = (0,external_node_path_.join)(directory, filename);
+            const text = readText(path);
+            const license = text
+                ? identifyLicenseText(text, licenseRules)
+                : undefined;
+            if (license || (includeMatchText && text))
+                return {
+                    license,
+                    source: (0,external_node_path_.relative)(root, path),
+                    matchText: text,
+                };
+        }
+        if (directory === vendorRoot)
+            break;
+        directory = (0,external_node_path_.dirname)(directory);
+    }
+    return {};
+}
+async function resolveGoLicense(root, dependency, token, logger, includeMatchText, licenseRules) {
+    const vendored = resolveVendoredGoLicense(root, dependency, includeMatchText, licenseRules);
+    if (vendored.license || vendored.matchText)
+        return {
+            ...vendored,
+            resolution: "manifest",
+        };
+    const match = /^github\.com\/([^/]+\/[^/]+)(?:\/v\d+)?$/.exec(dependency.name);
+    if (!match) {
+        logger.debug(`No repository resolver for Go module ${dependency.name}`);
+        return { resolution: "unknown" };
+    }
+    const apiMetadata = (await fetchJson(`https://api.github.com/repos/${match[1]}/license`, token));
+    const apiLicense = apiMetadata?.license?.spdx_id;
+    if (apiLicense && apiLicense !== "NOASSERTION") {
+        const matchText = includeMatchText && apiMetadata.download_url
+            ? await fetchText(apiMetadata.download_url)
+            : undefined;
+        return {
+            license: apiLicense,
+            source: `api.github.com/repos/${match[1]}/license`,
+            matchText,
+            resolution: "repository",
+        };
+    }
+    const candidates = [
+        dependency.version,
+        `v${dependency.version.replace(/^v/, "")}`,
+        "main",
+        "master",
+    ];
+    const attempts = await Promise.all(candidates.flatMap((ref) => LICENSE_FILENAMES.map(async (filename) => ({
+        filename,
+        text: await fetchText(`https://raw.githubusercontent.com/${match[1]}/${encodeURIComponent(ref)}/${filename}`),
+    }))));
+    for (const attempt of attempts) {
+        const license = attempt.text
+            ? identifyLicenseText(attempt.text, licenseRules)
+            : undefined;
+        if (license || (includeMatchText && attempt.text))
+            return {
+                license,
+                source: `github.com/${match[1]}/${attempt.filename}`,
+                matchText: attempt.text,
+                resolution: "repository",
+            };
+    }
+    return { resolution: "unknown" };
+}
+//# sourceMappingURL=license-resolver.js.map
+;// CONCATENATED MODULE: ./lib/dependencies/go/checker.js
 /*
  * Copyright 2026 Zaphiro Technologies
  *
@@ -46363,11 +46775,35 @@ function uniqueBy(items, key) {
 
 
 
-
-
-
-
-
+class GoDependencyChecker extends DependencyChecker {
+    ecosystem = "go";
+    supports(manifestName) {
+        return manifestName === "go.mod" || manifestName === "go.sum";
+    }
+    collect(context) {
+        return collectGoDependencies(context);
+    }
+    resolveLicense(dependency, context) {
+        return resolveGoLicense(context.root, dependency, context.token, context.logger, context.includeMatchText, context.licenseRules);
+    }
+}
+//# sourceMappingURL=checker.js.map
+;// CONCATENATED MODULE: ./lib/dependencies/javascript/parsers/package-json.js
+/*
+ * Copyright 2026 Zaphiro Technologies
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 function packageLicense(value) {
     if (typeof value === "string")
         return value;
@@ -46386,22 +46822,27 @@ function packageLicense(value) {
     }
     return undefined;
 }
+//# sourceMappingURL=package-json.js.map
+;// CONCATENATED MODULE: ./lib/dependencies/javascript/parsers/npm-lock.js
+/*
+ * Copyright 2026 Zaphiro Technologies
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+
 function npmVersionIsExact(version) {
     return /^v?\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?$/.test(version);
-}
-function pythonVersionIsExact(version) {
-    if (!version || version[0] < "0" || version[0] > "9")
-        return false;
-    for (const character of version) {
-        if ((character >= "0" && character <= "9") ||
-            (character >= "A" && character <= "Z") ||
-            (character >= "a" && character <= "z") ||
-            ".!+-".includes(character)) {
-            continue;
-        }
-        return false;
-    }
-    return true;
 }
 function addPackageJsonDependencies(dependencies, manifest, packageJson, includeDevDependencies) {
     const sections = [
@@ -46474,158 +46915,190 @@ function parseNpmLock(manifest, lockPath, dependencies, includeDevDependencies =
     if (lock.dependencies)
         visitLegacy(lock.dependencies);
 }
-function parseYarnLock(manifest, lockPath, dependencies, packageJson, includeDevDependencies) {
-    const text = (0,external_node_fs_.readFileSync)(lockPath, "utf8");
-    const parseDescriptor = (value) => {
-        const normalized = value.trim().replace(/^['"]|['"]$/g, "");
-        const separator = normalized.startsWith("@")
-            ? normalized.indexOf("@", normalized.indexOf("/") + 1)
-            : normalized.indexOf("@");
-        if (separator <= 0)
-            return undefined;
-        return {
-            name: normalized.slice(0, separator),
-            range: normalized.slice(separator + 1),
-        };
+//# sourceMappingURL=npm-lock.js.map
+;// CONCATENATED MODULE: ./lib/dependencies/javascript/parsers/yarn-lock.js
+/*
+ * Copyright 2026 Zaphiro Technologies
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+
+
+function parseYarnDescriptor(value) {
+    const normalized = value.trim().replace(/^['"]|['"]$/g, "");
+    const separator = normalized.startsWith("@")
+        ? normalized.indexOf("@", normalized.indexOf("/") + 1)
+        : normalized.indexOf("@");
+    if (separator <= 0)
+        return undefined;
+    return {
+        name: normalized.slice(0, separator),
+        range: normalized.slice(separator + 1),
     };
-    const unquote = (value) => value.trim().replace(/^['"]|['"]$/g, "");
+}
+function unquoteYarn(value) {
+    return value.trim().replace(/^['"]|['"]$/g, "");
+}
+function parseYarnVersion(line) {
+    const trimmed = line.trimStart();
+    if (!trimmed.startsWith("version"))
+        return undefined;
+    let value = trimmed.slice("version".length).trimStart();
+    if (value.startsWith(":"))
+        value = value.slice(1).trimStart();
+    value = value.replace(/^['"]/, "");
+    const end = [...value].findIndex((character) => /['"\s]/.test(character));
+    return value.slice(0, end < 0 ? value.length : end);
+}
+function yarnEntryFromSelectorLine(line) {
+    const selectors = line.slice(0, -1).trim().split(/,\s*/);
+    const descriptors = selectors
+        .map(parseYarnDescriptor)
+        .filter((item) => item !== undefined);
+    const aliasName = descriptors
+        .map((descriptor) => descriptor.range.startsWith("npm:")
+        ? parseYarnDescriptor(descriptor.range.slice(4))?.name
+        : undefined)
+        .find((name) => name !== undefined);
+    return {
+        descriptors,
+        name: aliasName ?? descriptors[0]?.name ?? "",
+        version: "*",
+        workspace: selectors.some((item) => item.includes("@workspace:")),
+        dependencies: [],
+    };
+}
+function parseYarnEntryLine(line, entry, dependencySection) {
+    const trimmed = line.trimStart();
+    const indentation = line.length - trimmed.length;
+    if (indentation === 2) {
+        if (trimmed === "dependencies:" || trimmed === "optionalDependencies:")
+            return true;
+        const version = parseYarnVersion(line);
+        if (version)
+            entry.version = version;
+        if (!trimmed.startsWith("resolution:"))
+            return false;
+        const resolution = unquoteYarn(trimmed.slice("resolution:".length));
+        const locator = resolution.indexOf("@npm:");
+        if (locator >= 0) {
+            const target = parseYarnDescriptor(resolution.slice(locator + 5));
+            if (target)
+                entry.name = target.name;
+        }
+        if (resolution.includes("@workspace:"))
+            entry.workspace = true;
+        return false;
+    }
+    if (indentation <= 2)
+        return false;
+    if (indentation === 3)
+        return dependencySection;
+    if (!dependencySection)
+        return false;
+    const colon = trimmed.indexOf(":");
+    const separator = colon > 0 ? colon : trimmed.search(/\s/);
+    if (separator <= 0)
+        return dependencySection;
+    const descriptor = parseYarnDescriptor(`${unquoteYarn(trimmed.slice(0, separator))}@${unquoteYarn(trimmed.slice(separator + 1))}`);
+    if (descriptor)
+        entry.dependencies.push(descriptor);
+    return true;
+}
+function parseYarnLockEntries(lockText) {
     const entries = [];
     let current;
     let dependencySection = false;
-    const flush = () => {
-        if (current)
-            entries.push(current);
-        current = undefined;
-        dependencySection = false;
-    };
-    const parseVersion = (line) => {
-        const trimmed = line.trimStart();
-        if (!trimmed.startsWith("version"))
-            return undefined;
-        let value = trimmed.slice("version".length).trimStart();
-        if (value.startsWith(":"))
-            value = value.slice(1).trimStart();
-        value = value.replace(/^['"]/, "");
-        const end = [...value].findIndex((character) => character === "'" ||
-            character === '"' ||
-            character === " " ||
-            character === "\t");
-        return value.slice(0, end < 0 ? value.length : end);
-    };
-    for (const line of text.split(/\r?\n/)) {
-        if (line.trim() === "" || line.startsWith("#"))
+    for (const line of lockText.split(/\r?\n/)) {
+        if (!line.trim() || line.startsWith("#"))
             continue;
         if (!line.startsWith(" ") && !line.startsWith("\t") && line.endsWith(":")) {
-            flush();
-            const selectors = line.slice(0, -1).trim().split(/,\s*/);
-            const descriptors = selectors
-                .map(parseDescriptor)
-                .filter((item) => item !== undefined);
-            current = {
-                descriptors,
-                name: descriptors
-                    .map((descriptor) => {
-                    if (!descriptor.range.startsWith("npm:"))
-                        return undefined;
-                    return parseDescriptor(descriptor.range.slice(4))?.name;
-                })
-                    .find((name) => name !== undefined) ??
-                    descriptors[0]?.name ??
-                    "",
-                version: "*",
-                workspace: selectors.some((item) => item.includes("@workspace:")),
-                dependencies: [],
-            };
-            continue;
-        }
-        if (!current)
-            continue;
-        const trimmed = line.trimStart();
-        const indentation = line.length - trimmed.length;
-        if (indentation === 2) {
-            dependencySection =
-                trimmed === "dependencies:" || trimmed === "optionalDependencies:";
-            const version = parseVersion(line);
-            if (version)
-                current.version = version;
-            if (trimmed.startsWith("resolution:")) {
-                const resolution = unquote(trimmed.slice("resolution:".length));
-                const locator = resolution.indexOf("@npm:");
-                if (locator >= 0) {
-                    const target = parseDescriptor(resolution.slice(locator + 5));
-                    if (target)
-                        current.name = target.name;
-                }
-                if (resolution.includes("@workspace:"))
-                    current.workspace = true;
-            }
-        }
-        else if (indentation >= 4 && dependencySection) {
-            const colon = trimmed.indexOf(":");
-            const separator = colon > 0 ? colon : trimmed.search(/\s/);
-            if (separator > 0) {
-                const descriptor = parseDescriptor(`${unquote(trimmed.slice(0, separator))}@${unquote(trimmed.slice(separator + 1))}`);
-                if (descriptor)
-                    current.dependencies.push(descriptor);
-            }
-        }
-        else if (indentation <= 2) {
+            if (current)
+                entries.push(current);
+            current = yarnEntryFromSelectorLine(line);
             dependencySection = false;
+            continue;
         }
+        if (current)
+            dependencySection = parseYarnEntryLine(line, current, dependencySection);
     }
-    flush();
+    if (current)
+        entries.push(current);
+    return entries;
+}
+function parseYarnLock(manifest, lockPath, dependencies, packageJson, includeDevDependencies) {
+    const entries = parseYarnLockEntries((0,external_node_fs_.readFileSync)(lockPath, "utf8"));
     if (includeDevDependencies) {
-        for (const entry of entries) {
-            if (entry.workspace || !entry.name)
-                continue;
-            dependencies.push({
-                name: entry.name,
-                version: entry.version,
-                ecosystem: "npm",
-                manifest,
-                versionResolved: npmVersionIsExact(entry.version),
-            });
-        }
+        appendAllYarnEntries(manifest, entries, dependencies);
         return;
     }
-    const findEntry = (descriptor) => entries.find((entry) => !entry.workspace &&
+    const graph = collectYarnDependencyGraph(entries, packageJson);
+    appendYarnGraphResults(manifest, graph, dependencies);
+}
+function appendAllYarnEntries(manifest, entries, dependencies) {
+    for (const entry of entries) {
+        if (entry.workspace || !entry.name)
+            continue;
+        dependencies.push({
+            name: entry.name,
+            version: entry.version,
+            ecosystem: "npm",
+            manifest,
+            versionResolved: npmVersionIsExact(entry.version),
+        });
+    }
+}
+function findYarnEntry(entries, descriptor) {
+    return entries.find((entry) => !entry.workspace &&
         entry.descriptors.some((candidate) => candidate.name === descriptor.name &&
             candidate.range.replace(/^npm:/, "") ===
                 descriptor.range.replace(/^npm:/, "")));
-    const resolveEntry = (descriptor, parentName) => {
-        const dependencyPath = parentName
-            ? `${parentName}/${descriptor.name}`
-            : descriptor.name;
-        const resolution = Object.entries(packageJson.resolutions ?? {}).find(([pattern]) => pattern === descriptor.name ||
-            minimatch(dependencyPath, pattern, { dot: true }));
-        if (resolution) {
-            return findEntry({
-                name: descriptor.name,
-                range: resolution[1].replace(/^npm:/, ""),
-            });
-        }
-        return findEntry(descriptor);
-    };
-    const roots = [
+}
+function resolveYarnEntry(entries, descriptor, parentName, resolutions) {
+    const dependencyPath = parentName
+        ? `${parentName}/${descriptor.name}`
+        : descriptor.name;
+    const resolution = Object.entries(resolutions).find(([pattern]) => pattern === descriptor.name ||
+        minimatch(dependencyPath, pattern, { dot: true }));
+    if (!resolution)
+        return findYarnEntry(entries, descriptor);
+    return findYarnEntry(entries, {
+        name: descriptor.name,
+        range: resolution[1].replace(/^npm:/, ""),
+    });
+}
+function yarnRootDependencies(packageJson) {
+    const sections = [
         packageJson.dependencies,
         packageJson.optionalDependencies,
         packageJson.peerDependencies,
-        ...(includeDevDependencies ? [packageJson.devDependencies] : []),
     ];
-    const pending = roots.flatMap((section) => Object.entries(section ?? {}).map(([name, range]) => ({
+    return sections.flatMap((section) => Object.entries(section ?? {}).map(([name, range]) => ({
         name,
         range,
         parentName: packageJson.name,
     })));
+}
+function collectYarnDependencyGraph(entries, packageJson) {
+    const pending = yarnRootDependencies(packageJson);
     const visited = new Set();
     const unresolved = new Set();
     while (pending.length > 0) {
         const descriptor = pending.pop();
-        if (!descriptor)
+        if (!descriptor || /^(workspace:|file:|link:)/.test(descriptor.range))
             continue;
-        if (/^(workspace:|file:|link:)/.test(descriptor.range))
-            continue;
-        const entry = resolveEntry(descriptor, descriptor.parentName);
+        const entry = resolveYarnEntry(entries, descriptor, descriptor.parentName, packageJson.resolutions ?? {});
         if (!entry) {
             unresolved.add(`${descriptor.name}@${descriptor.range}`);
             continue;
@@ -46638,7 +47111,10 @@ function parseYarnLock(manifest, lockPath, dependencies, packageJson, includeDev
             parentName: entry.name,
         })));
     }
-    for (const entry of visited) {
+    return { visited, unresolved };
+}
+function appendYarnGraphResults(manifest, graph, dependencies) {
+    for (const entry of graph.visited) {
         dependencies.push({
             name: entry.name,
             version: entry.version,
@@ -46647,17 +47123,37 @@ function parseYarnLock(manifest, lockPath, dependencies, packageJson, includeDev
             versionResolved: npmVersionIsExact(entry.version),
         });
     }
-    if (unresolved.size > 0) {
-        dependencies.push({
-            name: "(incomplete Yarn dependency graph)",
-            version: "unresolved",
-            ecosystem: "npm",
-            manifest,
-            versionResolved: false,
-            versionResolutionError: `Yarn lock entries not found for ${[...unresolved].join(", ")}.`,
-        });
-    }
+    if (graph.unresolved.size === 0)
+        return;
+    dependencies.push({
+        name: "(incomplete Yarn dependency graph)",
+        version: "unresolved",
+        ecosystem: "npm",
+        manifest,
+        versionResolved: false,
+        versionResolutionError: `Yarn lock entries not found for ${[...graph.unresolved].join(", ")}.`,
+    });
 }
+//# sourceMappingURL=yarn-lock.js.map
+;// CONCATENATED MODULE: ./lib/dependencies/javascript/parsers/pnpm-lock.js
+/*
+ * Copyright 2026 Zaphiro Technologies
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+
+
 function packageFromLockKey(key) {
     const normalized = key.replace(/^\//, "").replace(/^npm:/, "");
     const scopedSlash = /^(@[^/]+\/[^/]+)\/(.+)$/.exec(normalized);
@@ -46674,90 +47170,103 @@ function packageFromLockKey(key) {
         ? { name: plain[1], version: plain[2].split("(")[0] }
         : undefined;
 }
-function parsePnpmLock(manifest, lockPath, dependencies, includeDevDependencies = false) {
-    const parsed = (0,dist/* parse */.qg)((0,external_node_fs_.readFileSync)(lockPath, "utf8"));
-    if (includeDevDependencies) {
-        for (const section of ["packages", "snapshots"]) {
-            const entries = parsed[section];
-            if (!entries || typeof entries !== "object")
+function appendAllPnpmEntries(manifest, parsed, dependencies) {
+    for (const section of ["packages", "snapshots"]) {
+        const entries = parsed[section];
+        if (!entries || typeof entries !== "object")
+            continue;
+        for (const key of Object.keys(entries)) {
+            const packageInfo = packageFromLockKey(key);
+            if (!packageInfo)
                 continue;
-            for (const key of Object.keys(entries)) {
-                const packageInfo = packageFromLockKey(key);
-                if (packageInfo)
-                    dependencies.push({
-                        ...packageInfo,
-                        ecosystem: "npm",
-                        manifest,
-                        versionResolved: npmVersionIsExact(packageInfo.version),
-                    });
-            }
+            dependencies.push({
+                ...packageInfo,
+                ecosystem: "npm",
+                manifest,
+                versionResolved: npmVersionIsExact(packageInfo.version),
+            });
         }
-        return;
     }
-    const packages = (parsed.packages ?? {});
-    const snapshots = (parsed.snapshots ?? {});
-    const importers = (parsed.importers ?? {});
-    const rootImporter = importers["."] ??
-        (parsed.dependencies || parsed.optionalDependencies
-            ? {
-                dependencies: parsed.dependencies,
-                optionalDependencies: parsed.optionalDependencies,
-                peerDependencies: parsed.peerDependencies,
-                devDependencies: parsed.devDependencies,
-            }
-            : undefined);
-    if (!rootImporter) {
-        dependencies.push({
-            name: "(incomplete pnpm dependency graph)",
-            version: "unresolved",
-            ecosystem: "npm",
-            manifest,
-            versionResolved: false,
-            versionResolutionError: "The pnpm lockfile does not identify root dependency groups; enable dev dependencies or regenerate the lockfile.",
-        });
-        return;
+}
+function getPnpmRootImporter(parsed, importers) {
+    if (importers["."])
+        return importers["."];
+    if (!parsed.dependencies && !parsed.optionalDependencies)
+        return undefined;
+    return {
+        dependencies: parsed.dependencies,
+        optionalDependencies: parsed.optionalDependencies,
+        peerDependencies: parsed.peerDependencies,
+        devDependencies: parsed.devDependencies,
+    };
+}
+function normalizePnpmVersion(version) {
+    return version.split("(")[0].replace(/^\//, "");
+}
+function pnpmDependencyVersion(value) {
+    if (typeof value === "string")
+        return value;
+    if (value && typeof value === "object") {
+        const version = value.version;
+        if (typeof version === "string")
+            return version;
     }
-    const dependencySections = [
+    return "";
+}
+function pnpmDependencyRoots(rootImporter, includeDevDependencies) {
+    const sections = [
         rootImporter.dependencies,
         rootImporter.optionalDependencies,
         rootImporter.peerDependencies,
         ...(includeDevDependencies ? [rootImporter.devDependencies] : []),
     ];
-    const pending = [];
-    for (const section of dependencySections) {
+    const roots = [];
+    for (const section of sections) {
         if (!section || typeof section !== "object")
             continue;
         for (const [name, value] of Object.entries(section)) {
-            const details = value && typeof value === "object"
-                ? value
-                : undefined;
-            const version = typeof value === "string"
-                ? value
-                : typeof details?.version === "string"
-                    ? details.version
-                    : "";
+            const version = pnpmDependencyVersion(value);
             if (version && !/^(link:|workspace:|file:)/.test(version))
-                pending.push({ name, version });
+                roots.push({ name, version });
         }
     }
-    const normalizeVersion = (version) => version.split("(")[0].replace(/^\//, "");
+    return roots;
+}
+function pnpmLockEntries(packages, snapshots) {
     const entries = new Map();
     for (const [key, value] of Object.entries({ ...packages, ...snapshots })) {
         const info = packageFromLockKey(key);
         if (!info)
             continue;
-        entries.set(`${info.name}@${normalizeVersion(info.version)}`, {
+        entries.set(`${info.name}@${normalizePnpmVersion(info.version)}`, {
             ...info,
             value,
         });
     }
+    return entries;
+}
+function enqueuePnpmDependencies(value, pending) {
+    for (const sectionName of ["dependencies", "optionalDependencies"]) {
+        const section = value[sectionName];
+        if (!section || typeof section !== "object")
+            continue;
+        for (const [name, dependency] of Object.entries(section)) {
+            const version = typeof dependency === "string" ? dependency : "";
+            if (version && !/^(link:|workspace:|file:)/.test(version))
+                pending.push({ name, version });
+        }
+    }
+}
+function collectPnpmDependencyGraph(manifest, rootImporter, packages, snapshots, includeDevDependencies, dependencies) {
+    const pending = pnpmDependencyRoots(rootImporter, includeDevDependencies);
+    const entries = pnpmLockEntries(packages, snapshots);
     const visited = new Set();
     const unresolved = new Set();
     while (pending.length > 0) {
         const dependency = pending.pop();
         if (!dependency)
             continue;
-        const key = `${dependency.name}@${normalizeVersion(dependency.version)}`;
+        const key = `${dependency.name}@${normalizePnpmVersion(dependency.version)}`;
         const entry = entries.get(key);
         if (!entry) {
             unresolved.add(key);
@@ -46766,18 +47275,11 @@ function parsePnpmLock(manifest, lockPath, dependencies, includeDevDependencies 
         if (visited.has(key))
             continue;
         visited.add(key);
-        const snapshot = snapshots[`${entry.name}@${entry.version}`] ?? entry.value;
-        for (const sectionName of ["dependencies", "optionalDependencies"]) {
-            const section = snapshot[sectionName];
-            if (!section || typeof section !== "object")
-                continue;
-            for (const [name, value] of Object.entries(section)) {
-                const version = typeof value === "string" ? value : "";
-                if (version && !/^(link:|workspace:|file:)/.test(version))
-                    pending.push({ name, version });
-            }
-        }
+        enqueuePnpmDependencies(snapshots[`${entry.name}@${entry.version}`] ?? entry.value, pending);
     }
+    appendPnpmGraphResults(manifest, visited, unresolved, entries, dependencies);
+}
+function appendPnpmGraphResults(manifest, visited, unresolved, entries, dependencies) {
     for (const key of visited) {
         const entry = entries.get(key);
         if (!entry)
@@ -46790,178 +47292,462 @@ function parsePnpmLock(manifest, lockPath, dependencies, includeDevDependencies 
             versionResolved: npmVersionIsExact(entry.version),
         });
     }
-    if (unresolved.size > 0) {
+    if (unresolved.size === 0)
+        return;
+    dependencies.push({
+        name: "(incomplete pnpm dependency graph)",
+        version: "unresolved",
+        ecosystem: "npm",
+        manifest,
+        versionResolved: false,
+        versionResolutionError: `pnpm lock entries not found for ${[...unresolved].join(", ")}.`,
+    });
+}
+function parsePnpmLock(manifest, lockPath, dependencies, includeDevDependencies = false) {
+    const parsed = (0,dist/* parse */.qg)((0,external_node_fs_.readFileSync)(lockPath, "utf8"));
+    if (includeDevDependencies) {
+        appendAllPnpmEntries(manifest, parsed, dependencies);
+        return;
+    }
+    const packages = (parsed.packages ?? {});
+    const snapshots = (parsed.snapshots ?? {});
+    const importers = (parsed.importers ?? {});
+    const rootImporter = getPnpmRootImporter(parsed, importers);
+    if (!rootImporter) {
         dependencies.push({
             name: "(incomplete pnpm dependency graph)",
             version: "unresolved",
             ecosystem: "npm",
             manifest,
             versionResolved: false,
-            versionResolutionError: `pnpm lock entries not found for ${[...unresolved].join(", ")}.`,
+            versionResolutionError: "The pnpm lockfile does not identify root dependency groups; enable dev dependencies or regenerate the lockfile.",
+        });
+        return;
+    }
+    collectPnpmDependencyGraph(manifest, rootImporter, packages, snapshots, includeDevDependencies, dependencies);
+}
+//# sourceMappingURL=pnpm-lock.js.map
+;// CONCATENATED MODULE: ./lib/dependencies/javascript/parsers/manifest.js
+/*
+ * Copyright 2026 Zaphiro Technologies
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+
+
+
+
+function parsePackageJsonManifest(manifest, absolute, dependencies, includeDevDependencies) {
+    const packageJson = readJson(absolute);
+    if (!packageJson) {
+        dependencies.push({
+            name: "(invalid package.json)",
+            version: "unresolved",
+            ecosystem: "npm",
+            manifest,
+            versionResolved: false,
+            versionResolutionError: "Could not parse package.json dependencies.",
+        });
+        return;
+    }
+    parsePackageJsonLocks(manifest, absolute, dependencies, packageJson, includeDevDependencies);
+}
+function parsePackageJsonLocks(manifest, absolute, dependencies, packageJson, includeDevDependencies) {
+    const lockParsers = {
+        "package-lock.json": (lockPath) => parseNpmLock(manifest, lockPath, lockDependencies, includeDevDependencies),
+        "npm-shrinkwrap.json": (lockPath) => parseNpmLock(manifest, lockPath, lockDependencies, includeDevDependencies),
+        "yarn.lock": (lockPath) => parseYarnLock(manifest, lockPath, lockDependencies, packageJson, includeDevDependencies),
+        "pnpm-lock.yaml": (lockPath) => parsePnpmLock(manifest, lockPath, lockDependencies, includeDevDependencies),
+    };
+    const lockFiles = [];
+    const lockDependencies = [];
+    for (const [lockName, parser] of Object.entries(lockParsers)) {
+        const lockPath = (0,external_node_path_.join)((0,external_node_path_.dirname)(absolute), lockName);
+        if (!isFile(lockPath))
+            continue;
+        lockFiles.push(lockName);
+        parser(lockPath);
+    }
+    if (lockFiles.length === 0) {
+        addPackageJsonDependencies(dependencies, manifest, packageJson, includeDevDependencies);
+        return;
+    }
+    dependencies.push(...lockDependencies);
+    if (lockFiles.length > 1) {
+        dependencies.push({
+            name: "(ambiguous JavaScript lockfiles)",
+            version: "unresolved",
+            ecosystem: "npm",
+            manifest,
+            versionResolved: false,
+            versionResolutionError: `Multiple supported lockfiles found: ${lockFiles.join(", ")}.`,
         });
     }
+    appendMissingPackageJsonLockEntries(manifest, dependencies, packageJson, includeDevDependencies, lockFiles, lockDependencies);
 }
-function goExecutablePath() {
-    const executable = process.platform === "win32" ? "go.exe" : "go";
-    const goRoot = process.env.GOROOT;
-    const runnerGoRoot = process.env.RUNNER_TOOL_CACHE
-        ? (0,external_node_path_.join)(process.env.RUNNER_TOOL_CACHE, "go")
-        : undefined;
-    const cachedPathCandidates = runnerGoRoot
-        ? (process.env.PATH ?? "")
-            .split(external_node_path_.delimiter)
-            .filter((directory) => (0,external_node_path_.isAbsolute)(directory))
-            .map((directory) => (0,external_node_path_.join)(directory, executable))
-            .filter((candidate) => {
-            const relativeCandidate = (0,external_node_path_.relative)((0,external_node_path_.resolve)(runnerGoRoot), (0,external_node_path_.resolve)(candidate));
-            return (relativeCandidate !== "" &&
-                relativeCandidate !== ".." &&
-                !relativeCandidate.startsWith(`..${external_node_path_.sep}`) &&
-                !(0,external_node_path_.isAbsolute)(relativeCandidate));
-        })
-        : [];
-    const candidates = [
-        goRoot && (0,external_node_path_.isAbsolute)(goRoot) ? (0,external_node_path_.join)(goRoot, "bin", executable) : undefined,
-        ...cachedPathCandidates,
-        ...(process.platform === "win32"
-            ? [String.raw `C:\Program Files\Go\bin\go.exe`]
-            : [
-                "/usr/local/go/bin/go",
-                "/usr/local/bin/go",
-                "/opt/homebrew/bin/go",
-                "/usr/bin/go",
-            ]),
+function appendMissingPackageJsonLockEntries(manifest, dependencies, packageJson, includeDevDependencies, lockFiles, lockDependencies) {
+    const lockedNames = new Set(lockDependencies.map((dependency) => dependency.name));
+    const sections = [
+        "dependencies",
+        "optionalDependencies",
+        "peerDependencies",
+        ...(includeDevDependencies ? ["devDependencies"] : []),
     ];
-    const executablePath = candidates.find((candidate) => candidate && (0,external_node_fs_.existsSync)(candidate));
-    if (!executablePath) {
-        throw new Error("Could not locate Go; set GOROOT or install Go in a standard location.");
-    }
-    return executablePath;
-}
-function systemGoPackageList(moduleDirectory, packages, includeTests) {
-    return (0,external_node_child_process_namespaceObject.execFileSync)(goExecutablePath(), [
-        "list",
-        "-mod=readonly",
-        "-deps",
-        "-json",
-        ...(includeTests ? ["-test"] : []),
-        ...packages,
-    ], { cwd: moduleDirectory, encoding: "utf8", maxBuffer: 64 * 1024 * 1024 });
-}
-function parseGoPackageObjects(output) {
-    const objects = [];
-    let start = -1;
-    let depth = 0;
-    let inString = false;
-    let escaped = false;
-    for (let index = 0; index < output.length; index++) {
-        const character = output[index];
-        if (start < 0) {
-            if (character === "{") {
-                start = index;
-                depth = 1;
-            }
-            continue;
-        }
-        if (inString) {
-            if (escaped)
-                escaped = false;
-            else if (character === "\\")
-                escaped = true;
-            else if (character === '"')
-                inString = false;
-            continue;
-        }
-        if (character === '"')
-            inString = true;
-        else if (character === "{")
-            depth++;
-        else if (character === "}" && --depth === 0) {
-            const parsed = JSON.parse(output.slice(start, index + 1));
-            if (parsed && typeof parsed === "object" && !Array.isArray(parsed))
-                objects.push(parsed);
-            start = -1;
+    for (const section of sections) {
+        for (const [name, version] of Object.entries(packageJson[section] ?? {})) {
+            const aliasTarget = version.startsWith("npm:")
+                ? parseNpmAliasName(version.slice("npm:".length))
+                : undefined;
+            if (version.startsWith("workspace:") ||
+                lockedNames.has(name) ||
+                (aliasTarget !== undefined && lockedNames.has(aliasTarget)))
+                continue;
+            dependencies.push({
+                name,
+                version,
+                ecosystem: "npm",
+                manifest,
+                versionResolved: false,
+                versionResolutionError: `The dependency is missing from ${lockFiles.join(", ")}.`,
+            });
         }
     }
-    if (start >= 0)
-        throw new Error("Go returned incomplete package JSON.");
-    return objects;
 }
-function parseGoPackages(manifest, moduleDirectory, packages, includeTests, dependencies, goPackageList) {
-    if (!packages.length)
-        return;
-    let output;
+function parseNpmAliasName(value) {
+    const separator = value.startsWith("@")
+        ? value.indexOf("@", value.indexOf("/") + 1)
+        : value.indexOf("@");
+    return separator > 0 ? value.slice(0, separator) : undefined;
+}
+function collectJavaScriptDependencies(context) {
+    const { path, absolutePath, dependencyConfig } = context;
+    const dependencies = [];
+    const includeDevDependencies = dependencyConfig.includeDevDependencies === true;
+    const basename = path.split("/").pop() ?? path;
+    if (basename === "package.json") {
+        parsePackageJsonManifest(path, absolutePath, dependencies, includeDevDependencies);
+        return dependencies;
+    }
+    const parser = basename === "package-lock.json" || basename === "npm-shrinkwrap.json"
+        ? parseNpmLock
+        : basename === "pnpm-lock.yaml"
+            ? parsePnpmLock
+            : (manifest, lockPath, output, includeDev) => {
+                const packageJson = readJson((0,external_node_path_.join)((0,external_node_path_.dirname)(lockPath), "package.json"));
+                parseYarnLock(manifest, lockPath, output, packageJson ?? {}, includeDev === true);
+            };
+    parser(path, absolutePath, dependencies, includeDevDependencies);
+    return dependencies;
+}
+//# sourceMappingURL=manifest.js.map
+;// CONCATENATED MODULE: ./lib/dependencies/javascript/license-resolver.js
+/*
+ * Copyright 2026 Zaphiro Technologies
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+
+
+
+function installedNpmPackage(root, manifest, name) {
+    const packagePath = name.startsWith("@")
+        ? (0,external_node_path_.join)("node_modules", ...name.split("/"), "package.json")
+        : (0,external_node_path_.join)("node_modules", name, "package.json");
+    const candidates = [
+        (0,external_node_path_.join)(root, packagePath),
+        (0,external_node_path_.join)(root, (0,external_node_path_.dirname)(manifest), packagePath),
+    ];
+    for (const candidate of candidates) {
+        const packageJson = readJson(candidate);
+        if (packageJson)
+            return packageJson;
+    }
+    return undefined;
+}
+async function npmRepositoryLicenseText(packageInfo, token, licenseRules) {
+    const repositoryUrl = typeof packageInfo?.repository === "string"
+        ? packageInfo.repository
+        : packageInfo?.repository?.url;
+    const repository = repositoryUrl
+        ? githubRepositoryFromUrl(repositoryUrl)
+        : undefined;
+    if (!repository)
+        return undefined;
+    return resolveGithubRepositoryLicense(repository, token, true, licenseRules);
+}
+async function resolveNpmLicense(root, dependency, logger, token, includeMatchText, licenseRules) {
+    const installed = installedNpmPackage(root, dependency.manifest, dependency.name);
+    const installedLicense = packageLicense(installed?.license ?? installed?.licenses);
+    const installedMatchText = includeMatchText
+        ? await npmRepositoryLicenseText(installed, token, licenseRules)
+        : undefined;
+    if (installedLicense &&
+        (!includeMatchText || installedMatchText?.matchText)) {
+        return {
+            license: installedLicense,
+            source: "node_modules/package.json",
+            matchText: installedMatchText?.matchText,
+            resolution: "manifest",
+        };
+    }
+    const encodedName = dependency.name.startsWith("@")
+        ? dependency.name.replace("/", "%2f")
+        : dependency.name;
+    const concreteVersion = /^v?\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?$/.test(dependency.version);
+    const registryUrl = concreteVersion
+        ? `https://registry.npmjs.org/${encodedName}/${encodeURIComponent(dependency.version)}`
+        : `https://registry.npmjs.org/${encodedName}`;
+    const metadata = (await fetchJson(registryUrl));
+    const metadataMatch = includeMatchText
+        ? ((await npmRepositoryLicenseText(metadata, token, licenseRules)) ??
+            installedMatchText)
+        : undefined;
+    const metadataMatchText = metadataMatch?.matchText;
+    if (installedLicense)
+        return {
+            license: installedLicense,
+            source: "node_modules/package.json",
+            matchText: metadataMatchText,
+            resolution: "manifest",
+        };
+    const registryLicense = packageLicense(metadata?.license ?? metadata?.licenses);
+    if (registryLicense) {
+        return {
+            license: registryLicense,
+            source: "registry.npmjs.org",
+            matchText: metadataMatchText,
+            resolution: "registry",
+        };
+    }
+    if (metadata?.versions) {
+        const latest = metadata.versions[metadata["dist-tags"]?.latest ?? ""];
+        const latestLicense = packageLicense(latest?.license ?? latest?.licenses);
+        if (latestLicense) {
+            const matchText = includeMatchText
+                ? (await npmRepositoryLicenseText(latest, token, licenseRules))
+                    ?.matchText
+                : undefined;
+            return {
+                license: latestLicense,
+                source: "registry.npmjs.org",
+                matchText,
+                resolution: "registry",
+            };
+        }
+    }
+    if (installedLicense)
+        return {
+            license: installedLicense,
+            source: "node_modules/package.json",
+            matchText: metadataMatchText,
+            resolution: "manifest",
+        };
+    logger.debug(`Could not resolve npm license for ${dependency.name}@${dependency.version}`);
+    return {
+        license: metadataMatch?.license,
+        source: metadataMatch?.source,
+        matchText: metadataMatchText,
+        resolution: metadataMatch?.resolution ?? "unknown",
+    };
+}
+//# sourceMappingURL=license-resolver.js.map
+;// CONCATENATED MODULE: ./lib/dependencies/javascript/checker.js
+/*
+ * Copyright 2026 Zaphiro Technologies
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+
+
+
+
+class JavaScriptDependencyChecker extends DependencyChecker {
+    ecosystem = "npm";
+    supports(manifestName) {
+        return (manifestName === "package.json" ||
+            manifestName === "package-lock.json" ||
+            manifestName === "npm-shrinkwrap.json" ||
+            manifestName === "yarn.lock" ||
+            manifestName === "pnpm-lock.yaml");
+    }
+    collect(context) {
+        return collectJavaScriptDependencies(context);
+    }
+    resolveLicense(dependency, context) {
+        return resolveNpmLicense(context.root, dependency, context.logger, context.token, context.includeMatchText, context.licenseRules);
+    }
+}
+//# sourceMappingURL=checker.js.map
+// EXTERNAL MODULE: ../../.yarn/berry/cache/@iarna-toml-npm-2.2.5-6da1399e8e-10c0.zip/node_modules/@iarna/toml/toml.js
+var toml = __nccwpck_require__(389);
+;// CONCATENATED MODULE: ./lib/dependencies/python/parsers/version.js
+/*
+ * Copyright 2026 Zaphiro Technologies
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+function pythonVersionIsExact(version) {
+    if (!version || version[0] < "0" || version[0] > "9")
+        return false;
+    for (const character of version) {
+        if ((character >= "0" && character <= "9") ||
+            (character >= "A" && character <= "Z") ||
+            (character >= "a" && character <= "z") ||
+            ".!+-".includes(character)) {
+            continue;
+        }
+        return false;
+    }
+    return true;
+}
+//# sourceMappingURL=version.js.map
+;// CONCATENATED MODULE: ./lib/dependencies/python/parsers/lockfiles.js
+/*
+ * Copyright 2026 Zaphiro Technologies
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+
+
+
+function parsePoetryLock(manifest, path, dependencies, includeDevDependencies) {
     try {
-        output = goPackageList(moduleDirectory, packages, includeTests);
-    }
-    catch (error) {
-        const detail = error instanceof Error ? error.message.split("\n")[0] : String(error);
-        dependencies.push({
-            name: "(Go package graph)",
-            version: "unresolved",
-            ecosystem: "go",
-            manifest,
-            versionResolved: false,
-            versionResolutionError: `Unable to resolve Go packages ${packages.join(", ")}${includeTests ? " including tests" : ""}: ${detail}`,
-        });
-        return;
-    }
-    let packageObjects;
-    try {
-        packageObjects = parseGoPackageObjects(output);
-    }
-    catch (error) {
-        const detail = error instanceof Error ? error.message : String(error);
-        dependencies.push({
-            name: "(Go package graph)",
-            version: "unresolved",
-            ecosystem: "go",
-            manifest,
-            versionResolved: false,
-            versionResolutionError: `Unable to parse Go package data: ${detail}`,
-        });
-        return;
-    }
-    if (!packageObjects.length) {
-        dependencies.push({
-            name: "(Go package graph)",
-            version: "unresolved",
-            ecosystem: "go",
-            manifest,
-            versionResolved: false,
-            versionResolutionError: `Go returned no package data for ${packages.join(", ")}.`,
-        });
-        return;
-    }
-    const modules = new Map();
-    for (const packageObject of packageObjects) {
-        const module = packageObject.Module;
-        if (!module || module.Main === true || typeof module.Path !== "string")
-            continue;
-        const name = module.Path;
-        const version = typeof module.Version === "string" ? module.Version : "";
-        const replaced = Boolean(module.Replace);
-        const versionResolved = !replaced && /^v\d+\.\d+\.\d+(?:-[\w.-]+)?(?:\+[\w.-]+)?$/.test(version);
-        let versionResolutionError;
-        if (replaced) {
-            versionResolutionError =
-                "The Go module is replaced; its effective source version is not established.";
+        const lock = (0,toml.parse)((0,external_node_fs_.readFileSync)(path, "utf8"));
+        for (const entry of lock.package ?? []) {
+            const isDevOnly = entry.category === "dev" ||
+                (Array.isArray(entry.groups) &&
+                    entry.groups.length > 0 &&
+                    !entry.groups.includes("main"));
+            if (!includeDevDependencies && isDevOnly)
+                continue;
+            if (entry.name)
+                dependencies.push({
+                    name: entry.name,
+                    version: entry.version ?? "*",
+                    ecosystem: "python",
+                    manifest,
+                    versionResolved: typeof entry.version === "string" &&
+                        pythonVersionIsExact(entry.version),
+                    versionResolutionError: typeof entry.version === "string" &&
+                        pythonVersionIsExact(entry.version)
+                        ? undefined
+                        : "The Poetry lock entry has no exact version.",
+                });
         }
-        else if (!versionResolved) {
-            versionResolutionError =
-                "The Go package graph did not provide an exact module version.";
-        }
-        modules.set(name, {
-            name,
-            version: version || "unresolved",
-            ecosystem: "go",
-            manifest,
-            versionResolved,
-            versionResolutionError,
-        });
+        return true;
     }
-    dependencies.push(...modules.values());
+    catch {
+        // An invalid lockfile is reported by the package manager; do not make the action crash here.
+        return false;
+    }
 }
+function parsePipfileLock(manifest, path, dependencies, includeDevDependencies = false) {
+    const lock = readJson(path);
+    if (!lock) {
+        dependencies.push({
+            name: "(invalid Pipfile.lock)",
+            version: "unresolved",
+            ecosystem: "python",
+            manifest,
+            versionResolved: false,
+            versionResolutionError: "Could not parse Pipfile.lock.",
+        });
+        return;
+    }
+    for (const section of [
+        lock?.default,
+        ...(includeDevDependencies ? [lock?.develop] : []),
+    ]) {
+        for (const [name, value] of Object.entries(section ?? {})) {
+            const versionIsExact = typeof value.version === "string" &&
+                value.version.startsWith("==") &&
+                pythonVersionIsExact(value.version.slice(2));
+            dependencies.push({
+                name,
+                version: value.version?.replace(/^==/, "") ?? "*",
+                ecosystem: "python",
+                manifest,
+                versionResolved: versionIsExact,
+                versionResolutionError: versionIsExact
+                    ? undefined
+                    : "The Pipfile lock entry has no exact version.",
+            });
+        }
+    }
+}
+//# sourceMappingURL=lockfiles.js.map
+;// CONCATENATED MODULE: ./lib/dependencies/python/parsers/requirements.js
+/*
+ * Copyright 2026 Zaphiro Technologies
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+
 function parseRequirements(manifest, path, dependencies) {
     const parseRequirement = (value) => {
         const nameMatch = /^[A-Za-z0-9][A-Za-z0-9_.-]*/.exec(value);
@@ -47033,6 +47819,75 @@ function parseRequirements(manifest, path, dependencies) {
         });
     }
 }
+//# sourceMappingURL=requirements.js.map
+;// CONCATENATED MODULE: ./lib/dependencies/python/parsers/manifest.js
+/*
+ * Copyright 2026 Zaphiro Technologies
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+
+
+
+
+
+function appendUnresolvedPythonDependency(manifest, dependency, dependencies) {
+    dependencies.push({
+        ...dependency,
+        ecosystem: "python",
+        manifest,
+        versionResolved: false,
+        versionResolutionError: "A supported Python lockfile or fully pinned requirements file is required.",
+    });
+}
+function collectPyprojectGroup(entries, output) {
+    if (Array.isArray(entries)) {
+        for (const value of entries) {
+            if (typeof value !== "string")
+                continue;
+            const name = /^[A-Za-z0-9][A-Za-z0-9_.-]*/.exec(value)?.[0];
+            if (name)
+                output.push({ name, version: value.slice(name.length).trim() || "*" });
+        }
+        return;
+    }
+    if (!entries || typeof entries !== "object")
+        return;
+    for (const [name, value] of Object.entries(entries)) {
+        let version = "*";
+        if (typeof value === "string")
+            version = value;
+        else if (value &&
+            typeof value === "object" &&
+            typeof value.version === "string") {
+            version = value.version;
+        }
+        output.push({ name, version });
+    }
+}
+function appendPyprojectDevelopmentDependencies(manifest, parsed, dependencies) {
+    const requirements = [];
+    collectPyprojectGroup(parsed["dependency-groups"]?.dev, requirements);
+    collectPyprojectGroup(parsed.tool?.poetry?.["dev-dependencies"], requirements);
+    for (const [groupName, group] of Object.entries(parsed.tool?.poetry?.group ?? {})) {
+        if (groupName !== "main")
+            collectPyprojectGroup(group.dependencies, requirements);
+    }
+    for (const requirement of requirements) {
+        appendUnresolvedPythonDependency(manifest, requirement, dependencies);
+    }
+}
 function parsePyproject(manifest, path, dependencies, includeDevDependencies) {
     let parsed;
     try {
@@ -47057,213 +47912,19 @@ function parsePyproject(manifest, path, dependencies, includeDevDependencies) {
             const nameMatch = /^[A-Za-z0-9][A-Za-z0-9_.-]*/.exec(value);
             if (!nameMatch)
                 continue;
-            dependencies.push({
+            appendUnresolvedPythonDependency(manifest, {
                 name: nameMatch[0],
                 version: value.slice(nameMatch[0].length).trim() || "*",
-                ecosystem: "python",
-                manifest,
-                versionResolved: false,
-                versionResolutionError: "A supported Python lockfile or fully pinned requirements file is required.",
-            });
+            }, dependencies);
         }
     }
     for (const [name, value] of Object.entries(parsed.tool?.poetry?.dependencies ?? {})) {
         if (name.toLowerCase() === "python" || typeof value !== "string")
             continue;
-        dependencies.push({
-            name,
-            version: value,
-            ecosystem: "python",
-            manifest,
-            versionResolved: false,
-            versionResolutionError: "A supported Python lockfile or fully pinned requirements file is required.",
-        });
+        appendUnresolvedPythonDependency(manifest, { name, version: value }, dependencies);
     }
-    if (includeDevDependencies) {
-        const developmentRequirements = [];
-        const collectGroup = (entries) => {
-            if (Array.isArray(entries)) {
-                for (const value of entries) {
-                    if (typeof value !== "string")
-                        continue;
-                    const name = /^[A-Za-z0-9][A-Za-z0-9_.-]*/.exec(value)?.[0];
-                    if (name)
-                        developmentRequirements.push({
-                            name,
-                            version: value.slice(name.length).trim() || "*",
-                        });
-                }
-            }
-            else if (entries && typeof entries === "object") {
-                for (const [name, value] of Object.entries(entries)) {
-                    const version = typeof value === "string"
-                        ? value
-                        : value &&
-                            typeof value === "object" &&
-                            typeof value.version === "string"
-                            ? value.version
-                            : "*";
-                    developmentRequirements.push({ name, version });
-                }
-            }
-        };
-        collectGroup(parsed["dependency-groups"]?.dev);
-        collectGroup(parsed.tool?.poetry?.["dev-dependencies"]);
-        for (const [groupName, group] of Object.entries(parsed.tool?.poetry?.group ?? {})) {
-            if (groupName !== "main")
-                collectGroup(group.dependencies);
-        }
-        for (const requirement of developmentRequirements) {
-            dependencies.push({
-                ...requirement,
-                ecosystem: "python",
-                manifest,
-                versionResolved: false,
-                versionResolutionError: "A supported Python lockfile or fully pinned requirements file is required.",
-            });
-        }
-    }
-}
-function parsePoetryLock(manifest, path, dependencies, includeDevDependencies) {
-    try {
-        const lock = (0,toml.parse)((0,external_node_fs_.readFileSync)(path, "utf8"));
-        for (const entry of lock.package ?? []) {
-            const isDevOnly = entry.category === "dev" ||
-                (Array.isArray(entry.groups) &&
-                    entry.groups.length > 0 &&
-                    !entry.groups.includes("main"));
-            if (!includeDevDependencies && isDevOnly)
-                continue;
-            if (entry.name)
-                dependencies.push({
-                    name: entry.name,
-                    version: entry.version ?? "*",
-                    ecosystem: "python",
-                    manifest,
-                    versionResolved: typeof entry.version === "string" &&
-                        pythonVersionIsExact(entry.version),
-                    versionResolutionError: typeof entry.version === "string" &&
-                        pythonVersionIsExact(entry.version)
-                        ? undefined
-                        : "The Poetry lock entry has no exact version.",
-                });
-        }
-        return true;
-    }
-    catch {
-        // An invalid lockfile is reported by the package manager; do not make the action crash here.
-        return false;
-    }
-}
-function parsePipfileLock(manifest, path, dependencies, includeDevDependencies = false) {
-    const lock = readJson(path);
-    if (!lock) {
-        dependencies.push({
-            name: "(invalid Pipfile.lock)",
-            version: "unresolved",
-            ecosystem: "python",
-            manifest,
-            versionResolved: false,
-            versionResolutionError: "Could not parse Pipfile.lock.",
-        });
-        return;
-    }
-    for (const section of [
-        lock?.default,
-        ...(includeDevDependencies ? [lock?.develop] : []),
-    ]) {
-        for (const [name, value] of Object.entries(section ?? {})) {
-            const versionIsExact = typeof value.version === "string" &&
-                value.version.startsWith("==") &&
-                pythonVersionIsExact(value.version.slice(2));
-            dependencies.push({
-                name,
-                version: value.version?.replace(/^==/, "") ?? "*",
-                ecosystem: "python",
-                manifest,
-                versionResolved: versionIsExact,
-                versionResolutionError: versionIsExact
-                    ? undefined
-                    : "The Pipfile lock entry has no exact version.",
-            });
-        }
-    }
-}
-function parsePackageJsonManifest(manifest, absolute, dependencies, includeDevDependencies) {
-    const packageJson = readJson(absolute);
-    if (!packageJson) {
-        dependencies.push({
-            name: "(invalid package.json)",
-            version: "unresolved",
-            ecosystem: "npm",
-            manifest,
-            versionResolved: false,
-            versionResolutionError: "Could not parse package.json dependencies.",
-        });
-        return;
-    }
-    const lockParsers = {
-        "package-lock.json": (lockPath) => parseNpmLock(manifest, lockPath, lockDependencies, includeDevDependencies),
-        "npm-shrinkwrap.json": (lockPath) => parseNpmLock(manifest, lockPath, lockDependencies, includeDevDependencies),
-        "yarn.lock": (lockPath) => parseYarnLock(manifest, lockPath, lockDependencies, packageJson, includeDevDependencies),
-        "pnpm-lock.yaml": (lockPath) => parsePnpmLock(manifest, lockPath, lockDependencies, includeDevDependencies),
-    };
-    const lockFiles = [];
-    const lockDependencies = [];
-    for (const [lockName, parser] of Object.entries(lockParsers)) {
-        const lockPath = (0,external_node_path_.join)((0,external_node_path_.dirname)(absolute), lockName);
-        if (!isFile(lockPath))
-            continue;
-        lockFiles.push(lockName);
-        parser(lockPath);
-    }
-    if (lockFiles.length === 0) {
-        addPackageJsonDependencies(dependencies, manifest, packageJson, includeDevDependencies);
-        return;
-    }
-    dependencies.push(...lockDependencies);
-    if (lockFiles.length > 1) {
-        dependencies.push({
-            name: "(ambiguous JavaScript lockfiles)",
-            version: "unresolved",
-            ecosystem: "npm",
-            manifest,
-            versionResolved: false,
-            versionResolutionError: `Multiple supported lockfiles found: ${lockFiles.join(", ")}.`,
-        });
-    }
-    const lockedNames = new Set(lockDependencies.map((dependency) => dependency.name));
-    const sections = [
-        "dependencies",
-        "optionalDependencies",
-        "peerDependencies",
-        ...(includeDevDependencies ? ["devDependencies"] : []),
-    ];
-    for (const section of sections) {
-        for (const [name, version] of Object.entries(packageJson[section] ?? {})) {
-            const aliasTarget = version.startsWith("npm:")
-                ? parseNpmAliasName(version.slice("npm:".length))
-                : undefined;
-            if (version.startsWith("workspace:") ||
-                lockedNames.has(name) ||
-                (aliasTarget !== undefined && lockedNames.has(aliasTarget)))
-                continue;
-            dependencies.push({
-                name,
-                version,
-                ecosystem: "npm",
-                manifest,
-                versionResolved: false,
-                versionResolutionError: `The dependency is missing from ${lockFiles.join(", ")}.`,
-            });
-        }
-    }
-}
-function parseNpmAliasName(value) {
-    const separator = value.startsWith("@")
-        ? value.indexOf("@", value.indexOf("/") + 1)
-        : value.indexOf("@");
-    return separator > 0 ? value.slice(0, separator) : undefined;
+    if (includeDevDependencies)
+        appendPyprojectDevelopmentDependencies(manifest, parsed, dependencies);
 }
 function parsePyprojectManifest(manifest, path, dependencies, includeDevDependencies) {
     const poetryLockPath = (0,external_node_path_.join)((0,external_node_path_.dirname)(path), "poetry.lock");
@@ -47281,280 +47942,94 @@ function parsePyprojectManifest(manifest, path, dependencies, includeDevDependen
     }
     parsePyproject(manifest, path, dependencies, includeDevDependencies);
 }
-const MANIFEST_PARSERS = {
-    "package-lock.json": parseNpmLock,
-    "npm-shrinkwrap.json": parseNpmLock,
-    "yarn.lock": (manifest, path, dependencies, includeDevDependencies) => {
-        const packageJson = readJson((0,external_node_path_.join)((0,external_node_path_.dirname)(path), "package.json"));
-        parseYarnLock(manifest, path, dependencies, packageJson ?? {}, includeDevDependencies === true);
-    },
-    "pnpm-lock.yaml": parsePnpmLock,
-    "requirements.txt": parseRequirements,
-    "pyproject.toml": (manifest, path, dependencies, includeDevDependencies) => parsePyprojectManifest(manifest, path, dependencies, includeDevDependencies === true),
-    "poetry.lock": (manifest, path, dependencies, includeDevDependencies) => {
-        if (!parsePoetryLock(manifest, path, dependencies, includeDevDependencies === true))
+function collectPythonDependencies(context) {
+    const { path, absolutePath, dependencyConfig } = context;
+    const dependencies = [];
+    const includeDevDependencies = dependencyConfig.includeDevDependencies === true;
+    const basename = path.split("/").pop() ?? path;
+    if (basename === "pyproject.toml") {
+        parsePyprojectManifest(path, absolutePath, dependencies, includeDevDependencies);
+        return dependencies;
+    }
+    if (basename === "poetry.lock") {
+        if (!parsePoetryLock(path, absolutePath, dependencies, includeDevDependencies)) {
             dependencies.push({
                 name: "(invalid poetry.lock)",
                 version: "unresolved",
                 ecosystem: "python",
-                manifest,
+                manifest: path,
                 versionResolved: false,
                 versionResolutionError: "Could not parse poetry.lock.",
             });
-    },
-    "Pipfile.lock": (manifest, path, dependencies, includeDevDependencies) => parsePipfileLock(manifest, path, dependencies, includeDevDependencies === true),
-};
-function parseManifest(root, path, dependencies, goPackageList, dependencyConfig) {
-    const basename = path.split("/").pop() ?? path;
-    const absolute = (0,external_node_path_.resolve)(root, path);
-    const includeDevDependencies = dependencyConfig.includeDevDependencies === true;
-    if (!isFile(absolute))
-        return;
-    if (basename === "package.json") {
-        parsePackageJsonManifest(path, absolute, dependencies, includeDevDependencies);
-        return;
-    }
-    if (basename === "go.mod") {
-        const goConfig = dependencyConfig.go;
-        const packages = goConfig?.packages?.length ? goConfig.packages : ["./..."];
-        parseGoPackages(path, (0,external_node_path_.dirname)(absolute), packages, false, dependencies, goPackageList);
-        if (includeDevDependencies) {
-            parseGoPackages(path, (0,external_node_path_.dirname)(absolute), packages, true, dependencies, goPackageList);
         }
-        return;
+        return dependencies;
     }
-    if (basename === "go.sum")
-        return;
-    const parser = MANIFEST_PARSERS[basename] ??
-        (basename.endsWith(".txt") ? parseRequirements : undefined);
-    if (parser) {
-        parser(path, absolute, dependencies, includeDevDependencies);
-        return;
+    if (basename === "Pipfile.lock") {
+        parsePipfileLock(path, absolutePath, dependencies, includeDevDependencies);
+        return dependencies;
     }
-    dependencies.push({
-        name: "(unsupported dependency input)",
-        version: "unresolved",
-        ecosystem: "unknown",
-        manifest: path,
-        versionResolved: false,
-        versionResolutionError: `No parser is available for dependency input ${basename}.`,
-    });
+    parseRequirements(path, absolutePath, dependencies);
+    return dependencies;
 }
-function overrideFor(config, name, version) {
-    for (const override of config.licenses ?? []) {
-        if (override.match !== undefined)
+//# sourceMappingURL=manifest.js.map
+;// CONCATENATED MODULE: ./lib/dependencies/python/parsers/classifiers.js
+/*
+ * Copyright 2026 Zaphiro Technologies
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+
+function licenseFromPythonClassifier(classifier, customRules = []) {
+    const label = classifier.split("::").pop()?.trim() ?? classifier;
+    const applicableRules = customRules.filter((rule) => rule.source === "python-classifier");
+    for (const rule of [...applicableRules, ...DEFAULT_PYTHON_CLASSIFIER_RULES]) {
+        if (new RegExp(rule.match, "is").test(label))
+            return rule.license;
+    }
+    return label;
+}
+function licensesFromPythonClassifiers(classifiers, customRules = []) {
+    const licenses = new Set();
+    for (const classifier of classifiers ?? []) {
+        if (!classifier.startsWith("License ::"))
             continue;
-        const versionMatches = !override.version ||
-            override.version
-                .split(",")
-                .map((item) => item.trim())
-                .includes(version);
-        if (versionMatches &&
-            (override.name === name || minimatch(name, override.name)))
-            return override.license;
+        const normalized = normalizeLicenseExpression(licenseFromPythonClassifier(classifier, customRules));
+        if (normalized !== "Unknown")
+            licenses.add(normalized);
     }
-    return undefined;
+    return [...licenses];
 }
-function matchOverrideFor(config, name, version, candidates) {
-    for (const candidate of candidates) {
-        for (const override of config.licenses ?? []) {
-            if (override.match === undefined)
-                continue;
-            const versionMatches = !override.version ||
-                override.version
-                    .split(",")
-                    .map((item) => item.trim())
-                    .includes(version);
-            if (versionMatches &&
-                (override.name === name || minimatch(name, override.name)) &&
-                new RegExp(override.match).test(candidate))
-                return override.license;
-        }
-    }
-    return undefined;
-}
-function hasMatchRuleFor(config, name, version) {
-    return (config.licenses ?? []).some((override) => {
-        if (override.match === undefined)
-            return false;
-        const versionMatches = !override.version ||
-            override.version
-                .split(",")
-                .map((item) => item.trim())
-                .includes(version);
-        return (versionMatches &&
-            (override.name === name || minimatch(name, override.name)));
-    });
-}
-function exceptionFor(config, name, version) {
-    return (config.exceptions ?? []).find((exception) => exception.name === name && exception.version === version);
-}
-function excludedBy(config, name, version) {
-    return (config.excludes ?? []).some((exclude) => {
-        const versionMatches = !exclude.version ||
-            exclude.version
-                .split(",")
-                .map((item) => item.trim())
-                .includes(version);
-        return (versionMatches && (exclude.name === name || minimatch(name, exclude.name)));
-    });
-}
-function installedNpmPackage(root, manifest, name) {
-    const packagePath = name.startsWith("@")
-        ? (0,external_node_path_.join)("node_modules", ...name.split("/"), "package.json")
-        : (0,external_node_path_.join)("node_modules", name, "package.json");
-    const candidates = [
-        (0,external_node_path_.join)(root, packagePath),
-        (0,external_node_path_.join)(root, (0,external_node_path_.dirname)(manifest), packagePath),
-    ];
-    for (const candidate of candidates) {
-        const packageJson = readJson(candidate);
-        if (packageJson)
-            return packageJson;
-    }
-    return undefined;
-}
-const jsonCache = new Map();
-const textCache = new Map();
-const LICENSE_FILENAMES = [
-    "LICENSE",
-    "LICENCE",
-    "LICENSE.txt",
-    "LICENCE.txt",
-    "LICENSE.md",
-    "LICENCE.md",
-    "COPYING",
-];
-async function fetchJson(url, token) {
-    const cacheKey = `${token ? "authenticated" : "anonymous"}:${url}`;
-    const cached = jsonCache.get(cacheKey);
-    if (cached)
-        return cached;
-    const request = (async () => {
-        try {
-            const response = await fetch(url, {
-                headers: token
-                    ? { authorization: `Bearer ${token}`, accept: "application/json" }
-                    : { accept: "application/json" },
-                signal: AbortSignal.timeout(8000),
-            });
-            if (!response.ok)
-                return undefined;
-            return (await response.json());
-        }
-        catch {
-            return undefined;
-        }
-    })();
-    jsonCache.set(cacheKey, request);
-    return request;
-}
-async function fetchText(url) {
-    const cached = textCache.get(url);
-    if (cached)
-        return cached;
-    const request = (async () => {
-        try {
-            const response = await fetch(url, { signal: AbortSignal.timeout(8000) });
-            return response.ok ? response.text() : undefined;
-        }
-        catch {
-            return undefined;
-        }
-    })();
-    textCache.set(url, request);
-    return request;
-}
-function identifyLicenseText(text) {
-    const lower = text.toLowerCase();
-    if (lower.includes("gpl 2.0+/lgpl 2.1+/mpl 1.1") &&
-        lower.includes("tri-license"))
-        return "(GPL-2.0-or-later OR LGPL-2.1-or-later OR MPL-1.1)";
-    if (lower.includes("apache license") && lower.includes("version 2.0"))
-        return "Apache-2.0";
-    if (lower.includes("permission is hereby granted, free of charge"))
-        return "MIT";
-    if (lower.includes("mozilla public license") && lower.includes("2.0"))
-        return "MPL-2.0";
-    if (lower.includes("gnu lesser general public license"))
-        return lower.includes("2.1") ? "LGPL-2.1-only" : "LGPL-3.0-only";
-    if (lower.includes("gnu general public license"))
-        return lower.includes("version 2") ? "GPL-2.0-only" : "GPL-3.0-only";
-    if (lower.includes("redistribution and use in source and binary forms") &&
-        lower.includes("neither the name"))
-        return "BSD-3-Clause";
-    if (lower.includes("redistribution and use in source and binary forms"))
-        return "BSD-2-Clause";
-    if (lower.includes("permission to use, copy, modify, and/or distribute"))
-        return "ISC";
-    return undefined;
-}
-async function resolveNpm(root, dependency, logger, token, includeMatchText) {
-    const installed = installedNpmPackage(root, dependency.manifest, dependency.name);
-    const installedLicense = packageLicense(installed?.license ?? installed?.licenses);
-    const installedMatchText = includeMatchText
-        ? await npmRepositoryLicenseText(installed, token)
-        : undefined;
-    if (installedLicense && (!includeMatchText || installedMatchText)) {
-        return {
-            license: installedLicense,
-            source: "node_modules/package.json",
-            matchText: installedMatchText,
-            resolution: "manifest",
-        };
-    }
-    const encodedName = dependency.name.startsWith("@")
-        ? dependency.name.replace("/", "%2f")
-        : dependency.name;
-    const concreteVersion = /^v?\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?$/.test(dependency.version);
-    const registryUrl = concreteVersion
-        ? `https://registry.npmjs.org/${encodedName}/${encodeURIComponent(dependency.version)}`
-        : `https://registry.npmjs.org/${encodedName}`;
-    const metadata = (await fetchJson(registryUrl));
-    const metadataMatchText = includeMatchText
-        ? ((await npmRepositoryLicenseText(metadata, token)) ?? installedMatchText)
-        : undefined;
-    if (installedLicense)
-        return {
-            license: installedLicense,
-            source: "node_modules/package.json",
-            matchText: metadataMatchText,
-            resolution: "manifest",
-        };
-    const registryLicense = packageLicense(metadata?.license ?? metadata?.licenses);
-    if (registryLicense) {
-        return {
-            license: registryLicense,
-            source: "registry.npmjs.org",
-            matchText: metadataMatchText,
-            resolution: "registry",
-        };
-    }
-    if (metadata?.versions) {
-        const latest = metadata.versions[metadata["dist-tags"]?.latest ?? ""];
-        const latestLicense = packageLicense(latest?.license ?? latest?.licenses);
-        if (latestLicense) {
-            const matchText = includeMatchText
-                ? await npmRepositoryLicenseText(latest, token)
-                : undefined;
-            return {
-                license: latestLicense,
-                source: "registry.npmjs.org",
-                matchText,
-                resolution: "registry",
-            };
-        }
-    }
-    if (installedLicense)
-        return {
-            license: installedLicense,
-            source: "node_modules/package.json",
-            matchText: metadataMatchText,
-            resolution: "manifest",
-        };
-    logger.debug(`Could not resolve npm license for ${dependency.name}@${dependency.version}`);
-    return { matchText: metadataMatchText, resolution: "unknown" };
-}
+//# sourceMappingURL=classifiers.js.map
+;// CONCATENATED MODULE: ./lib/dependencies/python/license-resolver.js
+/*
+ * Copyright 2026 Zaphiro Technologies
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+
+
 function pythonVersionParts(version) {
     let value = version.trim();
     if (value[0]?.toLowerCase() === "v")
@@ -47643,67 +48118,8 @@ function selectPythonRelease(metadata, specifier) {
         .sort(comparePythonVersions)
         .at(-1);
 }
-function licenseFromPythonClassifier(classifier) {
-    const label = classifier.split("::").pop()?.trim() ?? classifier;
-    const lower = label.toLowerCase();
-    if (lower.includes("lesser general public license v3") &&
-        lower.includes("(lgplv3+)"))
-        return "LGPL-3.0-or-later";
-    if (lower.includes("lesser general public license v2.1") &&
-        lower.includes("(lgplv2.1+)"))
-        return "LGPL-2.1-or-later";
-    if (lower.includes("lesser general public license v2") &&
-        lower.includes("(lgplv2+)"))
-        return "LGPL-2.0-or-later";
-    if (lower.includes("general public license v3") && lower.includes("(gplv3+)"))
-        return "GPL-3.0-or-later";
-    if (lower.includes("general public license v2") && lower.includes("(gplv2+)"))
-        return "GPL-2.0-or-later";
-    if (lower.includes("mozilla public license 1.1") &&
-        lower.includes("(mpl 1.1)"))
-        return "MPL-1.1";
-    return label;
-}
-function licensesFromPythonClassifiers(classifiers) {
-    const licenses = new Set();
-    for (const classifier of classifiers ?? []) {
-        if (!classifier.startsWith("License ::"))
-            continue;
-        const normalized = normalizeLicenseExpression(licenseFromPythonClassifier(classifier));
-        if (normalized !== "Unknown")
-            licenses.add(normalized);
-    }
-    return [...licenses];
-}
 function isConciseLicenseMetadata(value) {
     return value.length <= 200 && !/[\r\n]/.test(value);
-}
-function githubRepositoryFromUrl(url) {
-    try {
-        const parsed = new URL(url.replace(/^git\+/, ""));
-        if (parsed.hostname.toLowerCase() !== "github.com" &&
-            parsed.hostname.toLowerCase() !== "www.github.com")
-            return undefined;
-        const [owner, repository] = parsed.pathname.split("/").filter(Boolean);
-        return owner && repository
-            ? `${owner}/${repository.replace(/\.git$/, "")}`
-            : undefined;
-    }
-    catch {
-        return undefined;
-    }
-}
-async function npmRepositoryLicenseText(packageInfo, token) {
-    const repositoryUrl = typeof packageInfo?.repository === "string"
-        ? packageInfo.repository
-        : packageInfo?.repository?.url;
-    const repository = repositoryUrl
-        ? githubRepositoryFromUrl(repositoryUrl)
-        : undefined;
-    if (!repository)
-        return undefined;
-    return (await resolveGithubRepositoryLicense(repository, token, true))
-        .matchText;
 }
 function githubRepositoryForPython(info) {
     if (!info)
@@ -47717,34 +48133,6 @@ function githubRepositoryForPython(info) {
             return repository;
     }
     return undefined;
-}
-async function resolveGithubRepositoryLicense(repository, token, includeMatchText = false) {
-    const apiUrl = `https://api.github.com/repos/${repository}/license`;
-    const metadata = (await fetchJson(apiUrl, token));
-    const apiLicense = metadata?.license?.spdx_id;
-    if (apiLicense && apiLicense !== "NOASSERTION") {
-        const matchText = includeMatchText && metadata?.download_url
-            ? await fetchText(metadata.download_url)
-            : undefined;
-        return {
-            license: apiLicense,
-            source: apiUrl,
-            matchText,
-            resolution: "repository",
-        };
-    }
-    if (metadata?.download_url) {
-        const text = await fetchText(metadata.download_url);
-        const license = text ? identifyLicenseText(text) : undefined;
-        if (license || text)
-            return {
-                license,
-                source: metadata.html_url ?? metadata.download_url,
-                matchText: text,
-                resolution: "repository",
-            };
-    }
-    return { resolution: "unknown" };
 }
 async function loadPythonMetadata(packageUrl, dependency) {
     const pinnedVersion = exactPythonVersion(dependency.version);
@@ -47783,8 +48171,8 @@ function declaredPythonLicense(info, version) {
         resolution: "registry",
     };
 }
-function classifierPythonLicense(classifiers, version) {
-    const licenses = licensesFromPythonClassifiers(classifiers);
+function classifierPythonLicense(classifiers, version, licenseRules) {
+    const licenses = licensesFromPythonClassifiers(classifiers, licenseRules);
     if (licenses.length === 0)
         return undefined;
     let license = licenses[0] ?? "Unknown";
@@ -47797,11 +48185,11 @@ function classifierPythonLicense(classifiers, version) {
         resolution: "registry",
     };
 }
-async function repositoryPythonLicense(info, token, version, includeMatchText = false) {
+async function repositoryPythonLicense(info, token, version, includeMatchText = false, licenseRules) {
     const repository = githubRepositoryForPython(info);
     if (!repository)
         return undefined;
-    const resolved = await resolveGithubRepositoryLicense(repository, token, includeMatchText);
+    const resolved = await resolveGithubRepositoryLicense(repository, token, includeMatchText, licenseRules);
     return resolved.license ? { ...resolved, version } : undefined;
 }
 function addRepositoryMatchText(license, repositoryLicense) {
@@ -47809,34 +48197,34 @@ function addRepositoryMatchText(license, repositoryLicense) {
         return license;
     return { ...license, matchText: repositoryLicense.matchText };
 }
-async function resolveDeclaredPythonLicense(info, license, token, version) {
+async function resolveDeclaredPythonLicense(info, license, token, version, licenseRules) {
     const repository = githubRepositoryForPython(info);
     if (!repository)
         return license;
-    const repositoryLicense = await repositoryPythonLicense(info, token, version, true);
+    const repositoryLicense = await repositoryPythonLicense(info, token, version, true, licenseRules);
     return addRepositoryMatchText(license, repositoryLicense);
 }
-async function resolvePythonFallbackLicense(info, token, version, includeMatchText) {
-    const classifierLicenses = licensesFromPythonClassifiers(info?.classifiers);
+async function resolvePythonFallbackLicense(info, token, version, includeMatchText, licenseRules) {
+    const classifierLicenses = licensesFromPythonClassifiers(info?.classifiers, licenseRules);
     const repository = githubRepositoryForPython(info);
     const repositoryResolution = includeMatchText && repository
-        ? await repositoryPythonLicense(info, token, version, true)
+        ? await repositoryPythonLicense(info, token, version, true, licenseRules)
         : undefined;
     if (classifierLicenses.length > 1 && repository) {
         const resolved = repositoryResolution ??
-            (await repositoryPythonLicense(info, token, version, includeMatchText));
+            (await repositoryPythonLicense(info, token, version, includeMatchText, licenseRules));
         if (resolved)
             return resolved;
     }
-    const classifier = classifierPythonLicense(info?.classifiers, version);
+    const classifier = classifierPythonLicense(info?.classifiers, version, licenseRules);
     if (classifier)
         return addRepositoryMatchText(classifier, repositoryResolution);
     if (!repository)
         return undefined;
     return (repositoryResolution ??
-        (await repositoryPythonLicense(info, token, version, includeMatchText)));
+        (await repositoryPythonLicense(info, token, version, includeMatchText, licenseRules)));
 }
-async function resolvePython(dependency, token, logger, includeMatchText) {
+async function resolvePythonLicense(dependency, token, logger, includeMatchText, licenseRules) {
     const packageName = dependency.name.replace(/[-_.]+/g, "-");
     const packageUrl = "https://pypi.org/pypi/" + encodeURIComponent(packageName);
     const { metadata, version } = await loadPythonMetadata(packageUrl, dependency);
@@ -47845,90 +48233,150 @@ async function resolvePython(dependency, token, logger, includeMatchText) {
     if (declared) {
         if (!includeMatchText)
             return declared;
-        return resolveDeclaredPythonLicense(info, declared, token, version);
+        return resolveDeclaredPythonLicense(info, declared, token, version, licenseRules);
     }
-    const fallback = await resolvePythonFallbackLicense(info, token, version, includeMatchText);
+    const fallback = await resolvePythonFallbackLicense(info, token, version, includeMatchText, licenseRules);
     if (fallback)
         return fallback;
     logger.debug(`Could not resolve Python license for ${dependency.name}@${dependency.version}`);
     return { resolution: "unknown" };
 }
-function resolveVendoredGoLicense(root, dependency) {
-    const vendorRoot = (0,external_node_path_.join)(root, (0,external_node_path_.dirname)(dependency.manifest), "vendor");
-    let directory = (0,external_node_path_.join)(vendorRoot, ...dependency.name.split("/"));
-    for (;;) {
-        for (const filename of LICENSE_FILENAMES) {
-            const path = (0,external_node_path_.join)(directory, filename);
-            const text = readText(path);
-            const license = text ? identifyLicenseText(text) : undefined;
-            if (license)
-                return {
-                    license,
-                    source: (0,external_node_path_.relative)(root, path),
-                    matchText: text,
-                };
+//# sourceMappingURL=license-resolver.js.map
+;// CONCATENATED MODULE: ./lib/dependencies/python/checker.js
+/*
+ * Copyright 2026 Zaphiro Technologies
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+
+
+
+class PythonDependencyChecker extends DependencyChecker {
+    ecosystem = "python";
+    supports(manifestName) {
+        return (manifestName === "pyproject.toml" ||
+            manifestName === "poetry.lock" ||
+            manifestName === "Pipfile.lock" ||
+            manifestName === "requirements.txt" ||
+            manifestName.endsWith(".txt"));
+    }
+    collect(context) {
+        return collectPythonDependencies(context);
+    }
+    resolveLicense(dependency, context) {
+        return resolvePythonLicense(dependency, context.token, context.logger, context.includeMatchText, context.licenseRules);
+    }
+}
+//# sourceMappingURL=checker.js.map
+;// CONCATENATED MODULE: ./lib/dependencies/registry.js
+/*
+ * Copyright 2026 Zaphiro Technologies
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+
+
+const checkers = [
+    new JavaScriptDependencyChecker(),
+    new PythonDependencyChecker(),
+    new GoDependencyChecker(),
+];
+function collectDependencyManifest(context) {
+    const basename = context.path.split("/").pop() ?? context.path;
+    const checker = checkers.find((candidate) => candidate.supports(basename));
+    return checker?.collect(context);
+}
+function resolveDependencyLicense(ecosystem, dependency, context) {
+    const checker = checkers.find((candidate) => candidate.ecosystem === ecosystem);
+    return checker
+        ? checker.resolveLicense(dependency, context)
+        : Promise.resolve({ resolution: "unknown" });
+}
+//# sourceMappingURL=registry.js.map
+;// CONCATENATED MODULE: ./lib/dependencies/policy/license-policy.js
+/*
+ * Copyright 2026 Zaphiro Technologies
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+
+function versionMatches(configured, version) {
+    return (!configured ||
+        configured
+            .split(",")
+            .map((item) => item.trim())
+            .includes(version));
+}
+function nameMatches(name, pattern) {
+    return name === pattern || minimatch(name, pattern);
+}
+function overrideFor(config, name, version) {
+    for (const override of config.licenses ?? []) {
+        if (override.match !== undefined)
+            continue;
+        if (versionMatches(override.version, version) &&
+            nameMatches(name, override.name))
+            return override.license;
+    }
+    return undefined;
+}
+function matchOverrideFor(config, name, version, candidates) {
+    for (const candidate of candidates) {
+        for (const override of config.licenses ?? []) {
+            if (override.match === undefined)
+                continue;
+            if (versionMatches(override.version, version) &&
+                nameMatches(name, override.name) &&
+                new RegExp(override.match).test(candidate))
+                return override.license;
         }
-        if (directory === vendorRoot)
-            break;
-        directory = (0,external_node_path_.dirname)(directory);
     }
-    return {};
+    return undefined;
 }
-async function resolveGo(root, dependency, token, logger, includeMatchText) {
-    const vendored = resolveVendoredGoLicense(root, dependency);
-    if (vendored.license)
-        return {
-            ...vendored,
-            resolution: "manifest",
-        };
-    const match = /^github\.com\/([^/]+\/[^/]+)(?:\/v\d+)?$/.exec(dependency.name);
-    if (!match) {
-        logger.debug(`No repository resolver for Go module ${dependency.name}`);
-        return { resolution: "unknown" };
-    }
-    const apiMetadata = (await fetchJson(`https://api.github.com/repos/${match[1]}/license`, token));
-    const apiLicense = apiMetadata?.license?.spdx_id;
-    if (apiLicense && apiLicense !== "NOASSERTION") {
-        const matchText = includeMatchText && apiMetadata.download_url
-            ? await fetchText(apiMetadata.download_url)
-            : undefined;
-        return {
-            license: apiLicense,
-            source: `api.github.com/repos/${match[1]}/license`,
-            matchText,
-            resolution: "repository",
-        };
-    }
-    const candidates = [
-        dependency.version,
-        `v${dependency.version.replace(/^v/, "")}`,
-        "main",
-        "master",
-    ];
-    const attempts = await Promise.all(candidates.flatMap((ref) => LICENSE_FILENAMES.map(async (filename) => ({
-        filename,
-        text: await fetchText(`https://raw.githubusercontent.com/${match[1]}/${encodeURIComponent(ref)}/${filename}`),
-    }))));
-    for (const attempt of attempts) {
-        const license = attempt.text
-            ? identifyLicenseText(attempt.text)
-            : undefined;
-        if (license || (includeMatchText && attempt.text))
-            return {
-                license,
-                source: `github.com/${match[1]}/${attempt.filename}`,
-                matchText: attempt.text,
-                resolution: "repository",
-            };
-    }
-    return { resolution: "unknown" };
+function hasMatchRuleFor(config, name, version) {
+    return (config.licenses ?? []).some((override) => override.match !== undefined &&
+        versionMatches(override.version, version) &&
+        nameMatches(name, override.name));
 }
-async function resolveByEcosystem(root, dependency, token, logger, includeMatchText) {
-    if (dependency.ecosystem === "npm")
-        return resolveNpm(root, dependency, logger, token, includeMatchText);
-    if (dependency.ecosystem === "python")
-        return resolvePython(dependency, token, logger, includeMatchText);
-    return resolveGo(root, dependency, token, logger, includeMatchText);
+function exceptionFor(config, name, version) {
+    return (config.exceptions ?? []).find((exception) => exception.name === name && exception.version === version);
+}
+function excludedBy(config, name, version) {
+    return (config.excludes ?? []).some((exclude) => versionMatches(exclude.version, version) &&
+        nameMatches(name, exclude.name));
 }
 async function resolveLicense(root, dependency, config, token, logger) {
     const configured = overrideFor(config, dependency.name, dependency.version);
@@ -47947,7 +48395,16 @@ async function resolveLicense(root, dependency, config, token, logger) {
             source: "configuration",
         };
     const hasMatchRules = hasMatchRuleFor(config, dependency.name, dependency.version);
-    const resolved = await resolveByEcosystem(root, dependency, token, logger, hasMatchRules);
+    const includeMatchText = hasMatchRules ||
+        config.licenseRules?.some((rule) => rule.source === "license-text") ===
+            true;
+    const resolved = await resolveDependencyLicense(dependency.ecosystem, dependency, {
+        root,
+        token,
+        logger,
+        includeMatchText,
+        licenseRules: config.licenseRules,
+    });
     const configuredTextMatch = matchOverrideFor(config, dependency.name, dependency.version, [
         ...matchCandidates,
         ...(resolved.license ? [resolved.license] : []),
@@ -47956,6 +48413,16 @@ async function resolveLicense(root, dependency, config, token, logger) {
     if (configuredTextMatch)
         return {
             license: configuredTextMatch,
+            resolution: "configured",
+            source: "configuration",
+            version: resolved.version,
+        };
+    const licenseTextRule = config.licenseRules?.find((rule) => rule.source === "license-text" &&
+        resolved.matchText !== undefined &&
+        new RegExp(rule.match, "is").test(resolved.matchText));
+    if (licenseTextRule)
+        return {
+            license: licenseTextRule.license,
             resolution: "configured",
             source: "configuration",
             version: resolved.version,
@@ -47973,6 +48440,30 @@ async function resolveLicense(root, dependency, config, token, logger) {
         version: resolved.version,
     };
 }
+//# sourceMappingURL=license-policy.js.map
+;// CONCATENATED MODULE: ./lib/dependencies/audit-service.js
+/*
+ * Copyright 2026 Zaphiro Technologies
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+
+
+
+
+
+
 function mainLicenseFor(manifest, config) {
     const rules = (0,lib_config/* headerRules */.$)(config);
     const selected = rules
@@ -47986,24 +48477,29 @@ async function checkDependencies(root, config, token, weakCompatible, logger, go
         return { checked: 0, results: [], failures: [] };
     }
     const dependencies = [];
-    const configuredPaths = new Set(dependencyConfig.files.map((path) => path.replaceAll("\\", "/")));
     for (const configuredPath of dependencyConfig.files) {
         const path = configuredPath.replaceAll("\\", "/");
         if (!isFile((0,external_node_path_.resolve)(root, path)))
             throw new Error(`Dependency file not found: ${path}`);
-        if (path.split("/").pop() === "go.sum" &&
-            !configuredPaths.has((0,external_node_path_.join)((0,external_node_path_.dirname)(path), "go.mod").replaceAll("\\", "/"))) {
+        const collected = collectDependencyManifest({
+            root,
+            path,
+            absolutePath: (0,external_node_path_.resolve)(root, path),
+            dependencyConfig,
+            goPackageList,
+        });
+        if (collected)
+            dependencies.push(...collected);
+        else {
             dependencies.push({
-                name: "(Go module graph)",
+                name: "(unsupported dependency input)",
                 version: "unresolved",
-                ecosystem: "go",
+                ecosystem: "unknown",
                 manifest: path,
                 versionResolved: false,
-                versionResolutionError: "go.sum contains checksums, not the selected module graph; configure the adjacent go.mod.",
+                versionResolutionError: `No parser is available for dependency input ${path.split("/").pop() ?? path}.`,
             });
-            continue;
         }
-        parseManifest(root, path, dependencies, goPackageList, dependencyConfig);
     }
     const uniqueDependencies = uniqueBy(dependencies, (dependency) => `${dependency.ecosystem}:${dependency.name}@${dependency.version}`).filter((dependency) => !excludedBy(dependencyConfig, dependency.name, dependency.version));
     logger.info(`Found ${uniqueDependencies.length} dependencies to check.`);
@@ -48082,6 +48578,24 @@ async function checkDependencies(root, config, token, weakCompatible, logger, go
             result.compatible !== "approved-exception"),
     };
 }
+//# sourceMappingURL=audit-service.js.map
+;// CONCATENATED MODULE: ./lib/dependencies.js
+/*
+ * Copyright 2026 Zaphiro Technologies
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 //# sourceMappingURL=dependencies.js.map
 
 /***/ }),
@@ -48092,7 +48606,7 @@ async function checkDependencies(root, config, token, weakCompatible, logger, go
 __nccwpck_require__.a(__webpack_module__, async (__webpack_handle_async_dependencies__, __webpack_async_result__) => { try {
 /* harmony import */ var _actions_core__WEBPACK_IMPORTED_MODULE_0__ = __nccwpck_require__(7687);
 /* harmony import */ var _config_js__WEBPACK_IMPORTED_MODULE_1__ = __nccwpck_require__(9651);
-/* harmony import */ var _dependencies_js__WEBPACK_IMPORTED_MODULE_2__ = __nccwpck_require__(493);
+/* harmony import */ var _dependencies_js__WEBPACK_IMPORTED_MODULE_2__ = __nccwpck_require__(6312);
 /* harmony import */ var _logger_js__WEBPACK_IMPORTED_MODULE_3__ = __nccwpck_require__(3953);
 /* harmony import */ var _report_js__WEBPACK_IMPORTED_MODULE_4__ = __nccwpck_require__(431);
 /*

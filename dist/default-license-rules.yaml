@@ -1,0 +1,39 @@
+# Ordered built-in rules for identifying licenses from text and Python classifiers.
+# The first matching rule for each source is used.
+license-text:
+  - match: '(?=[\s\S]*gpl 2\.0\+/lgpl 2\.1\+/mpl 1\.1)(?=[\s\S]*tri-license)'
+    license: (GPL-2.0-or-later OR LGPL-2.1-or-later OR MPL-1.1)
+  - match: '(?=[\s\S]*apache license)(?=[\s\S]*version 2\.0)'
+    license: Apache-2.0
+  - match: "permission is hereby granted, free of charge"
+    license: MIT
+  - match: '(?=[\s\S]*mozilla public license)(?=[\s\S]*2\.0)'
+    license: MPL-2.0
+  - match: '(?=[\s\S]*gnu lesser general public license)(?=[\s\S]*2\.1)'
+    license: LGPL-2.1-only
+  - match: "gnu lesser general public license"
+    license: LGPL-3.0-only
+  - match: '(?=[\s\S]*gnu general public license)(?=[\s\S]*version 2)'
+    license: GPL-2.0-only
+  - match: "gnu general public license"
+    license: GPL-3.0-only
+  - match: '(?=[\s\S]*redistribution and use in source and binary forms)(?=[\s\S]*neither the name)'
+    license: BSD-3-Clause
+  - match: "redistribution and use in source and binary forms"
+    license: BSD-2-Clause
+  - match: "permission to use, copy, modify, and/or distribute"
+    license: ISC
+
+python-classifier:
+  - match: 'lesser general public license v3(?=[\s\S]*\(lgplv3\+\))'
+    license: LGPL-3.0-or-later
+  - match: 'lesser general public license v2\.1(?=[\s\S]*\(lgplv2\.1\+\))'
+    license: LGPL-2.1-or-later
+  - match: 'lesser general public license v2(?=[\s\S]*\(lgplv2\+\))'
+    license: LGPL-2.0-or-later
+  - match: 'general public license v3(?=[\s\S]*\(gplv3\+\))'
+    license: GPL-3.0-or-later
+  - match: 'general public license v2(?=[\s\S]*\(gplv2\+\))'
+    license: GPL-2.0-or-later
+  - match: 'mozilla public license 1\.1(?=[\s\S]*\(mpl 1\.1\))'
+    license: MPL-1.1

@@ -647,6 +647,51 @@ describe("dependency checker", () => {
     });
   });
 
+  it("uses configured license text rules for vendored Go licenses", async () => {
+    const root = mkdtempSync(
+      join(tmpdir(), "license-checker-go-license-rule-"),
+    );
+    writeFileSync(
+      join(root, "go.mod"),
+      "module example.com/app\n\nrequire example.com/non-github v1.2.3\n",
+    );
+    const vendorModule = join(root, "vendor", "example.com", "non-github");
+    mkdirSync(vendorModule, { recursive: true });
+    writeFileSync(
+      join(vendorModule, "LICENSE"),
+      "Custom permit terms apply to this package.\n",
+    );
+    const config: LicenseEyeConfig = {
+      header: { license: { "spdx-id": "Apache-2.0" } },
+      dependency: {
+        files: ["go.mod"],
+        licenseRules: [
+          {
+            source: "license-text",
+            match: "custom permit terms",
+            license: "MIT",
+          },
+        ],
+      },
+    };
+
+    const report = await checkDependencies(
+      root,
+      config,
+      undefined,
+      false,
+      new Logger("error"),
+      goList("example.com/non-github v1.2.3"),
+    );
+
+    expect(report.results[0]).toMatchObject({
+      license: "MIT",
+      source: "configuration",
+      resolution: "configured",
+      compatible: "compatible",
+    });
+  });
+
   it("reports non-blocking distribution review warnings", async () => {
     const root = mkdtempSync(join(tmpdir(), "license-checker-distribution-"));
     writeFileSync(

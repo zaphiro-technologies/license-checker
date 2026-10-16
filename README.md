@@ -1,11 +1,11 @@
 # License Checker GitHub Action
 
-A GitHub Action for checking dependency license compatibility in
-JavaScript, Python, and Go projects.
+A GitHub Action for checking dependency license compatibility in JavaScript,
+Python, and Go projects.
 
-It uses License Eye-style YAML config and SPDX license expressions.
-This because we started from that tool, and keeping the same config file avoid
-us to rework all our repos.
+It uses License Eye-style YAML config and SPDX license expressions. This because
+we started from that tool, and keeping the same config file avoid us to rework
+all our repos.
 
 ## Usage
 
@@ -113,7 +113,8 @@ Rows are project licenses; columns are dependency licenses. `✓` is compatible,
 | CC0 1.0                                  | ✓   | ✓          | ✓            | ✓            | ✓   | ✓       | ✓       | ✓        | ✓        | ✓       | ✓        | ✓       | ✓         |
 | Unlicense                                | ✓   | ✓          | ✓            | ✓            | ✓   | ✓       | ✓       | ✓        | ✓        | ✓       | ✓        | ✓       | ✓         |
 
-The European Commission's [Licensing Assistant](https://interoperable-europe.ec.europa.eu/collection/eupl/solution/licensing-assistant/compatibility-checker)
+The European Commission's
+[Licensing Assistant](https://interoperable-europe.ec.europa.eu/collection/eupl/solution/licensing-assistant/compatibility-checker)
 provides an interactive check. Select the dependency license as inbound and the
 project license as outbound.
 
@@ -123,10 +124,9 @@ when `weak-compatible: true`.
 ## Comparison with alternatives
 
 We tested different tools. Some are surely more complete, and that was one of
-the problems: they do much more than just checking license compatibility.
-Other have a weak support for the ecosystem we care about, so in the end, rather
-than applying different tools to different ecosystem, we came up with our own
-tool.
+the problems: they do much more than just checking license compatibility. Other
+have a weak support for the ecosystem we care about, so in the end, rather than
+applying different tools to different ecosystem, we came up with our own tool.
 
 | Tool                                                                            | Strength                                                                                   | Trade-off                                                                                            |
 | ------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------- |
@@ -146,10 +146,10 @@ tool.
 | `report-all`      | `false`               | Include compatible dependencies in the job summary       |
 
 The summary shows the full report. PR comments show dependency issues and link
-to the summary; distribution warnings and approved exceptions appear only in
-the summary. `report-all: true` includes compatible dependencies in the
-summary. Reciprocal licenses such as LGPL, MPL, GPL/AGPL, and CAL produce
-non-blocking distribution warnings.
+to the summary; distribution warnings and approved exceptions appear only in the
+summary. `report-all: true` includes compatible dependencies in the summary.
+Reciprocal licenses such as LGPL, MPL, GPL/AGPL, and CAL produce non-blocking
+distribution warnings.
 
 ## Local usage
 
@@ -161,9 +161,9 @@ yarn install --immutable
 yarn run check --config .github/config/.licenserc.yaml --log debug
 ```
 
-The local command checks dependency licenses and exits non-zero on failures. Network access may be needed for registry
-and repository license resolution; configured `dependency.licenses` entries work
-offline.
+The local command checks dependency licenses and exits non-zero on failures.
+Network access may be needed for registry and repository license resolution;
+configured `dependency.licenses` entries work offline.
 
 ## Checking another repository locally
 

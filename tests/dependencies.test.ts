@@ -854,6 +854,47 @@ describe("dependency checker", () => {
     ]);
   });
 
+  it("resolves Yarn dependency ranges through package resolutions", async () => {
+    const root = mkdtempSync(
+      join(tmpdir(), "license-checker-yarn-resolutions-"),
+    );
+    writeFileSync(
+      join(root, "package.json"),
+      JSON.stringify({
+        name: "app",
+        dependencies: { runtime: "^1.0.0" },
+        resolutions: { overridden: "2.0.0" },
+      }),
+    );
+    writeFileSync(
+      join(root, "yarn.lock"),
+      `runtime@npm:^1.0.0:\n  version: 1.2.0\n  dependencies:\n    overridden: "npm:^1.0.0"\n\n"overridden@npm:2.0.0":\n  version: 2.0.0\n`,
+    );
+    const config: LicenseEyeConfig = {
+      header: { license: { "spdx-id": "Apache-2.0" } },
+      dependency: {
+        files: ["package.json"],
+        licenses: [
+          { name: "runtime", license: "MIT" },
+          { name: "overridden", license: "MIT" },
+        ],
+      },
+    };
+
+    const report = await checkDependencies(
+      root,
+      config,
+      undefined,
+      false,
+      new Logger("error"),
+    );
+
+    expect(report.failures).toHaveLength(0);
+    expect(
+      report.results.map((result) => `${result.name}@${result.version}`).sort(),
+    ).toEqual(["overridden@2.0.0", "runtime@1.2.0"]);
+  });
+
   it("prefers the adjacent Poetry lockfile's exact package versions", async () => {
     const root = mkdtempSync(join(tmpdir(), "license-checker-poetry-"));
     writeFileSync(

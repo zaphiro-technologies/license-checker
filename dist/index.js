@@ -46574,17 +46574,35 @@ function parseYarnLock(manifest, lockPath, dependencies, packageJson, includeDev
         }
         return;
     }
-    const resolveEntry = (descriptor) => entries.find((entry) => !entry.workspace &&
+    const findEntry = (descriptor) => entries.find((entry) => !entry.workspace &&
         entry.descriptors.some((candidate) => candidate.name === descriptor.name &&
             candidate.range.replace(/^npm:/, "") ===
                 descriptor.range.replace(/^npm:/, "")));
+    const resolveEntry = (descriptor, parentName) => {
+        const dependencyPath = parentName
+            ? `${parentName}/${descriptor.name}`
+            : descriptor.name;
+        const resolution = Object.entries(packageJson.resolutions ?? {}).find(([pattern]) => pattern === descriptor.name ||
+            minimatch(dependencyPath, pattern, { dot: true }));
+        if (resolution) {
+            return findEntry({
+                name: descriptor.name,
+                range: resolution[1].replace(/^npm:/, ""),
+            });
+        }
+        return findEntry(descriptor);
+    };
     const roots = [
         packageJson.dependencies,
         packageJson.optionalDependencies,
         packageJson.peerDependencies,
         ...(includeDevDependencies ? [packageJson.devDependencies] : []),
     ];
-    const pending = roots.flatMap((section) => Object.entries(section ?? {}).map(([name, range]) => ({ name, range })));
+    const pending = roots.flatMap((section) => Object.entries(section ?? {}).map(([name, range]) => ({
+        name,
+        range,
+        parentName: packageJson.name,
+    })));
     const visited = new Set();
     const unresolved = new Set();
     while (pending.length > 0) {
@@ -46593,7 +46611,7 @@ function parseYarnLock(manifest, lockPath, dependencies, packageJson, includeDev
             continue;
         if (/^(workspace:|file:|link:)/.test(descriptor.range))
             continue;
-        const entry = resolveEntry(descriptor);
+        const entry = resolveEntry(descriptor, descriptor.parentName);
         if (!entry) {
             unresolved.add(`${descriptor.name}@${descriptor.range}`);
             continue;
@@ -46601,7 +46619,10 @@ function parseYarnLock(manifest, lockPath, dependencies, packageJson, includeDev
         if (visited.has(entry))
             continue;
         visited.add(entry);
-        pending.push(...entry.dependencies);
+        pending.push(...entry.dependencies.map((dependency) => ({
+            ...dependency,
+            parentName: entry.name,
+        })));
     }
     for (const entry of visited) {
         dependencies.push({

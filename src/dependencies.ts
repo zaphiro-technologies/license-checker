@@ -54,6 +54,7 @@ interface PackageJson {
   devDependencies?: Record<string, string>;
   optionalDependencies?: Record<string, string>;
   peerDependencies?: Record<string, string>;
+  resolutions?: Record<string, string>;
 }
 
 function packageLicense(value: unknown): string | undefined {
@@ -319,7 +320,7 @@ function parseYarnLock(
     return;
   }
 
-  const resolveEntry = (descriptor: YarnDescriptor): YarnEntry | undefined =>
+  const findEntry = (descriptor: YarnDescriptor): YarnEntry | undefined =>
     entries.find(
       (entry) =>
         !entry.workspace &&
@@ -330,6 +331,26 @@ function parseYarnLock(
               descriptor.range.replace(/^npm:/, ""),
         ),
     );
+  const resolveEntry = (
+    descriptor: YarnDescriptor,
+    parentName?: string,
+  ): YarnEntry | undefined => {
+    const dependencyPath = parentName
+      ? `${parentName}/${descriptor.name}`
+      : descriptor.name;
+    const resolution = Object.entries(packageJson.resolutions ?? {}).find(
+      ([pattern]) =>
+        pattern === descriptor.name ||
+        minimatch(dependencyPath, pattern, { dot: true }),
+    );
+    if (resolution) {
+      return findEntry({
+        name: descriptor.name,
+        range: resolution[1].replace(/^npm:/, ""),
+      });
+    }
+    return findEntry(descriptor);
+  };
   const roots = [
     packageJson.dependencies,
     packageJson.optionalDependencies,
@@ -337,7 +358,11 @@ function parseYarnLock(
     ...(includeDevDependencies ? [packageJson.devDependencies] : []),
   ];
   const pending = roots.flatMap((section) =>
-    Object.entries(section ?? {}).map(([name, range]) => ({ name, range })),
+    Object.entries(section ?? {}).map(([name, range]) => ({
+      name,
+      range,
+      parentName: packageJson.name,
+    })),
   );
   const visited = new Set<YarnEntry>();
   const unresolved = new Set<string>();
@@ -345,14 +370,19 @@ function parseYarnLock(
     const descriptor = pending.pop();
     if (!descriptor) continue;
     if (/^(workspace:|file:|link:)/.test(descriptor.range)) continue;
-    const entry = resolveEntry(descriptor);
+    const entry = resolveEntry(descriptor, descriptor.parentName);
     if (!entry) {
       unresolved.add(`${descriptor.name}@${descriptor.range}`);
       continue;
     }
     if (visited.has(entry)) continue;
     visited.add(entry);
-    pending.push(...entry.dependencies);
+    pending.push(
+      ...entry.dependencies.map((dependency) => ({
+        ...dependency,
+        parentName: entry.name,
+      })),
+    );
   }
   for (const entry of visited) {
     dependencies.push({

@@ -196,6 +196,7 @@ export function normalizeLicenseId(value: string): string {
   const trimmed = value.trim();
   if (!trimmed || /^unknown$/i.test(trimmed) || /^noassertion$/i.test(trimmed))
     return "Unknown";
+  if (/^LicenseRef-[A-Za-z0-9.-]+$/.test(trimmed)) return trimmed;
   if (ALIASES[trimmed]) return ALIASES[trimmed];
   try {
     const corrected = spdxCorrect(trimmed);

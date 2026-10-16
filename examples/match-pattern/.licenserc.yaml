@@ -1,0 +1,13 @@
+header:
+  license:
+    spdx-id: Apache-2.0
+
+dependency:
+  files:
+    - package.json
+  licenses:
+    # This rule only applies to acme-package, and only when the pattern
+    # matches declared metadata or the downloaded repository LICENSE text.
+    - name: acme-package
+      match: 'Copyright \(c\) Acme.*All rights reserved'
+      license: LicenseRef-Acme-Proprietary

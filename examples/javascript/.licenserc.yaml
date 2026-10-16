@@ -1,0 +1,14 @@
+header:
+  license:
+    spdx-id: Apache-2.0
+
+dependency:
+  # package.json is paired with package-lock.json, npm-shrinkwrap.json,
+  # yarn.lock, or pnpm-lock.yaml in the same directory.
+  files:
+    - package.json
+  licenses:
+    # Example reviewed override, limited to the exact resolved version.
+    - name: is-number
+      version: "7.0.0"
+      license: MIT

@@ -38,6 +38,7 @@ export interface HeaderRule {
 export interface DependencyLicenseOverride {
   name: string;
   version?: string;
+  match?: string;
   license: string;
 }
 
@@ -69,13 +70,15 @@ export interface LicenseEyeConfig {
   dependency?: DependencyConfig;
 }
 
-export type Ecosystem = "npm" | "go" | "python";
+export type Ecosystem = "npm" | "go" | "python" | "unknown";
 
 export interface Dependency {
   name: string;
   version: string;
   ecosystem: Ecosystem;
   manifest: string;
+  versionResolved?: boolean;
+  versionResolutionError?: string;
   rawLicense?: string;
   source?: string;
 }
@@ -96,6 +99,8 @@ export interface DependencyResult extends Dependency {
     | "weak-compatible"
     | "incompatible"
     | "unknown";
+  versionResolved?: boolean;
+  versionResolutionError?: string;
   approval?: Pick<DependencyException, "url" | "reason">;
   reason?: string;
   distributionWarning?: string;

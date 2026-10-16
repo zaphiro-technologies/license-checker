@@ -1,0 +1,10 @@
+header:
+  license:
+    spdx-id: Apache-2.0
+
+dependency:
+  # The checker uses the adjacent poetry.lock for exact direct and
+  # transitive versions. Keep pyproject.toml and poetry.lock together.
+  files:
+    - pyproject.toml
+  licenses: []

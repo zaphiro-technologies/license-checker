@@ -28,6 +28,9 @@ describe("SPDX normalization", () => {
     expect(normalizeLicenseId("Apache License 2.0")).toBe("Apache-2.0");
     expect(normalizeLicenseId("ISC license")).toBe("ISC");
     expect(normalizeLicenseId("ISC License (ISCL)")).toBe("ISC");
+    expect(normalizeLicenseId("LicenseRef-Acme-Proprietary")).toBe(
+      "LicenseRef-Acme-Proprietary",
+    );
     for (const license of ["PSF-2.0", "CAL-1.0", "CNRI-Python", "MIT-CMU"])
       expect(normalizeLicenseId(license)).toBe(license);
     expect(normalizeLicenseExpression("MIT OR Apache-2.0")).toBe(

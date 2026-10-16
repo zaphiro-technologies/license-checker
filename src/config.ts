@@ -132,18 +132,30 @@ function normalizeDependencies(value: unknown): DependencyConfig | undefined {
       ? record.files.filter((item): item is string => typeof item === "string")
       : [],
     licenses: Array.isArray(record.licenses)
-      ? record.licenses.flatMap((item) => {
+      ? record.licenses.flatMap((item, index) => {
           const entry = asRecord(item);
           if (
             typeof entry.name !== "string" ||
             typeof entry.license !== "string"
           )
             return [];
+          const match =
+            typeof entry.match === "string" ? entry.match : undefined;
+          if (match !== undefined) {
+            try {
+              new RegExp(match);
+            } catch {
+              throw new Error(
+                `dependency.licenses[${index}].match must be a valid regular expression.`,
+              );
+            }
+          }
           return [
             {
               name: entry.name,
               version:
                 typeof entry.version === "string" ? entry.version : undefined,
+              ...(match !== undefined ? { match } : {}),
               license: entry.license,
             },
           ];

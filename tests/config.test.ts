@@ -67,6 +67,47 @@ describe("configuration", () => {
     ]);
   });
 
+  it("loads a license match regular expression", () => {
+    const root = mkdtempSync(join(tmpdir(), "license-checker-config-"));
+    writeFileSync(
+      join(root, ".licenserc.yaml"),
+      `dependency:
+  files: [package-lock.json]
+  licenses:
+    - name: acme-package
+      match: 'Copyright \\(c\\) Acme.*All rights reserved'
+      license: LicenseRef-Acme-Proprietary
+`,
+    );
+
+    expect(
+      loadConfig(root, ".licenserc.yaml").config.dependency?.licenses,
+    ).toEqual([
+      {
+        name: "acme-package",
+        match: "Copyright \\(c\\) Acme.*All rights reserved",
+        license: "LicenseRef-Acme-Proprietary",
+      },
+    ]);
+  });
+
+  it("rejects an invalid license match regular expression", () => {
+    const root = mkdtempSync(join(tmpdir(), "license-checker-config-"));
+    writeFileSync(
+      join(root, ".licenserc.yaml"),
+      `dependency:
+  licenses:
+    - name: acme-package
+      match: '['
+      license: LicenseRef-Acme-Proprietary
+`,
+    );
+
+    expect(() => loadConfig(root, ".licenserc.yaml")).toThrow(
+      "dependency.licenses[0].match must be a valid regular expression.",
+    );
+  });
+
   it("normalizes License Eye header and dependency configuration", () => {
     const root = mkdtempSync(join(tmpdir(), "license-checker-config-"));
     writeFileSync(

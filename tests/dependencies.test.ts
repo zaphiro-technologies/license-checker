@@ -21,6 +21,11 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { checkDependencies } from "../src/dependencies.js";
 import { Logger } from "../src/logger.js";
 import type { LicenseEyeConfig } from "../src/types.js";
+import type { GoModuleListRunner } from "../src/dependencies.js";
+
+function goList(...entries: string[]): GoModuleListRunner {
+  return () => ["example.com/app", ...entries].join("\n");
+}
 
 describe("dependency checker", () => {
   afterEach(() => {
@@ -41,6 +46,11 @@ describe("dependency checker", () => {
         licenses: [
           {
             name: "github.com/zaphiro-technologies/roger",
+            match: ".*",
+            license: "LicenseRef-Wildcard",
+          },
+          {
+            name: "github.com/zaphiro-technologies/roger",
             license: "Apache-2.0",
           },
         ],
@@ -52,10 +62,265 @@ describe("dependency checker", () => {
       undefined,
       false,
       new Logger("error"),
+      goList("github.com/zaphiro-technologies/roger v1.2.3"),
     );
     expect(report.checked).toBe(1);
     expect(report.failures).toHaveLength(0);
-    expect(report.results[0]?.resolution).toBe("configured");
+    expect(report.results[0]).toMatchObject({
+      license: "Apache-2.0",
+      resolution: "configured",
+    });
+  });
+
+  it("uses the exact npm lockfile version instead of the manifest range", async () => {
+    const root = mkdtempSync(
+      join(tmpdir(), "license-checker-npm-lock-version-"),
+    );
+    writeFileSync(
+      join(root, "package.json"),
+      JSON.stringify({ dependencies: { "locked-package": "^2.0.0" } }),
+    );
+    writeFileSync(
+      join(root, "package-lock.json"),
+      JSON.stringify({
+        lockfileVersion: 3,
+        packages: {
+          "": { name: "app", version: "1.0.0" },
+          "node_modules/locked-package": { version: "2.4.1" },
+        },
+      }),
+    );
+    const fetch = vi.fn();
+    vi.stubGlobal("fetch", fetch);
+    const config: LicenseEyeConfig = {
+      header: { license: { "spdx-id": "Apache-2.0" } },
+      dependency: {
+        files: ["package.json"],
+        licenses: [
+          { name: "locked-package", version: "2.4.1", license: "MIT" },
+        ],
+      },
+    };
+
+    const report = await checkDependencies(
+      root,
+      config,
+      undefined,
+      false,
+      new Logger("error"),
+    );
+
+    expect(report.results).toHaveLength(1);
+    expect(report.results[0]).toMatchObject({
+      name: "locked-package",
+      version: "2.4.1",
+      license: "MIT",
+      resolution: "configured",
+    });
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
+  it("uses the exact Pipfile lock version for Python dependencies", async () => {
+    const root = mkdtempSync(join(tmpdir(), "license-checker-pipfile-lock-"));
+    writeFileSync(
+      join(root, "Pipfile.lock"),
+      JSON.stringify({
+        default: { "locked-package": { version: "==1.7.2" } },
+      }),
+    );
+    const fetch = vi.fn();
+    vi.stubGlobal("fetch", fetch);
+    const config: LicenseEyeConfig = {
+      header: { license: { "spdx-id": "Apache-2.0" } },
+      dependency: {
+        files: ["Pipfile.lock"],
+        licenses: [
+          { name: "locked-package", version: "1.7.2", license: "MIT" },
+        ],
+      },
+    };
+
+    const report = await checkDependencies(
+      root,
+      config,
+      undefined,
+      false,
+      new Logger("error"),
+    );
+
+    expect(report.results).toHaveLength(1);
+    expect(report.results[0]).toMatchObject({
+      name: "locked-package",
+      version: "1.7.2",
+      license: "MIT",
+      resolution: "configured",
+    });
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
+  it("uses the Go build-list version selected above the go.mod requirement", async () => {
+    const root = mkdtempSync(join(tmpdir(), "license-checker-go-build-list-"));
+    writeFileSync(
+      join(root, "go.mod"),
+      `module example.com/app\n\ngo 1.23\n\nrequire example.com/locked v1.2.0\n`,
+    );
+    const config: LicenseEyeConfig = {
+      header: { license: { "spdx-id": "Apache-2.0" } },
+      dependency: {
+        files: ["go.mod"],
+        licenses: [
+          {
+            name: "example.com/locked",
+            version: "v1.5.0",
+            license: "MIT",
+          },
+        ],
+      },
+    };
+
+    const report = await checkDependencies(
+      root,
+      config,
+      undefined,
+      false,
+      new Logger("error"),
+      goList("example.com/locked v1.5.0"),
+    );
+
+    expect(report.results).toHaveLength(1);
+    expect(report.results[0]).toMatchObject({
+      name: "example.com/locked",
+      version: "v1.5.0",
+      license: "MIT",
+      resolution: "configured",
+    });
+  });
+
+  it("assigns a configured license when declared metadata matches", async () => {
+    const root = mkdtempSync(join(tmpdir(), "license-checker-match-metadata-"));
+    writeFileSync(join(root, "package.json"), JSON.stringify({ name: "app" }));
+    writeFileSync(
+      join(root, "package-lock.json"),
+      JSON.stringify({
+        lockfileVersion: 3,
+        packages: {
+          "": { name: "app", version: "1.0.0" },
+          "node_modules/acme-package": {
+            version: "2.0.0",
+            license: "MIT",
+          },
+        },
+      }),
+    );
+    const fetch = vi.fn();
+    vi.stubGlobal("fetch", fetch);
+    const config: LicenseEyeConfig = {
+      header: { license: { "spdx-id": "Apache-2.0" } },
+      dependency: {
+        files: ["package.json"],
+        licenses: [
+          {
+            name: "acme-package",
+            match: "Copyright.*All rights reserved",
+            license: "LicenseRef-Text-Match",
+          },
+          {
+            name: "acme-package",
+            match: "MIT",
+            license: "LicenseRef-Acme-Proprietary",
+          },
+        ],
+      },
+    };
+
+    const report = await checkDependencies(
+      root,
+      config,
+      undefined,
+      false,
+      new Logger("error"),
+    );
+
+    expect(report.results[0]).toMatchObject({
+      license: "LicenseRef-Acme-Proprietary",
+      normalized: "LicenseRef-Acme-Proprietary",
+      resolution: "configured",
+      source: "configuration",
+    });
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
+  it("assigns a configured license when downloaded repository text matches", async () => {
+    const root = mkdtempSync(join(tmpdir(), "license-checker-match-text-"));
+    writeFileSync(join(root, "package.json"), JSON.stringify({ name: "app" }));
+    writeFileSync(
+      join(root, "package-lock.json"),
+      JSON.stringify({
+        lockfileVersion: 3,
+        packages: {
+          "": { name: "app", version: "1.0.0" },
+          "node_modules/acme-package": { version: "2.0.0" },
+        },
+      }),
+    );
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockImplementation((url: string) => {
+        if (url === "https://registry.npmjs.org/acme-package/2.0.0")
+          return Promise.resolve({
+            ok: true,
+            json: async () => ({
+              license: "MIT",
+              repository: {
+                url: "git+https://github.com/acme/acme-package.git",
+              },
+            }),
+          });
+        if (url === "https://api.github.com/repos/acme/acme-package/license")
+          return Promise.resolve({
+            ok: true,
+            json: async () => ({
+              license: { spdx_id: "MIT" },
+              download_url: "https://raw.example/acme/acme-package/LICENSE",
+            }),
+          });
+        if (url === "https://raw.example/acme/acme-package/LICENSE")
+          return Promise.resolve({
+            ok: true,
+            text: async () =>
+              "Copyright (c) Acme Corporation. All rights reserved.",
+          });
+        return Promise.resolve({ ok: false, json: async () => ({}) });
+      }),
+    );
+    const config: LicenseEyeConfig = {
+      header: { license: { "spdx-id": "Apache-2.0" } },
+      dependency: {
+        files: ["package.json"],
+        licenses: [
+          {
+            name: "acme-package",
+            match: "Copyright \\(c\\) Acme.*All rights reserved",
+            license: "LicenseRef-Acme-Proprietary",
+          },
+        ],
+      },
+    };
+
+    const report = await checkDependencies(
+      root,
+      config,
+      undefined,
+      false,
+      new Logger("error"),
+    );
+
+    expect(report.results[0]).toMatchObject({
+      license: "LicenseRef-Acme-Proprietary",
+      normalized: "LicenseRef-Acme-Proprietary",
+      resolution: "configured",
+      source: "configuration",
+    });
   });
 
   it("prefers vendored Go license files before remote resolution", async () => {
@@ -81,6 +346,7 @@ describe("dependency checker", () => {
       undefined,
       false,
       new Logger("error"),
+      goList("example.com/non-github v1.2.3"),
     );
 
     expect(report.results[0]).toMatchObject({
@@ -117,6 +383,7 @@ describe("dependency checker", () => {
       undefined,
       false,
       new Logger("error"),
+      goList("example.com/reciprocal v1.2.3"),
     );
 
     expect(report.failures).toHaveLength(0);
@@ -153,6 +420,7 @@ describe("dependency checker", () => {
       undefined,
       false,
       new Logger("error"),
+      goList("example.com/proprietary v1.2.3"),
     );
 
     expect(report.failures).toHaveLength(0);
@@ -463,7 +731,7 @@ describe("dependency checker", () => {
     });
   });
 
-  it("selects the latest non-yanked PyPI release within a pyproject constraint", async () => {
+  it("reports pyproject ranges unresolved instead of selecting a newer release", async () => {
     const root = mkdtempSync(join(tmpdir(), "license-checker-pypi-range-"));
     writeFileSync(
       join(root, "pyproject.toml"),
@@ -506,17 +774,17 @@ describe("dependency checker", () => {
 
     expect(report.results[0]).toMatchObject({
       name: "range-package",
-      version: "1.5.0",
-      normalized: "MIT",
-      compatible: "compatible",
+      version: "(>=1.0.0,<2.0.0)",
+      normalized: "Unknown",
+      resolution: "unknown",
+      compatible: "unknown",
+      reason:
+        "A supported Python lockfile or fully pinned requirements file is required.",
     });
-    expect(fetch).toHaveBeenCalledWith(
-      "https://pypi.org/pypi/range-package/1.5.0/json",
-      expect.any(Object),
-    );
+    expect(fetch).not.toHaveBeenCalled();
   });
 
-  it("parses npm, pnpm, Go, Pipfile, requirements, and unlocked Poetry manifests", async () => {
+  it("parses locked and unlocked npm, Python, and Go inputs", async () => {
     const root = mkdtempSync(join(tmpdir(), "license-checker-manifests-"));
     writeFileSync(
       join(root, "package-lock.json"),
@@ -548,6 +816,7 @@ describe("dependency checker", () => {
       join(root, "go.sum"),
       "example.com/first v1.0.0 h1:checksum\nexample.com/second v2.0.0/go.mod h1:checksum\n",
     );
+    writeFileSync(join(root, "go.mod"), "module example.com/app\n\ngo 1.23\n");
     writeFileSync(
       join(root, "requirements.txt"),
       '# comment\n-r constraints.txt\nrequests[security]>=2.0.0 ; python_version >= "3.10"\nsingle==1.0.0 # inline comment\n',
@@ -570,6 +839,7 @@ describe("dependency checker", () => {
         files: [
           "package-lock.json",
           "pnpm-lock.yaml",
+          "go.mod",
           "go.sum",
           "requirements.txt",
           "pyproject.toml",
@@ -585,12 +855,13 @@ describe("dependency checker", () => {
       undefined,
       false,
       new Logger("error"),
+      goList("example.com/first v1.0.0", "example.com/second v2.0.0"),
     );
 
-    expect(report.results).toHaveLength(16);
+    expect(report.results).toHaveLength(18);
     expect(
-      report.results.every((result) => result.resolution === "configured"),
-    ).toBe(true);
+      report.results.filter((result) => result.compatible === "unknown").length,
+    ).toBeGreaterThan(0);
     expect(report.results.map((result) => result.name)).toEqual(
       expect.arrayContaining([
         "string-license",
@@ -604,7 +875,7 @@ describe("dependency checker", () => {
     );
   });
 
-  it("uses all package.json dependency sections when no lockfile exists", async () => {
+  it("marks package.json dependencies unresolved when no lockfile exists", async () => {
     const root = mkdtempSync(join(tmpdir(), "license-checker-package-json-"));
     writeFileSync(
       join(root, "package.json"),
@@ -637,5 +908,71 @@ describe("dependency checker", () => {
       "optional",
       "peer",
     ]);
+    expect(report.failures).toHaveLength(4);
+    expect(
+      report.results.every(
+        (result) =>
+          result.normalized === "Unknown" &&
+          result.reason === "A supported npm lockfile is required.",
+      ),
+    ).toBe(true);
+  });
+
+  it("reports the Go graph unresolved when go list cannot produce it", async () => {
+    const root = mkdtempSync(join(tmpdir(), "license-checker-go-list-error-"));
+    writeFileSync(join(root, "go.mod"), "module example.com/app\n\ngo 1.23\n");
+    const config: LicenseEyeConfig = {
+      header: { license: { "spdx-id": "Apache-2.0" } },
+      dependency: { files: ["go.mod"] },
+    };
+
+    const report = await checkDependencies(
+      root,
+      config,
+      undefined,
+      false,
+      new Logger("error"),
+      () => {
+        throw new Error("go executable missing");
+      },
+    );
+
+    expect(report.failures).toHaveLength(1);
+    expect(report.results[0]).toMatchObject({
+      name: "(Go module graph)",
+      version: "unresolved",
+      normalized: "Unknown",
+      compatible: "unknown",
+      reason: "Unable to read the Go build list: go executable missing",
+    });
+  });
+
+  it("does not treat go.sum as the Go dependency graph", async () => {
+    const root = mkdtempSync(join(tmpdir(), "license-checker-go-sum-only-"));
+    writeFileSync(
+      join(root, "go.sum"),
+      "example.com/module v1.2.3 h1:checksum\n",
+    );
+    const config: LicenseEyeConfig = {
+      header: { license: { "spdx-id": "Apache-2.0" } },
+      dependency: { files: ["go.sum"] },
+    };
+
+    const report = await checkDependencies(
+      root,
+      config,
+      undefined,
+      false,
+      new Logger("error"),
+    );
+
+    expect(report.failures).toHaveLength(1);
+    expect(report.results[0]).toMatchObject({
+      name: "(Go module graph)",
+      normalized: "Unknown",
+      compatible: "unknown",
+      reason:
+        "go.sum contains checksums, not the selected module graph; configure the adjacent go.mod.",
+    });
   });
 });

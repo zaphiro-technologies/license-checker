@@ -1,0 +1,9 @@
+[tool.poetry]
+name = "example-python-app"
+version = "0.1.0"
+description = "Example project for dependency license checking"
+authors = ["Example Team <team@example.com>"]
+
+[tool.poetry.dependencies]
+python = "^3.11"
+requests = "^2.32.3"

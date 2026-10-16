@@ -1,19 +1,3 @@
-/*
- * Copyright 2026 Zaphiro Technologies
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
 import { createRequire as __WEBPACK_EXTERNAL_createRequire } from "module";
 /******/ var __webpack_modules__ = ({
 
@@ -43106,6 +43090,21 @@ exports.visitAsync = visitAsync;
 /* harmony import */ var node_fs__WEBPACK_IMPORTED_MODULE_0__ = __nccwpck_require__(3024);
 /* harmony import */ var node_path__WEBPACK_IMPORTED_MODULE_1__ = __nccwpck_require__(6760);
 /* harmony import */ var yaml__WEBPACK_IMPORTED_MODULE_2__ = __nccwpck_require__(918);
+/*
+ * Copyright 2026 Zaphiro Technologies
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 
 
 
@@ -43196,15 +43195,25 @@ function normalizeDependencies(value) {
             ? record.files.filter((item) => typeof item === "string")
             : [],
         licenses: Array.isArray(record.licenses)
-            ? record.licenses.flatMap((item) => {
+            ? record.licenses.flatMap((item, index) => {
                 const entry = asRecord(item);
                 if (typeof entry.name !== "string" ||
                     typeof entry.license !== "string")
                     return [];
+                const match = typeof entry.match === "string" ? entry.match : undefined;
+                if (match !== undefined) {
+                    try {
+                        new RegExp(match);
+                    }
+                    catch {
+                        throw new Error(`dependency.licenses[${index}].match must be a valid regular expression.`);
+                    }
+                }
                 return [
                     {
                         name: entry.name,
                         version: typeof entry.version === "string" ? entry.version : undefined,
+                        ...(match !== undefined ? { match } : {}),
                         license: entry.license,
                     },
                 ];
@@ -43254,7 +43263,7 @@ function headerRules(config) {
 
 /***/ }),
 
-/***/ 472:
+/***/ 493:
 /***/ ((__unused_webpack___webpack_module__, __webpack_exports__, __nccwpck_require__) => {
 
 
@@ -43265,6 +43274,8 @@ __nccwpck_require__.d(__webpack_exports__, {
 
 // EXTERNAL MODULE: external "node:fs"
 var external_node_fs_ = __nccwpck_require__(3024);
+;// CONCATENATED MODULE: external "node:child_process"
+const external_node_child_process_namespaceObject = __WEBPACK_EXTERNAL_createRequire(import.meta.url)("node:child_process");
 // EXTERNAL MODULE: external "node:path"
 var external_node_path_ = __nccwpck_require__(6760);
 // EXTERNAL MODULE: ../../.yarn/berry/cache/@iarna-toml-npm-2.2.5-6da1399e8e-10c0.zip/node_modules/@iarna/toml/toml.js
@@ -45796,6 +45807,21 @@ var spdx_correct = __nccwpck_require__(1854);
 // EXTERNAL MODULE: ../../.yarn/berry/cache/spdx-expression-parse-npm-3.0.1-b718cbb35a-10c0.zip/node_modules/spdx-expression-parse/index.js
 var spdx_expression_parse = __nccwpck_require__(7487);
 ;// CONCATENATED MODULE: ./lib/spdx.js
+/*
+ * Copyright 2026 Zaphiro Technologies
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 
 
 const CATEGORY_A = new Set([
@@ -45962,6 +45988,8 @@ function normalizeLicenseId(value) {
     const trimmed = value.trim();
     if (!trimmed || /^unknown$/i.test(trimmed) || /^noassertion$/i.test(trimmed))
         return "Unknown";
+    if (/^LicenseRef-[A-Za-z0-9.-]+$/.test(trimmed))
+        return trimmed;
     if (ALIASES[trimmed])
         return ALIASES[trimmed];
     try {
@@ -46202,6 +46230,21 @@ function isUnknownLicense(value) {
 }
 //# sourceMappingURL=spdx.js.map
 ;// CONCATENATED MODULE: ./lib/util.js
+/*
+ * Copyright 2026 Zaphiro Technologies
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 
 
 
@@ -46258,6 +46301,22 @@ function uniqueBy(items, key) {
 }
 //# sourceMappingURL=util.js.map
 ;// CONCATENATED MODULE: ./lib/dependencies.js
+/*
+ * Copyright 2026 Zaphiro Technologies
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 
 
 
@@ -46284,6 +46343,13 @@ function packageLicense(value) {
     }
     return undefined;
 }
+function npmVersionIsExact(version) {
+    return /^v?\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?$/.test(version);
+}
+function pythonVersionIsExact(version) {
+    return (/^\d+(?:\.\d+)*(?:[A-Za-z0-9.+!-]+)?$/.test(version) &&
+        !/[*!<>=~,\s]/.test(version));
+}
 function addPackageJsonDependencies(dependencies, manifest, packageJson) {
     for (const section of [
         "dependencies",
@@ -46292,14 +46358,30 @@ function addPackageJsonDependencies(dependencies, manifest, packageJson) {
         "peerDependencies",
     ]) {
         for (const [name, version] of Object.entries(packageJson[section] ?? {})) {
-            dependencies.push({ name, version, ecosystem: "npm", manifest });
+            dependencies.push({
+                name,
+                version,
+                ecosystem: "npm",
+                manifest,
+                versionResolved: false,
+                versionResolutionError: "A supported npm lockfile is required.",
+            });
         }
     }
 }
 function parseNpmLock(manifest, lockPath, dependencies) {
     const lock = readJson(lockPath);
-    if (!lock)
+    if (!lock) {
+        dependencies.push({
+            name: "(invalid npm lockfile)",
+            version: "unresolved",
+            ecosystem: "npm",
+            manifest,
+            versionResolved: false,
+            versionResolutionError: `Could not parse ${lockPath}.`,
+        });
         return;
+    }
     if (lock.packages) {
         for (const [location, value] of Object.entries(lock.packages)) {
             if (!location.startsWith("node_modules/"))
@@ -46311,6 +46393,7 @@ function parseNpmLock(manifest, lockPath, dependencies) {
                 version,
                 ecosystem: "npm",
                 manifest,
+                versionResolved: npmVersionIsExact(version),
                 rawLicense: packageLicense(value.license ?? value.licenses),
             });
         }
@@ -46322,6 +46405,7 @@ function parseNpmLock(manifest, lockPath, dependencies) {
                 version: typeof value.version === "string" ? value.version : "*",
                 ecosystem: "npm",
                 manifest,
+                versionResolved: typeof value.version === "string" && npmVersionIsExact(value.version),
                 rawLicense: packageLicense(value.license ?? value.licenses),
             });
             if (value.dependencies && typeof value.dependencies === "object") {
@@ -46340,7 +46424,13 @@ function parseYarnLock(manifest, lockPath, dependencies) {
     const flush = () => {
         if (!workspaceEntry) {
             for (const name of names)
-                dependencies.push({ name, version, ecosystem: "npm", manifest });
+                dependencies.push({
+                    name,
+                    version,
+                    ecosystem: "npm",
+                    manifest,
+                    versionResolved: npmVersionIsExact(version),
+                });
         }
         names = [];
         version = "*";
@@ -46424,56 +46514,58 @@ function parsePnpmLock(manifest, lockPath, dependencies) {
         for (const key of Object.keys(entries)) {
             const packageInfo = packageFromLockKey(key);
             if (packageInfo)
-                dependencies.push({ ...packageInfo, ecosystem: "npm", manifest });
+                dependencies.push({
+                    ...packageInfo,
+                    ecosystem: "npm",
+                    manifest,
+                    versionResolved: npmVersionIsExact(packageInfo.version),
+                });
         }
     }
 }
-function parseGoMod(manifest, path, dependencies) {
-    const text = (0,external_node_fs_.readFileSync)(path, "utf8");
-    let inRequire = false;
-    for (const rawLine of text.split(/\r?\n/)) {
-        const commentStart = rawLine.indexOf("//");
-        const line = (commentStart < 0 ? rawLine : rawLine.slice(0, commentStart)).trim();
-        if (!line)
-            continue;
-        if (/^require\s*\(/.test(line)) {
-            inRequire = true;
-            continue;
-        }
-        if (inRequire && line === ")") {
-            inRequire = false;
-            continue;
-        }
-        const inline = /^require\s+(\S+)\s+(\S+)/.exec(line);
-        const block = inRequire ? /^(\S+)\s+(\S+)/.exec(line) : undefined;
-        const match = inline ?? block;
-        if (!match)
-            continue;
+function systemGoModuleList(moduleDirectory) {
+    return (0,external_node_child_process_namespaceObject.execFileSync)("go", ["list", "-mod=readonly", "-m", "all"], {
+        cwd: moduleDirectory,
+        encoding: "utf8",
+    });
+}
+function parseGoMod(manifest, path, dependencies, goModuleList) {
+    let output;
+    try {
+        output = goModuleList((0,external_node_path_.dirname)(path));
+    }
+    catch (error) {
+        const detail = error instanceof Error ? error.message.split("\n")[0] : String(error);
         dependencies.push({
-            name: match[1],
-            version: match[2],
+            name: "(Go module graph)",
+            version: "unresolved",
             ecosystem: "go",
             manifest,
+            versionResolved: false,
+            versionResolutionError: `Unable to read the Go build list: ${detail}`,
         });
+        return;
     }
-}
-function parseGoSum(manifest, path, dependencies) {
-    for (const rawLine of (0,external_node_fs_.readFileSync)(path, "utf8").split(/\r?\n/)) {
-        const fields = rawLine.trim().split(/\s+/);
+    for (const line of output.split(/\r?\n/)) {
+        const fields = line.trim().split(/\s+/);
         const name = fields[0];
-        const rawVersion = fields[1];
-        const checksum = fields[2];
-        if (name && rawVersion && checksum?.startsWith("h1:")) {
-            const version = rawVersion.endsWith("/go.mod")
-                ? rawVersion.slice(0, -"/go.mod".length)
-                : rawVersion;
-            dependencies.push({
-                name,
-                version,
-                ecosystem: "go",
-                manifest,
-            });
-        }
+        if (!name || fields.length < 2)
+            continue;
+        const version = fields[1];
+        const replaced = fields.includes("=>");
+        const versionResolved = !replaced && /^v\d+\.\d+\.\d+(?:-[\w.-]+)?(?:\+[\w.-]+)?$/.test(version);
+        dependencies.push({
+            name,
+            version,
+            ecosystem: "go",
+            manifest,
+            versionResolved,
+            versionResolutionError: replaced
+                ? "The Go module is replaced; its effective source version is not established."
+                : versionResolved
+                    ? undefined
+                    : "The Go build list did not provide an exact module version.",
+        });
     }
 }
 function parseRequirements(manifest, path, dependencies) {
@@ -46491,30 +46583,60 @@ function parseRequirements(manifest, path, dependencies) {
         }
         const operator = /^(===|==|~=|>=|<=|>|<)/.exec(remainder)?.[0];
         if (!operator)
-            return { name, version: "*" };
+            return { name, version: "*", versionResolved: false };
         remainder = remainder.slice(operator.length).trimStart();
         const semicolon = remainder.indexOf(";");
         const whitespace = remainder.search(/\s/);
         const end = [semicolon, whitespace]
             .filter((index) => index >= 0)
             .sort((left, right) => left - right)[0];
+        const version = remainder.slice(0, end ?? remainder.length) || "*";
+        const versionResolved = (operator === "==" || operator === "===") &&
+            pythonVersionIsExact(version);
         return {
             name,
-            version: remainder.slice(0, end ?? remainder.length) || "*",
+            version,
+            versionResolved,
         };
     };
-    for (const rawLine of (0,external_node_fs_.readFileSync)(path, "utf8").split(/\r?\n/)) {
+    for (const [lineIndex, rawLine] of (0,external_node_fs_.readFileSync)(path, "utf8")
+        .split(/\r?\n/)
+        .entries()) {
         const commentStart = rawLine.indexOf("#");
         const line = (commentStart < 0 ? rawLine : rawLine.slice(0, commentStart)).trim();
-        if (!line || line.startsWith("#") || line.startsWith("-"))
+        if (!line || line.startsWith("#"))
             continue;
-        const requirement = parseRequirement(line);
-        if (requirement)
+        if (line.startsWith("-")) {
             dependencies.push({
-                ...requirement,
+                name: `(requirements input line ${lineIndex + 1})`,
+                version: "unresolved",
                 ecosystem: "python",
                 manifest,
+                versionResolved: false,
+                versionResolutionError: "Requirements includes, constraints, and options must be expanded before license checking.",
             });
+            continue;
+        }
+        const requirement = parseRequirement(line);
+        if (!requirement) {
+            dependencies.push({
+                name: `(requirements input line ${lineIndex + 1})`,
+                version: "unresolved",
+                ecosystem: "python",
+                manifest,
+                versionResolved: false,
+                versionResolutionError: "The requirements line could not be parsed as a pinned package.",
+            });
+            continue;
+        }
+        dependencies.push({
+            ...requirement,
+            ecosystem: "python",
+            manifest,
+            versionResolutionError: requirement.versionResolved
+                ? undefined
+                : "Python requirements must pin an exact version with == or ===.",
+        });
     }
 }
 function parsePyproject(manifest, path, dependencies) {
@@ -46523,6 +46645,14 @@ function parsePyproject(manifest, path, dependencies) {
         parsed = (0,toml.parse)((0,external_node_fs_.readFileSync)(path, "utf8"));
     }
     catch {
+        dependencies.push({
+            name: "(invalid pyproject.toml)",
+            version: "unresolved",
+            ecosystem: "python",
+            manifest,
+            versionResolved: false,
+            versionResolutionError: "Could not parse pyproject.toml dependencies.",
+        });
         return;
     }
     const projectDependencies = parsed.project?.dependencies;
@@ -46538,13 +46668,22 @@ function parsePyproject(manifest, path, dependencies) {
                 version: value.slice(nameMatch[0].length).trim() || "*",
                 ecosystem: "python",
                 manifest,
+                versionResolved: false,
+                versionResolutionError: "A supported Python lockfile or fully pinned requirements file is required.",
             });
         }
     }
     for (const [name, value] of Object.entries(parsed.tool?.poetry?.dependencies ?? {})) {
         if (name.toLowerCase() === "python" || typeof value !== "string")
             continue;
-        dependencies.push({ name, version: value, ecosystem: "python", manifest });
+        dependencies.push({
+            name,
+            version: value,
+            ecosystem: "python",
+            manifest,
+            versionResolved: false,
+            versionResolutionError: "A supported Python lockfile or fully pinned requirements file is required.",
+        });
     }
 }
 function parsePoetryLock(manifest, path, dependencies) {
@@ -46557,6 +46696,12 @@ function parsePoetryLock(manifest, path, dependencies) {
                     version: entry.version ?? "*",
                     ecosystem: "python",
                     manifest,
+                    versionResolved: typeof entry.version === "string" &&
+                        pythonVersionIsExact(entry.version),
+                    versionResolutionError: typeof entry.version === "string" &&
+                        pythonVersionIsExact(entry.version)
+                        ? undefined
+                        : "The Poetry lock entry has no exact version.",
                 });
         }
         return true;
@@ -46568,41 +46713,114 @@ function parsePoetryLock(manifest, path, dependencies) {
 }
 function parsePipfileLock(manifest, path, dependencies) {
     const lock = readJson(path);
+    if (!lock) {
+        dependencies.push({
+            name: "(invalid Pipfile.lock)",
+            version: "unresolved",
+            ecosystem: "python",
+            manifest,
+            versionResolved: false,
+            versionResolutionError: "Could not parse Pipfile.lock.",
+        });
+        return;
+    }
     for (const section of [lock?.default, lock?.develop]) {
         for (const [name, value] of Object.entries(section ?? {})) {
             dependencies.push({
                 name,
-                version: value.version ?? "*",
+                version: value.version?.replace(/^==/, "") ?? "*",
                 ecosystem: "python",
                 manifest,
+                versionResolved: typeof value.version === "string" &&
+                    value.version.startsWith("==") &&
+                    pythonVersionIsExact(value.version.slice(2)),
+                versionResolutionError: typeof value.version === "string" &&
+                    value.version.startsWith("==") &&
+                    pythonVersionIsExact(value.version.slice(2))
+                    ? undefined
+                    : "The Pipfile lock entry has no exact version.",
             });
         }
     }
 }
 function parsePackageJsonManifest(manifest, absolute, dependencies) {
     const packageJson = readJson(absolute);
+    if (!packageJson) {
+        dependencies.push({
+            name: "(invalid package.json)",
+            version: "unresolved",
+            ecosystem: "npm",
+            manifest,
+            versionResolved: false,
+            versionResolutionError: "Could not parse package.json dependencies.",
+        });
+        return;
+    }
     const lockParsers = {
         "package-lock.json": parseNpmLock,
         "npm-shrinkwrap.json": parseNpmLock,
         "yarn.lock": parseYarnLock,
         "pnpm-lock.yaml": parsePnpmLock,
     };
-    let lockFound = false;
+    const lockFiles = [];
+    const lockDependencies = [];
     for (const [lockName, parser] of Object.entries(lockParsers)) {
         const lockPath = (0,external_node_path_.join)((0,external_node_path_.dirname)(absolute), lockName);
         if (!isFile(lockPath))
             continue;
-        lockFound = true;
-        parser(manifest, lockPath, dependencies);
+        lockFiles.push(lockName);
+        parser(manifest, lockPath, lockDependencies);
     }
-    if (!lockFound && packageJson)
+    if (lockFiles.length === 0) {
         addPackageJsonDependencies(dependencies, manifest, packageJson);
+        return;
+    }
+    dependencies.push(...lockDependencies);
+    if (lockFiles.length > 1) {
+        dependencies.push({
+            name: "(ambiguous JavaScript lockfiles)",
+            version: "unresolved",
+            ecosystem: "npm",
+            manifest,
+            versionResolved: false,
+            versionResolutionError: `Multiple supported lockfiles found: ${lockFiles.join(", ")}.`,
+        });
+    }
+    const lockedNames = new Set(lockDependencies.map((dependency) => dependency.name));
+    for (const section of [
+        "dependencies",
+        "devDependencies",
+        "optionalDependencies",
+        "peerDependencies",
+    ]) {
+        for (const [name, version] of Object.entries(packageJson[section] ?? {})) {
+            if (version.startsWith("workspace:") || lockedNames.has(name))
+                continue;
+            dependencies.push({
+                name,
+                version,
+                ecosystem: "npm",
+                manifest,
+                versionResolved: false,
+                versionResolutionError: `The dependency is missing from ${lockFiles.join(", ")}.`,
+            });
+        }
+    }
 }
 function parsePyprojectManifest(manifest, path, dependencies) {
     const poetryLockPath = (0,external_node_path_.join)((0,external_node_path_.dirname)(path), "poetry.lock");
-    if (isFile(poetryLockPath) &&
-        parsePoetryLock(manifest, poetryLockPath, dependencies))
-        return;
+    if (isFile(poetryLockPath)) {
+        if (parsePoetryLock(manifest, poetryLockPath, dependencies))
+            return;
+        dependencies.push({
+            name: "(invalid poetry.lock)",
+            version: "unresolved",
+            ecosystem: "python",
+            manifest,
+            versionResolved: false,
+            versionResolutionError: "Could not parse the adjacent poetry.lock.",
+        });
+    }
     parsePyproject(manifest, path, dependencies);
 }
 const MANIFEST_PARSERS = {
@@ -46610,16 +46828,22 @@ const MANIFEST_PARSERS = {
     "npm-shrinkwrap.json": parseNpmLock,
     "yarn.lock": parseYarnLock,
     "pnpm-lock.yaml": parsePnpmLock,
-    "go.mod": parseGoMod,
-    "go.sum": parseGoSum,
     "requirements.txt": parseRequirements,
     "pyproject.toml": parsePyprojectManifest,
     "poetry.lock": (manifest, path, dependencies) => {
-        parsePoetryLock(manifest, path, dependencies);
+        if (!parsePoetryLock(manifest, path, dependencies))
+            dependencies.push({
+                name: "(invalid poetry.lock)",
+                version: "unresolved",
+                ecosystem: "python",
+                manifest,
+                versionResolved: false,
+                versionResolutionError: "Could not parse poetry.lock.",
+            });
     },
     "Pipfile.lock": parsePipfileLock,
 };
-function parseManifest(root, path, dependencies) {
+function parseManifest(root, path, dependencies, goModuleList) {
     const basename = path.split("/").pop() ?? path;
     const absolute = (0,external_node_path_.resolve)(root, path);
     if (!isFile(absolute))
@@ -46628,12 +46852,31 @@ function parseManifest(root, path, dependencies) {
         parsePackageJsonManifest(path, absolute, dependencies);
         return;
     }
+    if (basename === "go.mod") {
+        parseGoMod(path, absolute, dependencies, goModuleList);
+        return;
+    }
+    if (basename === "go.sum")
+        return;
     const parser = MANIFEST_PARSERS[basename] ??
         (basename.endsWith(".txt") ? parseRequirements : undefined);
-    parser?.(path, absolute, dependencies);
+    if (parser) {
+        parser(path, absolute, dependencies);
+        return;
+    }
+    dependencies.push({
+        name: "(unsupported dependency input)",
+        version: "unresolved",
+        ecosystem: "unknown",
+        manifest: path,
+        versionResolved: false,
+        versionResolutionError: `No parser is available for dependency input ${basename}.`,
+    });
 }
 function overrideFor(config, name, version) {
     for (const override of config.licenses ?? []) {
+        if (override.match !== undefined)
+            continue;
         const versionMatches = !override.version ||
             override.version
                 .split(",")
@@ -46644,6 +46887,37 @@ function overrideFor(config, name, version) {
             return override.license;
     }
     return undefined;
+}
+function matchOverrideFor(config, name, version, candidates) {
+    for (const candidate of candidates) {
+        for (const override of config.licenses ?? []) {
+            if (override.match === undefined)
+                continue;
+            const versionMatches = !override.version ||
+                override.version
+                    .split(",")
+                    .map((item) => item.trim())
+                    .includes(version);
+            if (versionMatches &&
+                (override.name === name || minimatch(name, override.name)) &&
+                new RegExp(override.match).test(candidate))
+                return override.license;
+        }
+    }
+    return undefined;
+}
+function hasMatchRuleFor(config, name, version) {
+    return (config.licenses ?? []).some((override) => {
+        if (override.match === undefined)
+            return false;
+        const versionMatches = !override.version ||
+            override.version
+                .split(",")
+                .map((item) => item.trim())
+                .includes(version);
+        return (versionMatches &&
+            (override.name === name || minimatch(name, override.name)));
+    });
 }
 function exceptionFor(config, name, version) {
     return (config.exceptions ?? []).find((exception) => exception.name === name && exception.version === version);
@@ -46748,15 +47022,20 @@ function identifyLicenseText(text) {
         return "ISC";
     return undefined;
 }
-async function resolveNpm(root, dependency, logger) {
+async function resolveNpm(root, dependency, logger, token, includeMatchText) {
     const installed = installedNpmPackage(root, dependency.manifest, dependency.name);
     const installedLicense = packageLicense(installed?.license ?? installed?.licenses);
-    if (installedLicense)
+    const installedMatchText = includeMatchText
+        ? await npmRepositoryLicenseText(installed, token)
+        : undefined;
+    if (installedLicense && (!includeMatchText || installedMatchText)) {
         return {
             license: installedLicense,
             source: "node_modules/package.json",
+            matchText: installedMatchText,
             resolution: "manifest",
         };
+    }
     const encodedName = dependency.name.startsWith("@")
         ? dependency.name.replace("/", "%2f")
         : dependency.name;
@@ -46765,25 +47044,49 @@ async function resolveNpm(root, dependency, logger) {
         ? `https://registry.npmjs.org/${encodedName}/${encodeURIComponent(dependency.version)}`
         : `https://registry.npmjs.org/${encodedName}`;
     const metadata = (await fetchJson(registryUrl));
+    const metadataMatchText = includeMatchText
+        ? ((await npmRepositoryLicenseText(metadata, token)) ?? installedMatchText)
+        : undefined;
+    if (installedLicense)
+        return {
+            license: installedLicense,
+            source: "node_modules/package.json",
+            matchText: metadataMatchText,
+            resolution: "manifest",
+        };
     const registryLicense = packageLicense(metadata?.license ?? metadata?.licenses);
-    if (registryLicense)
+    if (registryLicense) {
         return {
             license: registryLicense,
             source: "registry.npmjs.org",
+            matchText: metadataMatchText,
             resolution: "registry",
         };
+    }
     if (metadata?.versions) {
         const latest = metadata.versions[metadata["dist-tags"]?.latest ?? ""];
         const latestLicense = packageLicense(latest?.license ?? latest?.licenses);
-        if (latestLicense)
+        if (latestLicense) {
+            const matchText = includeMatchText
+                ? await npmRepositoryLicenseText(latest, token)
+                : undefined;
             return {
                 license: latestLicense,
                 source: "registry.npmjs.org",
+                matchText,
                 resolution: "registry",
             };
+        }
     }
+    if (installedLicense)
+        return {
+            license: installedLicense,
+            source: "node_modules/package.json",
+            matchText: metadataMatchText,
+            resolution: "manifest",
+        };
     logger.debug(`Could not resolve npm license for ${dependency.name}@${dependency.version}`);
-    return { resolution: "unknown" };
+    return { matchText: metadataMatchText, resolution: "unknown" };
 }
 function pythonVersionParts(version) {
     let value = version.trim();
@@ -46923,6 +47226,18 @@ function githubRepositoryFromUrl(url) {
         return undefined;
     }
 }
+async function npmRepositoryLicenseText(packageInfo, token) {
+    const repositoryUrl = typeof packageInfo?.repository === "string"
+        ? packageInfo.repository
+        : packageInfo?.repository?.url;
+    const repository = repositoryUrl
+        ? githubRepositoryFromUrl(repositoryUrl)
+        : undefined;
+    if (!repository)
+        return undefined;
+    return (await resolveGithubRepositoryLicense(repository, token, true))
+        .matchText;
+}
 function githubRepositoryForPython(info) {
     if (!info)
         return undefined;
@@ -46936,23 +47251,29 @@ function githubRepositoryForPython(info) {
     }
     return undefined;
 }
-async function resolveGithubRepositoryLicense(repository, token) {
+async function resolveGithubRepositoryLicense(repository, token, includeMatchText = false) {
     const apiUrl = `https://api.github.com/repos/${repository}/license`;
     const metadata = (await fetchJson(apiUrl, token));
     const apiLicense = metadata?.license?.spdx_id;
-    if (apiLicense && apiLicense !== "NOASSERTION")
+    if (apiLicense && apiLicense !== "NOASSERTION") {
+        const matchText = includeMatchText && metadata?.download_url
+            ? await fetchText(metadata.download_url)
+            : undefined;
         return {
             license: apiLicense,
             source: apiUrl,
+            matchText,
             resolution: "repository",
         };
+    }
     if (metadata?.download_url) {
         const text = await fetchText(metadata.download_url);
         const license = text ? identifyLicenseText(text) : undefined;
-        if (license)
+        if (license || text)
             return {
                 license,
                 source: metadata.html_url ?? metadata.download_url,
+                matchText: text,
                 resolution: "repository",
             };
     }
@@ -47009,33 +47330,46 @@ function classifierPythonLicense(classifiers, version) {
         resolution: "registry",
     };
 }
-async function repositoryPythonLicense(info, token, version) {
+async function repositoryPythonLicense(info, token, version, includeMatchText = false) {
     const repository = githubRepositoryForPython(info);
     if (!repository)
         return undefined;
-    const resolved = await resolveGithubRepositoryLicense(repository, token);
+    const resolved = await resolveGithubRepositoryLicense(repository, token, includeMatchText);
     return resolved.license ? { ...resolved, version } : undefined;
 }
-async function resolvePython(dependency, token, logger) {
+async function resolvePython(dependency, token, logger, includeMatchText) {
     const packageName = dependency.name.replace(/[-_.]+/g, "-");
     const packageUrl = "https://pypi.org/pypi/" + encodeURIComponent(packageName);
     const { metadata, version } = await loadPythonMetadata(packageUrl, dependency);
     const info = metadata?.info;
     const declared = declaredPythonLicense(info, version);
-    if (declared)
-        return declared;
+    if (declared) {
+        if (!includeMatchText || !githubRepositoryForPython(info))
+            return declared;
+        const repository = await repositoryPythonLicense(info, token, version, includeMatchText);
+        return repository?.matchText
+            ? { ...declared, matchText: repository.matchText }
+            : declared;
+    }
     const classifierLicenses = licensesFromPythonClassifiers(info?.classifiers);
     const repository = githubRepositoryForPython(info);
+    const repositoryResolution = includeMatchText && repository
+        ? await repositoryPythonLicense(info, token, version, includeMatchText)
+        : undefined;
     if (classifierLicenses.length > 1 && repository) {
-        const resolved = await repositoryPythonLicense(info, token, version);
+        const resolved = repositoryResolution ??
+            (await repositoryPythonLicense(info, token, version, includeMatchText));
         if (resolved)
             return resolved;
     }
     const classifier = classifierPythonLicense(info?.classifiers, version);
     if (classifier)
-        return classifier;
+        return repositoryResolution?.matchText
+            ? { ...classifier, matchText: repositoryResolution.matchText }
+            : classifier;
     if (repository) {
-        const resolved = await repositoryPythonLicense(info, token, version);
+        const resolved = repositoryResolution ??
+            (await repositoryPythonLicense(info, token, version, includeMatchText));
         if (resolved)
             return resolved;
     }
@@ -47054,6 +47388,7 @@ function resolveVendoredGoLicense(root, dependency) {
                 return {
                     license,
                     source: (0,external_node_path_.relative)(root, path),
+                    matchText: text,
                 };
         }
         if (directory === vendorRoot)
@@ -47062,7 +47397,7 @@ function resolveVendoredGoLicense(root, dependency) {
     }
     return {};
 }
-async function resolveGo(root, dependency, token, logger) {
+async function resolveGo(root, dependency, token, logger, includeMatchText) {
     const vendored = resolveVendoredGoLicense(root, dependency);
     if (vendored.license)
         return {
@@ -47077,9 +47412,13 @@ async function resolveGo(root, dependency, token, logger) {
     const apiMetadata = (await fetchJson(`https://api.github.com/repos/${match[1]}/license`, token));
     const apiLicense = apiMetadata?.license?.spdx_id;
     if (apiLicense && apiLicense !== "NOASSERTION") {
+        const matchText = includeMatchText && apiMetadata.download_url
+            ? await fetchText(apiMetadata.download_url)
+            : undefined;
         return {
             license: apiLicense,
             source: `api.github.com/repos/${match[1]}/license`,
+            matchText,
             resolution: "repository",
         };
     }
@@ -47097,21 +47436,22 @@ async function resolveGo(root, dependency, token, logger) {
         const license = attempt.text
             ? identifyLicenseText(attempt.text)
             : undefined;
-        if (license)
+        if (license || (includeMatchText && attempt.text))
             return {
                 license,
                 source: `github.com/${match[1]}/${attempt.filename}`,
+                matchText: attempt.text,
                 resolution: "repository",
             };
     }
     return { resolution: "unknown" };
 }
-async function resolveByEcosystem(root, dependency, token, logger) {
+async function resolveByEcosystem(root, dependency, token, logger, includeMatchText) {
     if (dependency.ecosystem === "npm")
-        return resolveNpm(root, dependency, logger);
+        return resolveNpm(root, dependency, logger, token, includeMatchText);
     if (dependency.ecosystem === "python")
-        return resolvePython(dependency, token, logger);
-    return resolveGo(root, dependency, token, logger);
+        return resolvePython(dependency, token, logger, includeMatchText);
+    return resolveGo(root, dependency, token, logger, includeMatchText);
 }
 async function resolveLicense(root, dependency, config, token, logger) {
     const configured = overrideFor(config, dependency.name, dependency.version);
@@ -47121,13 +47461,34 @@ async function resolveLicense(root, dependency, config, token, logger) {
             resolution: "configured",
             source: "configuration",
         };
+    const matchCandidates = dependency.rawLicense ? [dependency.rawLicense] : [];
+    const configuredMatch = matchOverrideFor(config, dependency.name, dependency.version, matchCandidates);
+    if (configuredMatch)
+        return {
+            license: configuredMatch,
+            resolution: "configured",
+            source: "configuration",
+        };
+    const hasMatchRules = hasMatchRuleFor(config, dependency.name, dependency.version);
+    const resolved = await resolveByEcosystem(root, dependency, token, logger, hasMatchRules);
+    const configuredTextMatch = matchOverrideFor(config, dependency.name, dependency.version, [
+        ...matchCandidates,
+        ...(resolved.license ? [resolved.license] : []),
+        ...(resolved.matchText ? [resolved.matchText] : []),
+    ]);
+    if (configuredTextMatch)
+        return {
+            license: configuredTextMatch,
+            resolution: "configured",
+            source: "configuration",
+            version: resolved.version,
+        };
     if (dependency.rawLicense)
         return {
             license: dependency.rawLicense,
             resolution: "manifest",
             source: dependency.manifest,
         };
-    const resolved = await resolveByEcosystem(root, dependency, token, logger);
     return {
         license: resolved.license ?? "Unknown",
         resolution: resolved.resolution,
@@ -47142,17 +47503,30 @@ function mainLicenseFor(manifest, config) {
         .sort((left, right) => (right.path?.length ?? 0) - (left.path?.length ?? 0))[0];
     return selected?.license["spdx-id"] ?? rules[0]?.license["spdx-id"];
 }
-async function checkDependencies(root, config, token, weakCompatible, logger) {
+async function checkDependencies(root, config, token, weakCompatible, logger, goModuleList = systemGoModuleList) {
     const dependencyConfig = config.dependency;
     if (!dependencyConfig?.files?.length) {
         return { checked: 0, results: [], failures: [] };
     }
     const dependencies = [];
+    const configuredPaths = new Set(dependencyConfig.files.map((path) => path.replaceAll("\\", "/")));
     for (const configuredPath of dependencyConfig.files) {
         const path = configuredPath.replaceAll("\\", "/");
         if (!isFile((0,external_node_path_.resolve)(root, path)))
             throw new Error(`Dependency file not found: ${path}`);
-        parseManifest(root, path, dependencies);
+        if (path.split("/").pop() === "go.sum" &&
+            !configuredPaths.has((0,external_node_path_.join)((0,external_node_path_.dirname)(path), "go.mod").replaceAll("\\", "/"))) {
+            dependencies.push({
+                name: "(Go module graph)",
+                version: "unresolved",
+                ecosystem: "go",
+                manifest: path,
+                versionResolved: false,
+                versionResolutionError: "go.sum contains checksums, not the selected module graph; configure the adjacent go.mod.",
+            });
+            continue;
+        }
+        parseManifest(root, path, dependencies, goModuleList);
     }
     const uniqueDependencies = uniqueBy(dependencies, (dependency) => `${dependency.ecosystem}:${dependency.name}@${dependency.version}`).filter((dependency) => !excludedBy(dependencyConfig, dependency.name, dependency.version));
     logger.info(`Found ${uniqueDependencies.length} dependencies to check.`);
@@ -47170,6 +47544,18 @@ async function checkDependencies(root, config, token, weakCompatible, logger) {
                 logger.info(`Resolving dependencies: ${index + 1}/${uniqueDependencies.length}`);
             }
             logger.debug(`Resolving dependency ${index + 1}/${uniqueDependencies.length}: ${dependency.name}@${dependency.version}`);
+            if (!dependency.versionResolved) {
+                resultSlots[index] = {
+                    ...dependency,
+                    license: "Unknown",
+                    normalized: "Unknown",
+                    resolution: "unknown",
+                    compatible: "unknown",
+                    reason: dependency.versionResolutionError ??
+                        "An exact resolved dependency version is required.",
+                };
+                continue;
+            }
             const exception = exceptionFor(dependencyConfig, dependency.name, dependency.version);
             if (exception) {
                 resultSlots[index] = {
@@ -47226,9 +47612,24 @@ async function checkDependencies(root, config, token, weakCompatible, logger) {
 __nccwpck_require__.a(__webpack_module__, async (__webpack_handle_async_dependencies__, __webpack_async_result__) => { try {
 /* harmony import */ var _actions_core__WEBPACK_IMPORTED_MODULE_0__ = __nccwpck_require__(7687);
 /* harmony import */ var _config_js__WEBPACK_IMPORTED_MODULE_1__ = __nccwpck_require__(9651);
-/* harmony import */ var _dependencies_js__WEBPACK_IMPORTED_MODULE_2__ = __nccwpck_require__(472);
+/* harmony import */ var _dependencies_js__WEBPACK_IMPORTED_MODULE_2__ = __nccwpck_require__(493);
 /* harmony import */ var _logger_js__WEBPACK_IMPORTED_MODULE_3__ = __nccwpck_require__(3953);
 /* harmony import */ var _report_js__WEBPACK_IMPORTED_MODULE_4__ = __nccwpck_require__(431);
+/*
+ * Copyright 2026 Zaphiro Technologies
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 
 
 
@@ -47289,6 +47690,21 @@ __webpack_async_result__();
 /* harmony export */   V: () => (/* binding */ Logger)
 /* harmony export */ });
 /* harmony import */ var _actions_core__WEBPACK_IMPORTED_MODULE_0__ = __nccwpck_require__(7687);
+/*
+ * Copyright 2026 Zaphiro Technologies
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 
 const priorities = {
     error: 0,
@@ -47342,6 +47758,21 @@ class Logger {
 /* unused harmony exports summaryDependencies, allSummaryDependencies */
 /* harmony import */ var _actions_core__WEBPACK_IMPORTED_MODULE_0__ = __nccwpck_require__(7687);
 /* harmony import */ var _actions_github__WEBPACK_IMPORTED_MODULE_1__ = __nccwpck_require__(2409);
+/*
+ * Copyright 2026 Zaphiro Technologies
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 
 
 const COMMENT_MARKER = "<!-- license-checker-action -->";
@@ -47362,6 +47793,7 @@ function dependencyRows(results) {
         result.resolution,
         approvalDetails(result),
         result.distributionWarning ?? "",
+        result.reason ? escapeTableCell(result.reason) : "",
     ]);
 }
 function distributionWarnings(report) {
@@ -47376,9 +47808,9 @@ function allSummaryDependencies(report) {
 function commentBody(report) {
     const lines = [COMMENT_MARKER, "## License Checker", ""];
     if (report.dependency.failures.length > 0) {
-        lines.push("### Dependency license failures", "", "| Dependency | Version | License | Result |", "|---|---:|---|---|");
+        lines.push("### Dependency license failures", "", "| Dependency | Version | License | Result | Reason |", "|---|---:|---|---|---|");
         for (const result of report.dependency.failures.slice(0, 100)) {
-            lines.push(`| ${result.name} | ${result.version} | ${result.normalized} | ${result.compatible} |`);
+            lines.push(`| ${result.name} | ${result.version} | ${result.normalized} | ${result.compatible} | ${escapeTableCell(result.reason ?? "")} |`);
         }
         lines.push("");
     }
@@ -47454,6 +47886,7 @@ async function writeSummary(report, summaryMode = "issues") {
                 { data: "Resolution", header: true },
                 { data: "Manual approval", header: true },
                 { data: "Distribution review", header: true },
+                { data: "Reason", header: true },
             ],
             ...dependencyRows(displayedDependencies),
         ]);
@@ -47468,6 +47901,7 @@ async function writeSummary(report, summaryMode = "issues") {
                 { data: "Resolution", header: true },
                 { data: "Manual approval", header: true },
                 { data: "Distribution review", header: true },
+                { data: "Reason", header: true },
             ],
             ...dependencyRows(approvals),
         ]);
@@ -47477,7 +47911,7 @@ async function writeSummary(report, summaryMode = "issues") {
 }
 function annotate(report) {
     for (const result of report.dependency.failures) {
-        _actions_core__WEBPACK_IMPORTED_MODULE_0__.error(`${result.name}@${result.version}: ${result.normalized} (${result.compatible})`, {
+        _actions_core__WEBPACK_IMPORTED_MODULE_0__.error(`${result.name}@${result.version}: ${result.normalized} (${result.compatible})${result.reason ? ` - ${result.reason}` : ""}`, {
             file: result.manifest,
             startLine: 1,
         });

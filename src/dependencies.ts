@@ -15,6 +15,7 @@
  */
 
 import { readFileSync } from "node:fs";
+import { execFileSync } from "node:child_process";
 import { dirname, join, relative, resolve } from "node:path";
 import { parse as parseToml } from "@iarna/toml";
 import { parse as parseYaml } from "yaml";
@@ -40,6 +41,7 @@ interface PackageJson {
   version?: string;
   license?: string | { type?: string };
   licenses?: Array<{ type?: string }>;
+  repository?: string | { url?: string };
   dependencies?: Record<string, string>;
   devDependencies?: Record<string, string>;
   optionalDependencies?: Record<string, string>;
@@ -68,6 +70,19 @@ function packageLicense(value: unknown): string | undefined {
   return undefined;
 }
 
+function npmVersionIsExact(version: string): boolean {
+  return /^v?\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?$/.test(
+    version,
+  );
+}
+
+function pythonVersionIsExact(version: string): boolean {
+  return (
+    /^\d+(?:\.\d+)*(?:[A-Za-z0-9.+!-]+)?$/.test(version) &&
+    !/[*!<>=~,\s]/.test(version)
+  );
+}
+
 function addPackageJsonDependencies(
   dependencies: Dependency[],
   manifest: string,
@@ -80,7 +95,14 @@ function addPackageJsonDependencies(
     "peerDependencies",
   ] as const) {
     for (const [name, version] of Object.entries(packageJson[section] ?? {})) {
-      dependencies.push({ name, version, ecosystem: "npm", manifest });
+      dependencies.push({
+        name,
+        version,
+        ecosystem: "npm",
+        manifest,
+        versionResolved: false,
+        versionResolutionError: "A supported npm lockfile is required.",
+      });
     }
   }
 }
@@ -96,7 +118,17 @@ function parseNpmLock(
         dependencies?: Record<string, Record<string, unknown>>;
       }
     | undefined;
-  if (!lock) return;
+  if (!lock) {
+    dependencies.push({
+      name: "(invalid npm lockfile)",
+      version: "unresolved",
+      ecosystem: "npm",
+      manifest,
+      versionResolved: false,
+      versionResolutionError: `Could not parse ${lockPath}.`,
+    });
+    return;
+  }
 
   if (lock.packages) {
     for (const [location, value] of Object.entries(lock.packages)) {
@@ -110,6 +142,7 @@ function parseNpmLock(
         version,
         ecosystem: "npm",
         manifest,
+        versionResolved: npmVersionIsExact(version),
         rawLicense: packageLicense(value.license ?? value.licenses),
       });
     }
@@ -124,6 +157,8 @@ function parseNpmLock(
         version: typeof value.version === "string" ? value.version : "*",
         ecosystem: "npm",
         manifest,
+        versionResolved:
+          typeof value.version === "string" && npmVersionIsExact(value.version),
         rawLicense: packageLicense(value.license ?? value.licenses),
       });
       if (value.dependencies && typeof value.dependencies === "object") {
@@ -149,7 +184,13 @@ function parseYarnLock(
   const flush = (): void => {
     if (!workspaceEntry) {
       for (const name of names)
-        dependencies.push({ name, version, ecosystem: "npm", manifest });
+        dependencies.push({
+          name,
+          version,
+          ecosystem: "npm",
+          manifest,
+          versionResolved: npmVersionIsExact(version),
+        });
     }
     names = [];
     version = "*";
@@ -244,66 +285,68 @@ function parsePnpmLock(
     for (const key of Object.keys(entries as Record<string, unknown>)) {
       const packageInfo = packageFromLockKey(key);
       if (packageInfo)
-        dependencies.push({ ...packageInfo, ecosystem: "npm", manifest });
+        dependencies.push({
+          ...packageInfo,
+          ecosystem: "npm",
+          manifest,
+          versionResolved: npmVersionIsExact(packageInfo.version),
+        });
     }
   }
+}
+
+export type GoModuleListRunner = (moduleDirectory: string) => string;
+
+function systemGoModuleList(moduleDirectory: string): string {
+  return execFileSync("go", ["list", "-mod=readonly", "-m", "all"], {
+    cwd: moduleDirectory,
+    encoding: "utf8",
+  });
 }
 
 function parseGoMod(
   manifest: string,
   path: string,
   dependencies: Dependency[],
+  goModuleList: GoModuleListRunner,
 ): void {
-  const text = readFileSync(path, "utf8");
-  let inRequire = false;
-  for (const rawLine of text.split(/\r?\n/)) {
-    const commentStart = rawLine.indexOf("//");
-    const line = (
-      commentStart < 0 ? rawLine : rawLine.slice(0, commentStart)
-    ).trim();
-    if (!line) continue;
-    if (/^require\s*\(/.test(line)) {
-      inRequire = true;
-      continue;
-    }
-    if (inRequire && line === ")") {
-      inRequire = false;
-      continue;
-    }
-    const inline = /^require\s+(\S+)\s+(\S+)/.exec(line);
-    const block = inRequire ? /^(\S+)\s+(\S+)/.exec(line) : undefined;
-    const match = inline ?? block;
-    if (!match) continue;
+  let output: string;
+  try {
+    output = goModuleList(dirname(path));
+  } catch (error) {
+    const detail =
+      error instanceof Error ? error.message.split("\n")[0] : String(error);
     dependencies.push({
-      name: match[1],
-      version: match[2],
+      name: "(Go module graph)",
+      version: "unresolved",
       ecosystem: "go",
       manifest,
+      versionResolved: false,
+      versionResolutionError: `Unable to read the Go build list: ${detail}`,
     });
+    return;
   }
-}
 
-function parseGoSum(
-  manifest: string,
-  path: string,
-  dependencies: Dependency[],
-): void {
-  for (const rawLine of readFileSync(path, "utf8").split(/\r?\n/)) {
-    const fields = rawLine.trim().split(/\s+/);
+  for (const line of output.split(/\r?\n/)) {
+    const fields = line.trim().split(/\s+/);
     const name = fields[0];
-    const rawVersion = fields[1];
-    const checksum = fields[2];
-    if (name && rawVersion && checksum?.startsWith("h1:")) {
-      const version = rawVersion.endsWith("/go.mod")
-        ? rawVersion.slice(0, -"/go.mod".length)
-        : rawVersion;
-      dependencies.push({
-        name,
-        version,
-        ecosystem: "go",
-        manifest,
-      });
-    }
+    if (!name || fields.length < 2) continue;
+    const version = fields[1];
+    const replaced = fields.includes("=>");
+    const versionResolved =
+      !replaced && /^v\d+\.\d+\.\d+(?:-[\w.-]+)?(?:\+[\w.-]+)?$/.test(version);
+    dependencies.push({
+      name,
+      version,
+      ecosystem: "go",
+      manifest,
+      versionResolved,
+      versionResolutionError: replaced
+        ? "The Go module is replaced; its effective source version is not established."
+        : versionResolved
+          ? undefined
+          : "The Go build list did not provide an exact module version.",
+    });
   }
 }
 
@@ -314,7 +357,8 @@ function parseRequirements(
 ): void {
   const parseRequirement = (
     value: string,
-  ): { name: string; version: string } | undefined => {
+  ):
+    { name: string; version: string; versionResolved: boolean } | undefined => {
     const nameMatch = /^[A-Za-z0-9][A-Za-z0-9_.-]*/.exec(value);
     if (!nameMatch) return undefined;
     const name = nameMatch[0];
@@ -325,32 +369,65 @@ function parseRequirements(
       remainder = remainder.slice(extrasEnd + 1).trimStart();
     }
     const operator = /^(===|==|~=|>=|<=|>|<)/.exec(remainder)?.[0];
-    if (!operator) return { name, version: "*" };
+    if (!operator) return { name, version: "*", versionResolved: false };
     remainder = remainder.slice(operator.length).trimStart();
     const semicolon = remainder.indexOf(";");
     const whitespace = remainder.search(/\s/);
     const end = [semicolon, whitespace]
       .filter((index) => index >= 0)
       .sort((left, right) => left - right)[0];
+    const version = remainder.slice(0, end ?? remainder.length) || "*";
+    const versionResolved =
+      (operator === "==" || operator === "===") &&
+      pythonVersionIsExact(version);
     return {
       name,
-      version: remainder.slice(0, end ?? remainder.length) || "*",
+      version,
+      versionResolved,
     };
   };
 
-  for (const rawLine of readFileSync(path, "utf8").split(/\r?\n/)) {
+  for (const [lineIndex, rawLine] of readFileSync(path, "utf8")
+    .split(/\r?\n/)
+    .entries()) {
     const commentStart = rawLine.indexOf("#");
     const line = (
       commentStart < 0 ? rawLine : rawLine.slice(0, commentStart)
     ).trim();
-    if (!line || line.startsWith("#") || line.startsWith("-")) continue;
-    const requirement = parseRequirement(line);
-    if (requirement)
+    if (!line || line.startsWith("#")) continue;
+    if (line.startsWith("-")) {
       dependencies.push({
-        ...requirement,
+        name: `(requirements input line ${lineIndex + 1})`,
+        version: "unresolved",
         ecosystem: "python",
         manifest,
+        versionResolved: false,
+        versionResolutionError:
+          "Requirements includes, constraints, and options must be expanded before license checking.",
       });
+      continue;
+    }
+    const requirement = parseRequirement(line);
+    if (!requirement) {
+      dependencies.push({
+        name: `(requirements input line ${lineIndex + 1})`,
+        version: "unresolved",
+        ecosystem: "python",
+        manifest,
+        versionResolved: false,
+        versionResolutionError:
+          "The requirements line could not be parsed as a pinned package.",
+      });
+      continue;
+    }
+    dependencies.push({
+      ...requirement,
+      ecosystem: "python",
+      manifest,
+      versionResolutionError: requirement.versionResolved
+        ? undefined
+        : "Python requirements must pin an exact version with == or ===.",
+    });
   }
 }
 
@@ -366,6 +443,14 @@ function parsePyproject(
   try {
     parsed = parseToml(readFileSync(path, "utf8")) as typeof parsed;
   } catch {
+    dependencies.push({
+      name: "(invalid pyproject.toml)",
+      version: "unresolved",
+      ecosystem: "python",
+      manifest,
+      versionResolved: false,
+      versionResolutionError: "Could not parse pyproject.toml dependencies.",
+    });
     return;
   }
 
@@ -380,6 +465,9 @@ function parsePyproject(
         version: value.slice(nameMatch[0].length).trim() || "*",
         ecosystem: "python",
         manifest,
+        versionResolved: false,
+        versionResolutionError:
+          "A supported Python lockfile or fully pinned requirements file is required.",
       });
     }
   }
@@ -388,7 +476,15 @@ function parsePyproject(
     parsed.tool?.poetry?.dependencies ?? {},
   )) {
     if (name.toLowerCase() === "python" || typeof value !== "string") continue;
-    dependencies.push({ name, version: value, ecosystem: "python", manifest });
+    dependencies.push({
+      name,
+      version: value,
+      ecosystem: "python",
+      manifest,
+      versionResolved: false,
+      versionResolutionError:
+        "A supported Python lockfile or fully pinned requirements file is required.",
+    });
   }
 }
 
@@ -408,6 +504,14 @@ function parsePoetryLock(
           version: entry.version ?? "*",
           ecosystem: "python",
           manifest,
+          versionResolved:
+            typeof entry.version === "string" &&
+            pythonVersionIsExact(entry.version),
+          versionResolutionError:
+            typeof entry.version === "string" &&
+            pythonVersionIsExact(entry.version)
+              ? undefined
+              : "The Poetry lock entry has no exact version.",
         });
     }
     return true;
@@ -428,13 +532,34 @@ function parsePipfileLock(
         develop?: Record<string, { version?: string }>;
       }
     | undefined;
+  if (!lock) {
+    dependencies.push({
+      name: "(invalid Pipfile.lock)",
+      version: "unresolved",
+      ecosystem: "python",
+      manifest,
+      versionResolved: false,
+      versionResolutionError: "Could not parse Pipfile.lock.",
+    });
+    return;
+  }
   for (const section of [lock?.default, lock?.develop]) {
     for (const [name, value] of Object.entries(section ?? {})) {
       dependencies.push({
         name,
-        version: value.version ?? "*",
+        version: value.version?.replace(/^==/, "") ?? "*",
         ecosystem: "python",
         manifest,
+        versionResolved:
+          typeof value.version === "string" &&
+          value.version.startsWith("==") &&
+          pythonVersionIsExact(value.version.slice(2)),
+        versionResolutionError:
+          typeof value.version === "string" &&
+          value.version.startsWith("==") &&
+          pythonVersionIsExact(value.version.slice(2))
+            ? undefined
+            : "The Pipfile lock entry has no exact version.",
       });
     }
   }
@@ -452,21 +577,67 @@ function parsePackageJsonManifest(
   dependencies: Dependency[],
 ): void {
   const packageJson = readJson(absolute) as PackageJson | undefined;
+  if (!packageJson) {
+    dependencies.push({
+      name: "(invalid package.json)",
+      version: "unresolved",
+      ecosystem: "npm",
+      manifest,
+      versionResolved: false,
+      versionResolutionError: "Could not parse package.json dependencies.",
+    });
+    return;
+  }
   const lockParsers: Record<string, ManifestParser> = {
     "package-lock.json": parseNpmLock,
     "npm-shrinkwrap.json": parseNpmLock,
     "yarn.lock": parseYarnLock,
     "pnpm-lock.yaml": parsePnpmLock,
   };
-  let lockFound = false;
+  const lockFiles: string[] = [];
+  const lockDependencies: Dependency[] = [];
   for (const [lockName, parser] of Object.entries(lockParsers)) {
     const lockPath = join(dirname(absolute), lockName);
     if (!isFile(lockPath)) continue;
-    lockFound = true;
-    parser(manifest, lockPath, dependencies);
+    lockFiles.push(lockName);
+    parser(manifest, lockPath, lockDependencies);
   }
-  if (!lockFound && packageJson)
+  if (lockFiles.length === 0) {
     addPackageJsonDependencies(dependencies, manifest, packageJson);
+    return;
+  }
+  dependencies.push(...lockDependencies);
+  if (lockFiles.length > 1) {
+    dependencies.push({
+      name: "(ambiguous JavaScript lockfiles)",
+      version: "unresolved",
+      ecosystem: "npm",
+      manifest,
+      versionResolved: false,
+      versionResolutionError: `Multiple supported lockfiles found: ${lockFiles.join(", ")}.`,
+    });
+  }
+  const lockedNames = new Set(
+    lockDependencies.map((dependency) => dependency.name),
+  );
+  for (const section of [
+    "dependencies",
+    "devDependencies",
+    "optionalDependencies",
+    "peerDependencies",
+  ] as const) {
+    for (const [name, version] of Object.entries(packageJson[section] ?? {})) {
+      if (version.startsWith("workspace:") || lockedNames.has(name)) continue;
+      dependencies.push({
+        name,
+        version,
+        ecosystem: "npm",
+        manifest,
+        versionResolved: false,
+        versionResolutionError: `The dependency is missing from ${lockFiles.join(", ")}.`,
+      });
+    }
+  }
 }
 
 function parsePyprojectManifest(
@@ -475,11 +646,17 @@ function parsePyprojectManifest(
   dependencies: Dependency[],
 ): void {
   const poetryLockPath = join(dirname(path), "poetry.lock");
-  if (
-    isFile(poetryLockPath) &&
-    parsePoetryLock(manifest, poetryLockPath, dependencies)
-  )
-    return;
+  if (isFile(poetryLockPath)) {
+    if (parsePoetryLock(manifest, poetryLockPath, dependencies)) return;
+    dependencies.push({
+      name: "(invalid poetry.lock)",
+      version: "unresolved",
+      ecosystem: "python",
+      manifest,
+      versionResolved: false,
+      versionResolutionError: "Could not parse the adjacent poetry.lock.",
+    });
+  }
   parsePyproject(manifest, path, dependencies);
 }
 
@@ -488,12 +665,18 @@ const MANIFEST_PARSERS: Record<string, ManifestParser> = {
   "npm-shrinkwrap.json": parseNpmLock,
   "yarn.lock": parseYarnLock,
   "pnpm-lock.yaml": parsePnpmLock,
-  "go.mod": parseGoMod,
-  "go.sum": parseGoSum,
   "requirements.txt": parseRequirements,
   "pyproject.toml": parsePyprojectManifest,
   "poetry.lock": (manifest, path, dependencies) => {
-    parsePoetryLock(manifest, path, dependencies);
+    if (!parsePoetryLock(manifest, path, dependencies))
+      dependencies.push({
+        name: "(invalid poetry.lock)",
+        version: "unresolved",
+        ecosystem: "python",
+        manifest,
+        versionResolved: false,
+        versionResolutionError: "Could not parse poetry.lock.",
+      });
   },
   "Pipfile.lock": parsePipfileLock,
 };
@@ -502,6 +685,7 @@ function parseManifest(
   root: string,
   path: string,
   dependencies: Dependency[],
+  goModuleList: GoModuleListRunner,
 ): void {
   const basename = path.split("/").pop() ?? path;
   const absolute = resolve(root, path);
@@ -511,10 +695,26 @@ function parseManifest(
     parsePackageJsonManifest(path, absolute, dependencies);
     return;
   }
+  if (basename === "go.mod") {
+    parseGoMod(path, absolute, dependencies, goModuleList);
+    return;
+  }
+  if (basename === "go.sum") return;
   const parser =
     MANIFEST_PARSERS[basename] ??
     (basename.endsWith(".txt") ? parseRequirements : undefined);
-  parser?.(path, absolute, dependencies);
+  if (parser) {
+    parser(path, absolute, dependencies);
+    return;
+  }
+  dependencies.push({
+    name: "(unsupported dependency input)",
+    version: "unresolved",
+    ecosystem: "unknown",
+    manifest: path,
+    versionResolved: false,
+    versionResolutionError: `No parser is available for dependency input ${basename}.`,
+  });
 }
 
 function overrideFor(
@@ -523,6 +723,7 @@ function overrideFor(
   version: string,
 ): string | undefined {
   for (const override of config.licenses ?? []) {
+    if (override.match !== undefined) continue;
     const versionMatches =
       !override.version ||
       override.version
@@ -536,6 +737,52 @@ function overrideFor(
       return override.license;
   }
   return undefined;
+}
+
+function matchOverrideFor(
+  config: DependencyConfig,
+  name: string,
+  version: string,
+  candidates: string[],
+): string | undefined {
+  for (const candidate of candidates) {
+    for (const override of config.licenses ?? []) {
+      if (override.match === undefined) continue;
+      const versionMatches =
+        !override.version ||
+        override.version
+          .split(",")
+          .map((item) => item.trim())
+          .includes(version);
+      if (
+        versionMatches &&
+        (override.name === name || minimatch(name, override.name)) &&
+        new RegExp(override.match).test(candidate)
+      )
+        return override.license;
+    }
+  }
+  return undefined;
+}
+
+function hasMatchRuleFor(
+  config: DependencyConfig,
+  name: string,
+  version: string,
+): boolean {
+  return (config.licenses ?? []).some((override) => {
+    if (override.match === undefined) return false;
+    const versionMatches =
+      !override.version ||
+      override.version
+        .split(",")
+        .map((item) => item.trim())
+        .includes(version);
+    return (
+      versionMatches &&
+      (override.name === name || minimatch(name, override.name))
+    );
+  });
 }
 
 function exceptionFor(
@@ -669,9 +916,12 @@ async function resolveNpm(
   root: string,
   dependency: Dependency,
   logger: Logger,
+  token: string | undefined,
+  includeMatchText: boolean,
 ): Promise<{
   license?: string;
   source?: string;
+  matchText?: string;
   resolution: DependencyResult["resolution"];
 }> {
   const installed = installedNpmPackage(
@@ -682,12 +932,17 @@ async function resolveNpm(
   const installedLicense = packageLicense(
     installed?.license ?? installed?.licenses,
   );
-  if (installedLicense)
+  const installedMatchText = includeMatchText
+    ? await npmRepositoryLicenseText(installed, token)
+    : undefined;
+  if (installedLicense && (!includeMatchText || installedMatchText)) {
     return {
       license: installedLicense,
       source: "node_modules/package.json",
+      matchText: installedMatchText,
       resolution: "manifest",
     };
+  }
   const encodedName = dependency.name.startsWith("@")
     ? dependency.name.replace("/", "%2f")
     : dependency.name;
@@ -703,29 +958,53 @@ async function resolveNpm(
         ["dist-tags"]?: { latest?: string };
       })
     | undefined;
+  const metadataMatchText = includeMatchText
+    ? ((await npmRepositoryLicenseText(metadata, token)) ?? installedMatchText)
+    : undefined;
+  if (installedLicense)
+    return {
+      license: installedLicense,
+      source: "node_modules/package.json",
+      matchText: metadataMatchText,
+      resolution: "manifest",
+    };
   const registryLicense = packageLicense(
     metadata?.license ?? metadata?.licenses,
   );
-  if (registryLicense)
+  if (registryLicense) {
     return {
       license: registryLicense,
       source: "registry.npmjs.org",
+      matchText: metadataMatchText,
       resolution: "registry",
     };
+  }
   if (metadata?.versions) {
     const latest = metadata.versions[metadata["dist-tags"]?.latest ?? ""];
     const latestLicense = packageLicense(latest?.license ?? latest?.licenses);
-    if (latestLicense)
+    if (latestLicense) {
+      const matchText = includeMatchText
+        ? await npmRepositoryLicenseText(latest, token)
+        : undefined;
       return {
         license: latestLicense,
         source: "registry.npmjs.org",
+        matchText,
         resolution: "registry",
       };
+    }
   }
+  if (installedLicense)
+    return {
+      license: installedLicense,
+      source: "node_modules/package.json",
+      matchText: metadataMatchText,
+      resolution: "manifest",
+    };
   logger.debug(
     `Could not resolve npm license for ${dependency.name}@${dependency.version}`,
   );
-  return { resolution: "unknown" };
+  return { matchText: metadataMatchText, resolution: "unknown" };
 }
 
 interface PythonPackageMetadata {
@@ -897,6 +1176,22 @@ function githubRepositoryFromUrl(url: string): string | undefined {
   }
 }
 
+async function npmRepositoryLicenseText(
+  packageInfo: PackageJson | undefined,
+  token: string | undefined,
+): Promise<string | undefined> {
+  const repositoryUrl =
+    typeof packageInfo?.repository === "string"
+      ? packageInfo.repository
+      : packageInfo?.repository?.url;
+  const repository = repositoryUrl
+    ? githubRepositoryFromUrl(repositoryUrl)
+    : undefined;
+  if (!repository) return undefined;
+  return (await resolveGithubRepositoryLicense(repository, token, true))
+    .matchText;
+}
+
 function githubRepositoryForPython(
   info: PythonPackageMetadata["info"],
 ): string | undefined {
@@ -913,9 +1208,11 @@ function githubRepositoryForPython(
 async function resolveGithubRepositoryLicense(
   repository: string,
   token: string | undefined,
+  includeMatchText = false,
 ): Promise<{
   license?: string;
   source?: string;
+  matchText?: string;
   resolution: DependencyResult["resolution"];
 }> {
   const apiUrl = `https://api.github.com/repos/${repository}/license`;
@@ -927,19 +1224,26 @@ async function resolveGithubRepositoryLicense(
       }
     | undefined;
   const apiLicense = metadata?.license?.spdx_id;
-  if (apiLicense && apiLicense !== "NOASSERTION")
+  if (apiLicense && apiLicense !== "NOASSERTION") {
+    const matchText =
+      includeMatchText && metadata?.download_url
+        ? await fetchText(metadata.download_url)
+        : undefined;
     return {
       license: apiLicense,
       source: apiUrl,
+      matchText,
       resolution: "repository",
     };
+  }
   if (metadata?.download_url) {
     const text = await fetchText(metadata.download_url);
     const license = text ? identifyLicenseText(text) : undefined;
-    if (license)
+    if (license || text)
       return {
         license,
         source: metadata.html_url ?? metadata.download_url,
+        matchText: text,
         resolution: "repository",
       };
   }
@@ -950,6 +1254,7 @@ type PythonResolution = {
   license?: string;
   source?: string;
   version?: string;
+  matchText?: string;
   resolution: DependencyResult["resolution"];
 };
 
@@ -1023,10 +1328,15 @@ async function repositoryPythonLicense(
   info: PythonPackageMetadata["info"],
   token: string | undefined,
   version: string | undefined,
+  includeMatchText = false,
 ): Promise<PythonResolution | undefined> {
   const repository = githubRepositoryForPython(info);
   if (!repository) return undefined;
-  const resolved = await resolveGithubRepositoryLicense(repository, token);
+  const resolved = await resolveGithubRepositoryLicense(
+    repository,
+    token,
+    includeMatchText,
+  );
   return resolved.license ? { ...resolved, version } : undefined;
 }
 
@@ -1034,6 +1344,7 @@ async function resolvePython(
   dependency: Dependency,
   token: string | undefined,
   logger: Logger,
+  includeMatchText: boolean,
 ): Promise<PythonResolution> {
   const packageName = dependency.name.replace(/[-_.]+/g, "-");
   const packageUrl = "https://pypi.org/pypi/" + encodeURIComponent(packageName);
@@ -1044,17 +1355,39 @@ async function resolvePython(
 
   const info = metadata?.info;
   const declared = declaredPythonLicense(info, version);
-  if (declared) return declared;
+  if (declared) {
+    if (!includeMatchText || !githubRepositoryForPython(info)) return declared;
+    const repository = await repositoryPythonLicense(
+      info,
+      token,
+      version,
+      includeMatchText,
+    );
+    return repository?.matchText
+      ? { ...declared, matchText: repository.matchText }
+      : declared;
+  }
   const classifierLicenses = licensesFromPythonClassifiers(info?.classifiers);
   const repository = githubRepositoryForPython(info);
+  const repositoryResolution =
+    includeMatchText && repository
+      ? await repositoryPythonLicense(info, token, version, includeMatchText)
+      : undefined;
   if (classifierLicenses.length > 1 && repository) {
-    const resolved = await repositoryPythonLicense(info, token, version);
+    const resolved =
+      repositoryResolution ??
+      (await repositoryPythonLicense(info, token, version, includeMatchText));
     if (resolved) return resolved;
   }
   const classifier = classifierPythonLicense(info?.classifiers, version);
-  if (classifier) return classifier;
+  if (classifier)
+    return repositoryResolution?.matchText
+      ? { ...classifier, matchText: repositoryResolution.matchText }
+      : classifier;
   if (repository) {
-    const resolved = await repositoryPythonLicense(info, token, version);
+    const resolved =
+      repositoryResolution ??
+      (await repositoryPythonLicense(info, token, version, includeMatchText));
     if (resolved) return resolved;
   }
   logger.debug(
@@ -1066,7 +1399,7 @@ async function resolvePython(
 function resolveVendoredGoLicense(
   root: string,
   dependency: Dependency,
-): { license?: string; source?: string } {
+): { license?: string; source?: string; matchText?: string } {
   const vendorRoot = join(root, dirname(dependency.manifest), "vendor");
   let directory = join(vendorRoot, ...dependency.name.split("/"));
   for (;;) {
@@ -1078,6 +1411,7 @@ function resolveVendoredGoLicense(
         return {
           license,
           source: relative(root, path),
+          matchText: text,
         };
     }
     if (directory === vendorRoot) break;
@@ -1091,9 +1425,11 @@ async function resolveGo(
   dependency: Dependency,
   token: string | undefined,
   logger: Logger,
+  includeMatchText: boolean,
 ): Promise<{
   license?: string;
   source?: string;
+  matchText?: string;
   resolution: DependencyResult["resolution"];
 }> {
   const vendored = resolveVendoredGoLicense(root, dependency);
@@ -1113,12 +1449,22 @@ async function resolveGo(
   const apiMetadata = (await fetchJson(
     `https://api.github.com/repos/${match[1]}/license`,
     token,
-  )) as { license?: { spdx_id?: string } } | undefined;
+  )) as
+    | {
+        license?: { spdx_id?: string };
+        download_url?: string;
+      }
+    | undefined;
   const apiLicense = apiMetadata?.license?.spdx_id;
   if (apiLicense && apiLicense !== "NOASSERTION") {
+    const matchText =
+      includeMatchText && apiMetadata.download_url
+        ? await fetchText(apiMetadata.download_url)
+        : undefined;
     return {
       license: apiLicense,
       source: `api.github.com/repos/${match[1]}/license`,
+      matchText,
       resolution: "repository",
     };
   }
@@ -1143,10 +1489,11 @@ async function resolveGo(
     const license = attempt.text
       ? identifyLicenseText(attempt.text)
       : undefined;
-    if (license)
+    if (license || (includeMatchText && attempt.text))
       return {
         license,
         source: `github.com/${match[1]}/${attempt.filename}`,
+        matchText: attempt.text,
         resolution: "repository",
       };
   }
@@ -1158,17 +1505,19 @@ async function resolveByEcosystem(
   dependency: Dependency,
   token: string | undefined,
   logger: Logger,
+  includeMatchText: boolean,
 ): Promise<{
   license?: string;
   source?: string;
+  matchText?: string;
   version?: string;
   resolution: DependencyResult["resolution"];
 }> {
   if (dependency.ecosystem === "npm")
-    return resolveNpm(root, dependency, logger);
+    return resolveNpm(root, dependency, logger, token, includeMatchText);
   if (dependency.ecosystem === "python")
-    return resolvePython(dependency, token, logger);
-  return resolveGo(root, dependency, token, logger);
+    return resolvePython(dependency, token, logger, includeMatchText);
+  return resolveGo(root, dependency, token, logger, includeMatchText);
 }
 
 async function resolveLicense(
@@ -1190,6 +1539,49 @@ async function resolveLicense(
       resolution: "configured",
       source: "configuration",
     };
+  const matchCandidates = dependency.rawLicense ? [dependency.rawLicense] : [];
+  const configuredMatch = matchOverrideFor(
+    config,
+    dependency.name,
+    dependency.version,
+    matchCandidates,
+  );
+  if (configuredMatch)
+    return {
+      license: configuredMatch,
+      resolution: "configured",
+      source: "configuration",
+    };
+
+  const hasMatchRules = hasMatchRuleFor(
+    config,
+    dependency.name,
+    dependency.version,
+  );
+  const resolved = await resolveByEcosystem(
+    root,
+    dependency,
+    token,
+    logger,
+    hasMatchRules,
+  );
+  const configuredTextMatch = matchOverrideFor(
+    config,
+    dependency.name,
+    dependency.version,
+    [
+      ...matchCandidates,
+      ...(resolved.license ? [resolved.license] : []),
+      ...(resolved.matchText ? [resolved.matchText] : []),
+    ],
+  );
+  if (configuredTextMatch)
+    return {
+      license: configuredTextMatch,
+      resolution: "configured",
+      source: "configuration",
+      version: resolved.version,
+    };
   if (dependency.rawLicense)
     return {
       license: dependency.rawLicense,
@@ -1197,7 +1589,6 @@ async function resolveLicense(
       source: dependency.manifest,
     };
 
-  const resolved = await resolveByEcosystem(root, dependency, token, logger);
   return {
     license: resolved.license ?? "Unknown",
     resolution: resolved.resolution,
@@ -1225,6 +1616,7 @@ export async function checkDependencies(
   token: string | undefined,
   weakCompatible: boolean,
   logger: Logger,
+  goModuleList: GoModuleListRunner = systemGoModuleList,
 ): Promise<DependencyReport> {
   const dependencyConfig = config.dependency;
   if (!dependencyConfig?.files?.length) {
@@ -1232,11 +1624,29 @@ export async function checkDependencies(
   }
 
   const dependencies: Dependency[] = [];
+  const configuredPaths = new Set(
+    dependencyConfig.files.map((path) => path.replaceAll("\\", "/")),
+  );
   for (const configuredPath of dependencyConfig.files) {
     const path = configuredPath.replaceAll("\\", "/");
     if (!isFile(resolve(root, path)))
       throw new Error(`Dependency file not found: ${path}`);
-    parseManifest(root, path, dependencies);
+    if (
+      path.split("/").pop() === "go.sum" &&
+      !configuredPaths.has(join(dirname(path), "go.mod").replaceAll("\\", "/"))
+    ) {
+      dependencies.push({
+        name: "(Go module graph)",
+        version: "unresolved",
+        ecosystem: "go",
+        manifest: path,
+        versionResolved: false,
+        versionResolutionError:
+          "go.sum contains checksums, not the selected module graph; configure the adjacent go.mod.",
+      });
+      continue;
+    }
+    parseManifest(root, path, dependencies, goModuleList);
   }
 
   const uniqueDependencies = uniqueBy(
@@ -1270,6 +1680,19 @@ export async function checkDependencies(
       logger.debug(
         `Resolving dependency ${index + 1}/${uniqueDependencies.length}: ${dependency.name}@${dependency.version}`,
       );
+      if (!dependency.versionResolved) {
+        resultSlots[index] = {
+          ...dependency,
+          license: "Unknown",
+          normalized: "Unknown",
+          resolution: "unknown",
+          compatible: "unknown",
+          reason:
+            dependency.versionResolutionError ??
+            "An exact resolved dependency version is required.",
+        };
+        continue;
+      }
       const exception = exceptionFor(
         dependencyConfig,
         dependency.name,

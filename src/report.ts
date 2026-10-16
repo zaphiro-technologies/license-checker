@@ -38,6 +38,7 @@ function dependencyRows(results: DependencyResult[]): string[][] {
     result.resolution,
     approvalDetails(result),
     result.distributionWarning ?? "",
+    result.reason ? escapeTableCell(result.reason) : "",
   ]);
 }
 
@@ -66,12 +67,12 @@ function commentBody(report: CheckReport): string {
     lines.push(
       "### Dependency license failures",
       "",
-      "| Dependency | Version | License | Result |",
-      "|---|---:|---|---|",
+      "| Dependency | Version | License | Result | Reason |",
+      "|---|---:|---|---|---|",
     );
     for (const result of report.dependency.failures.slice(0, 100)) {
       lines.push(
-        `| ${result.name} | ${result.version} | ${result.normalized} | ${result.compatible} |`,
+        `| ${result.name} | ${result.version} | ${result.normalized} | ${result.compatible} | ${escapeTableCell(result.reason ?? "")} |`,
       );
     }
     lines.push("");
@@ -184,6 +185,7 @@ export async function writeSummary(
           { data: "Resolution", header: true },
           { data: "Manual approval", header: true },
           { data: "Distribution review", header: true },
+          { data: "Reason", header: true },
         ],
         ...dependencyRows(displayedDependencies),
       ]);
@@ -198,6 +200,7 @@ export async function writeSummary(
         { data: "Resolution", header: true },
         { data: "Manual approval", header: true },
         { data: "Distribution review", header: true },
+        { data: "Reason", header: true },
       ],
       ...dependencyRows(approvals),
     ]);
@@ -208,7 +211,7 @@ export async function writeSummary(
 export function annotate(report: CheckReport): void {
   for (const result of report.dependency.failures) {
     core.error(
-      `${result.name}@${result.version}: ${result.normalized} (${result.compatible})`,
+      `${result.name}@${result.version}: ${result.normalized} (${result.compatible})${result.reason ? ` - ${result.reason}` : ""}`,
       {
         file: result.manifest,
         startLine: 1,

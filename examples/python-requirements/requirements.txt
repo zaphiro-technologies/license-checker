@@ -1,0 +1,2 @@
+# This example has no transitive dependencies; list the complete resolved set.
+idna==3.10

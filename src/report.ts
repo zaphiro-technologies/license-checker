@@ -20,6 +20,14 @@ import type { CheckReport, DependencyResult } from "./types.js";
 
 const COMMENT_MARKER = "<!-- license-checker-action -->";
 
+function workflowSummaryLink(): string | undefined {
+  const serverUrl = process.env.GITHUB_SERVER_URL;
+  const repository = process.env.GITHUB_REPOSITORY;
+  const runId = process.env.GITHUB_RUN_ID;
+  if (!serverUrl || !repository || !runId) return undefined;
+  return `${serverUrl}/${repository}/actions/runs/${runId}`;
+}
+
 function escapeTableCell(value: string): string {
   return value.replaceAll("|", String.raw`\|`).replaceAll("\n", " ");
 }
@@ -77,39 +85,14 @@ function commentBody(report: CheckReport): string {
     }
     lines.push("");
   }
-  const warnings = distributionWarnings(report);
-  if (warnings.length > 0) {
-    lines.push(
-      "### Distribution review warnings",
-      "",
-      "| Dependency | Version | License | Review required |",
-      "|---|---:|---|---|",
-    );
-    for (const result of warnings.slice(0, 100)) {
-      lines.push(
-        `| ${result.name} | ${result.version} | ${result.normalized} | ${escapeTableCell(result.distributionWarning ?? "")} |`,
-      );
-    }
-    lines.push("");
-  }
-  const approvals = report.dependency.results.filter(
-    (result) => result.compatible === "approved-exception" && result.approval,
-  );
-  if (approvals.length > 0) {
-    lines.push(
-      "### Manual license approvals",
-      "",
-      "| Dependency | Version | Terms | Reason |",
-      "|---|---:|---|---|",
-    );
-    for (const result of approvals) {
-      lines.push(
-        `| ${result.name} | ${result.version} | [terms](${result.approval?.url}) | ${escapeTableCell(result.approval?.reason ?? "")} |`,
-      );
-    }
-    lines.push("");
-  }
   lines.push(`Checked ${report.dependency.checked} dependencies.`);
+  const summaryLink = workflowSummaryLink();
+  if (summaryLink) {
+    lines.push(
+      "",
+      `[View the full report in the workflow summary](${summaryLink})`,
+    );
+  }
   return lines.join("\n");
 }
 
@@ -210,8 +193,9 @@ export async function writeSummary(
 
 export function annotate(report: CheckReport): void {
   for (const result of report.dependency.failures) {
+    const reason = result.reason ? ` - ${result.reason}` : "";
     core.error(
-      `${result.name}@${result.version}: ${result.normalized} (${result.compatible})${result.reason ? ` - ${result.reason}` : ""}`,
+      `${result.name}@${result.version}: ${result.normalized} (${result.compatible})${reason}`,
       {
         file: result.manifest,
         startLine: 1,

@@ -46347,8 +46347,18 @@ function npmVersionIsExact(version) {
     return /^v?\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?$/.test(version);
 }
 function pythonVersionIsExact(version) {
-    return (/^\d+(?:\.\d+)*(?:[A-Za-z0-9.+!-]+)?$/.test(version) &&
-        !/[*!<>=~,\s]/.test(version));
+    if (!version || version[0] < "0" || version[0] > "9")
+        return false;
+    for (const character of version) {
+        if ((character >= "0" && character <= "9") ||
+            (character >= "A" && character <= "Z") ||
+            (character >= "a" && character <= "z") ||
+            ".!+-".includes(character)) {
+            continue;
+        }
+        return false;
+    }
+    return true;
 }
 function addPackageJsonDependencies(dependencies, manifest, packageJson) {
     for (const section of [
@@ -46523,11 +46533,45 @@ function parsePnpmLock(manifest, lockPath, dependencies) {
         }
     }
 }
+function goExecutablePath() {
+    const executable = process.platform === "win32" ? "go.exe" : "go";
+    const goRoot = process.env.GOROOT;
+    const runnerGoRoot = process.env.RUNNER_TOOL_CACHE
+        ? (0,external_node_path_.join)(process.env.RUNNER_TOOL_CACHE, "go")
+        : undefined;
+    const cachedPathCandidates = runnerGoRoot
+        ? (process.env.PATH ?? "")
+            .split(external_node_path_.delimiter)
+            .filter((directory) => (0,external_node_path_.isAbsolute)(directory))
+            .map((directory) => (0,external_node_path_.join)(directory, executable))
+            .filter((candidate) => {
+            const relativeCandidate = (0,external_node_path_.relative)((0,external_node_path_.resolve)(runnerGoRoot), (0,external_node_path_.resolve)(candidate));
+            return (relativeCandidate !== "" &&
+                relativeCandidate !== ".." &&
+                !relativeCandidate.startsWith(`..${external_node_path_.sep}`) &&
+                !(0,external_node_path_.isAbsolute)(relativeCandidate));
+        })
+        : [];
+    const candidates = [
+        goRoot && (0,external_node_path_.isAbsolute)(goRoot) ? (0,external_node_path_.join)(goRoot, "bin", executable) : undefined,
+        ...cachedPathCandidates,
+        ...(process.platform === "win32"
+            ? ["C:\\Program Files\\Go\\bin\\go.exe"]
+            : [
+                "/usr/local/go/bin/go",
+                "/usr/local/bin/go",
+                "/opt/homebrew/bin/go",
+                "/usr/bin/go",
+            ]),
+    ];
+    const executablePath = candidates.find((candidate) => candidate && (0,external_node_fs_.existsSync)(candidate));
+    if (!executablePath) {
+        throw new Error("Could not locate Go; set GOROOT or install Go in a standard location.");
+    }
+    return executablePath;
+}
 function systemGoModuleList(moduleDirectory) {
-    return (0,external_node_child_process_namespaceObject.execFileSync)("go", ["list", "-mod=readonly", "-m", "all"], {
-        cwd: moduleDirectory,
-        encoding: "utf8",
-    });
+    return (0,external_node_child_process_namespaceObject.execFileSync)(goExecutablePath(), ["list", "-mod=readonly", "-m", "all"], { cwd: moduleDirectory, encoding: "utf8" });
 }
 function parseGoMod(manifest, path, dependencies, goModuleList) {
     let output;
@@ -46554,17 +46598,22 @@ function parseGoMod(manifest, path, dependencies, goModuleList) {
         const version = fields[1];
         const replaced = fields.includes("=>");
         const versionResolved = !replaced && /^v\d+\.\d+\.\d+(?:-[\w.-]+)?(?:\+[\w.-]+)?$/.test(version);
+        let versionResolutionError;
+        if (replaced) {
+            versionResolutionError =
+                "The Go module is replaced; its effective source version is not established.";
+        }
+        else if (!versionResolved) {
+            versionResolutionError =
+                "The Go build list did not provide an exact module version.";
+        }
         dependencies.push({
             name,
             version,
             ecosystem: "go",
             manifest,
             versionResolved,
-            versionResolutionError: replaced
-                ? "The Go module is replaced; its effective source version is not established."
-                : versionResolved
-                    ? undefined
-                    : "The Go build list did not provide an exact module version.",
+            versionResolutionError,
         });
     }
 }
@@ -46726,17 +46775,16 @@ function parsePipfileLock(manifest, path, dependencies) {
     }
     for (const section of [lock?.default, lock?.develop]) {
         for (const [name, value] of Object.entries(section ?? {})) {
+            const versionIsExact = typeof value.version === "string" &&
+                value.version.startsWith("==") &&
+                pythonVersionIsExact(value.version.slice(2));
             dependencies.push({
                 name,
                 version: value.version?.replace(/^==/, "") ?? "*",
                 ecosystem: "python",
                 manifest,
-                versionResolved: typeof value.version === "string" &&
-                    value.version.startsWith("==") &&
-                    pythonVersionIsExact(value.version.slice(2)),
-                versionResolutionError: typeof value.version === "string" &&
-                    value.version.startsWith("==") &&
-                    pythonVersionIsExact(value.version.slice(2))
+                versionResolved: versionIsExact,
+                versionResolutionError: versionIsExact
                     ? undefined
                     : "The Pipfile lock entry has no exact version.",
             });
@@ -47337,24 +47385,23 @@ async function repositoryPythonLicense(info, token, version, includeMatchText = 
     const resolved = await resolveGithubRepositoryLicense(repository, token, includeMatchText);
     return resolved.license ? { ...resolved, version } : undefined;
 }
-async function resolvePython(dependency, token, logger, includeMatchText) {
-    const packageName = dependency.name.replace(/[-_.]+/g, "-");
-    const packageUrl = "https://pypi.org/pypi/" + encodeURIComponent(packageName);
-    const { metadata, version } = await loadPythonMetadata(packageUrl, dependency);
-    const info = metadata?.info;
-    const declared = declaredPythonLicense(info, version);
-    if (declared) {
-        if (!includeMatchText || !githubRepositoryForPython(info))
-            return declared;
-        const repository = await repositoryPythonLicense(info, token, version, includeMatchText);
-        return repository?.matchText
-            ? { ...declared, matchText: repository.matchText }
-            : declared;
-    }
+function addRepositoryMatchText(license, repositoryLicense) {
+    if (!repositoryLicense?.matchText)
+        return license;
+    return { ...license, matchText: repositoryLicense.matchText };
+}
+async function resolveDeclaredPythonLicense(info, license, token, version) {
+    const repository = githubRepositoryForPython(info);
+    if (!repository)
+        return license;
+    const repositoryLicense = await repositoryPythonLicense(info, token, version, true);
+    return addRepositoryMatchText(license, repositoryLicense);
+}
+async function resolvePythonFallbackLicense(info, token, version, includeMatchText) {
     const classifierLicenses = licensesFromPythonClassifiers(info?.classifiers);
     const repository = githubRepositoryForPython(info);
     const repositoryResolution = includeMatchText && repository
-        ? await repositoryPythonLicense(info, token, version, includeMatchText)
+        ? await repositoryPythonLicense(info, token, version, true)
         : undefined;
     if (classifierLicenses.length > 1 && repository) {
         const resolved = repositoryResolution ??
@@ -47364,15 +47411,26 @@ async function resolvePython(dependency, token, logger, includeMatchText) {
     }
     const classifier = classifierPythonLicense(info?.classifiers, version);
     if (classifier)
-        return repositoryResolution?.matchText
-            ? { ...classifier, matchText: repositoryResolution.matchText }
-            : classifier;
-    if (repository) {
-        const resolved = repositoryResolution ??
-            (await repositoryPythonLicense(info, token, version, includeMatchText));
-        if (resolved)
-            return resolved;
+        return addRepositoryMatchText(classifier, repositoryResolution);
+    if (!repository)
+        return undefined;
+    return (repositoryResolution ??
+        (await repositoryPythonLicense(info, token, version, includeMatchText)));
+}
+async function resolvePython(dependency, token, logger, includeMatchText) {
+    const packageName = dependency.name.replace(/[-_.]+/g, "-");
+    const packageUrl = "https://pypi.org/pypi/" + encodeURIComponent(packageName);
+    const { metadata, version } = await loadPythonMetadata(packageUrl, dependency);
+    const info = metadata?.info;
+    const declared = declaredPythonLicense(info, version);
+    if (declared) {
+        if (!includeMatchText)
+            return declared;
+        return resolveDeclaredPythonLicense(info, declared, token, version);
     }
+    const fallback = await resolvePythonFallbackLicense(info, token, version, includeMatchText);
+    if (fallback)
+        return fallback;
     logger.debug(`Could not resolve Python license for ${dependency.name}@${dependency.version}`);
     return { resolution: "unknown" };
 }
@@ -47531,69 +47589,72 @@ async function checkDependencies(root, config, token, weakCompatible, logger, go
     const uniqueDependencies = uniqueBy(dependencies, (dependency) => `${dependency.ecosystem}:${dependency.name}@${dependency.version}`).filter((dependency) => !excludedBy(dependencyConfig, dependency.name, dependency.version));
     logger.info(`Found ${uniqueDependencies.length} dependencies to check.`);
     const resultSlots = new Array(uniqueDependencies.length);
-    let nextIndex = 0;
-    const worker = async () => {
-        while (true) {
-            const index = nextIndex++;
-            const dependency = uniqueDependencies[index];
-            if (!dependency)
-                return;
-            if (index === 0 ||
-                (index + 1) % 100 === 0 ||
-                index === uniqueDependencies.length - 1) {
-                logger.info(`Resolving dependencies: ${index + 1}/${uniqueDependencies.length}`);
-            }
-            logger.debug(`Resolving dependency ${index + 1}/${uniqueDependencies.length}: ${dependency.name}@${dependency.version}`);
-            if (!dependency.versionResolved) {
-                resultSlots[index] = {
-                    ...dependency,
-                    license: "Unknown",
-                    normalized: "Unknown",
-                    resolution: "unknown",
-                    compatible: "unknown",
-                    reason: dependency.versionResolutionError ??
-                        "An exact resolved dependency version is required.",
-                };
-                continue;
-            }
-            const exception = exceptionFor(dependencyConfig, dependency.name, dependency.version);
-            if (exception) {
-                resultSlots[index] = {
-                    ...dependency,
-                    license: "LicenseRef-Manual-Exception",
-                    normalized: "LicenseRef-Manual-Exception",
-                    resolution: "exception",
-                    compatible: "approved-exception",
-                    source: exception.url,
-                    approval: { url: exception.url, reason: exception.reason },
-                    reason: `Manual approval: ${exception.reason}`,
-                };
-                logger.debug(`Dependency ${dependency.name}@${dependency.version}: approved manual exception`);
-                continue;
-            }
-            const resolved = await resolveLicense(root, dependency, dependencyConfig, token, logger);
-            const resolvedDependency = resolved.version
-                ? { ...dependency, version: resolved.version }
-                : dependency;
-            const normalized = normalizeLicenseExpression(resolved.license);
-            const distributionWarning = distributionWarningFor(normalized);
-            const compatibility = checkCompatibility(mainLicenseFor(dependency.manifest, config), normalized, weakCompatible, dependencyConfig);
-            resultSlots[index] = {
-                ...resolvedDependency,
-                license: resolved.license,
-                normalized,
-                resolution: resolved.resolution,
-                source: resolved.source,
-                compatible: compatibility,
-                distributionWarning,
-                reason: compatibility === "compatible"
-                    ? undefined
-                    : `${compatibility} with project license`,
-            };
-            logger.debug(`Dependency ${dependency.name}@${dependency.version}: ${normalized} (${compatibility})`);
+    const concurrency = Math.min(16, uniqueDependencies.length);
+    const resolveDependency = async (index) => {
+        const dependency = uniqueDependencies[index];
+        if (!dependency)
+            return;
+        if (index === 0 ||
+            (index + 1) % 100 === 0 ||
+            index === uniqueDependencies.length - 1) {
+            logger.info(`Resolving dependencies: ${index + 1}/${uniqueDependencies.length}`);
         }
+        logger.debug(`Resolving dependency ${index + 1}/${uniqueDependencies.length}: ${dependency.name}@${dependency.version}`);
+        if (!dependency.versionResolved) {
+            resultSlots[index] = {
+                ...dependency,
+                license: "Unknown",
+                normalized: "Unknown",
+                resolution: "unknown",
+                compatible: "unknown",
+                reason: dependency.versionResolutionError ??
+                    "An exact resolved dependency version is required.",
+            };
+            return;
+        }
+        const exception = exceptionFor(dependencyConfig, dependency.name, dependency.version);
+        if (exception) {
+            resultSlots[index] = {
+                ...dependency,
+                license: "LicenseRef-Manual-Exception",
+                normalized: "LicenseRef-Manual-Exception",
+                resolution: "exception",
+                compatible: "approved-exception",
+                source: exception.url,
+                approval: { url: exception.url, reason: exception.reason },
+                reason: `Manual approval: ${exception.reason}`,
+            };
+            logger.debug(`Dependency ${dependency.name}@${dependency.version}: approved manual exception`);
+            return;
+        }
+        const resolved = await resolveLicense(root, dependency, dependencyConfig, token, logger);
+        const resolvedDependency = resolved.version
+            ? { ...dependency, version: resolved.version }
+            : dependency;
+        const normalized = normalizeLicenseExpression(resolved.license);
+        const distributionWarning = distributionWarningFor(normalized);
+        const compatibility = checkCompatibility(mainLicenseFor(dependency.manifest, config), normalized, weakCompatible, dependencyConfig);
+        resultSlots[index] = {
+            ...resolvedDependency,
+            license: resolved.license,
+            normalized,
+            resolution: resolved.resolution,
+            source: resolved.source,
+            compatible: compatibility,
+            distributionWarning,
+            reason: compatibility === "compatible"
+                ? undefined
+                : `${compatibility} with project license`,
+        };
+        logger.debug(`Dependency ${dependency.name}@${dependency.version}: ${normalized} (${compatibility})`);
     };
-    await Promise.all(Array.from({ length: Math.min(16, uniqueDependencies.length) }, () => worker()));
+    const worker = async (index) => {
+        if (index >= uniqueDependencies.length)
+            return;
+        await resolveDependency(index);
+        return worker(index + concurrency);
+    };
+    await Promise.all(Array.from({ length: concurrency }, (_, index) => worker(index)));
     const results = resultSlots.filter((result) => result !== undefined);
     return {
         checked: results.length,
@@ -47776,6 +47837,14 @@ class Logger {
 
 
 const COMMENT_MARKER = "<!-- license-checker-action -->";
+function workflowSummaryLink() {
+    const serverUrl = process.env.GITHUB_SERVER_URL;
+    const repository = process.env.GITHUB_REPOSITORY;
+    const runId = process.env.GITHUB_RUN_ID;
+    if (!serverUrl || !repository || !runId)
+        return undefined;
+    return `${serverUrl}/${repository}/actions/runs/${runId}`;
+}
 function escapeTableCell(value) {
     return value.replaceAll("|", String.raw `\|`).replaceAll("\n", " ");
 }
@@ -47814,23 +47883,11 @@ function commentBody(report) {
         }
         lines.push("");
     }
-    const warnings = distributionWarnings(report);
-    if (warnings.length > 0) {
-        lines.push("### Distribution review warnings", "", "| Dependency | Version | License | Review required |", "|---|---:|---|---|");
-        for (const result of warnings.slice(0, 100)) {
-            lines.push(`| ${result.name} | ${result.version} | ${result.normalized} | ${escapeTableCell(result.distributionWarning ?? "")} |`);
-        }
-        lines.push("");
-    }
-    const approvals = report.dependency.results.filter((result) => result.compatible === "approved-exception" && result.approval);
-    if (approvals.length > 0) {
-        lines.push("### Manual license approvals", "", "| Dependency | Version | Terms | Reason |", "|---|---:|---|---|");
-        for (const result of approvals) {
-            lines.push(`| ${result.name} | ${result.version} | [terms](${result.approval?.url}) | ${escapeTableCell(result.approval?.reason ?? "")} |`);
-        }
-        lines.push("");
-    }
     lines.push(`Checked ${report.dependency.checked} dependencies.`);
+    const summaryLink = workflowSummaryLink();
+    if (summaryLink) {
+        lines.push("", `[View the full report in the workflow summary](${summaryLink})`);
+    }
     return lines.join("\n");
 }
 function dependencySummaryRows(report, warnings, approvals) {
@@ -47911,7 +47968,8 @@ async function writeSummary(report, summaryMode = "issues") {
 }
 function annotate(report) {
     for (const result of report.dependency.failures) {
-        _actions_core__WEBPACK_IMPORTED_MODULE_0__.error(`${result.name}@${result.version}: ${result.normalized} (${result.compatible})${result.reason ? ` - ${result.reason}` : ""}`, {
+        const reason = result.reason ? ` - ${result.reason}` : "";
+        _actions_core__WEBPACK_IMPORTED_MODULE_0__.error(`${result.name}@${result.version}: ${result.normalized} (${result.compatible})${reason}`, {
             file: result.manifest,
             startLine: 1,
         });

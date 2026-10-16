@@ -133,16 +133,17 @@ when `weak-compatible: true`.
 | `report-all`      | `false`               | Include compatible dependencies in the job summary       |
 
 By default, the job summary and pull-request comment show dependency issues
-only. Manually approved non-SPDX exceptions remain visible in a separate audit
-section. Set `report-all: true` to include every compatible dependency in the
-job summary.
+only. Distribution review warnings and manually approved non-SPDX exceptions
+are included in the job summary; they are omitted from the pull-request comment.
+The pull-request comment links to the workflow run summary for the full report.
+Set `report-all: true` to include every compatible dependency in the job summary.
 
 Compatible reciprocal/copyleft dependencies are also reported by default as
 non-blocking **Distribution review** warnings. LGPL, MPL, GPL/AGPL, CAL, and
 related reciprocal licenses can require notices, license copies, source
 availability, relinking, or other conditions when software is distributed. These
-warnings do not fail the action, but they do appear in the job summary,
-pull-request comment, and GitHub Actions warning annotations.
+warnings do not fail the action. They appear in the job summary and as GitHub
+Actions warning annotations.
 
 The generated `dist/index.js` bundle is committed because JavaScript GitHub
 Actions run from the checked-out action repository without installing its Node

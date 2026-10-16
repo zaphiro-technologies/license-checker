@@ -101,6 +101,9 @@ describe("summary reporting", () => {
 
   afterEach(() => {
     delete process.env.GITHUB_STEP_SUMMARY;
+    delete process.env.GITHUB_SERVER_URL;
+    delete process.env.GITHUB_REPOSITORY;
+    delete process.env.GITHUB_RUN_ID;
   });
 
   it("shows only dependency issues by default", () => {
@@ -131,6 +134,9 @@ describe("summary reporting", () => {
     expect(actionMocks.summary.addHeading).toHaveBeenCalledWith(
       "Manual license approvals",
       3,
+    );
+    expect(JSON.stringify(actionMocks.summary.addTable.mock.calls)).toContain(
+      "Include LGPL notices",
     );
     expect(actionMocks.summary.addTable).toHaveBeenCalledTimes(3);
     expect(actionMocks.summary.write).toHaveBeenCalledOnce();
@@ -193,6 +199,9 @@ describe("summary reporting", () => {
   });
 
   it("creates, updates, and safely handles pull-request comments", async () => {
+    process.env.GITHUB_SERVER_URL = "https://github.com";
+    process.env.GITHUB_REPOSITORY = "zaphiro-technologies/license-checker";
+    process.env.GITHUB_RUN_ID = "12345";
     const issues = {
       createComment: vi.fn().mockResolvedValue({}),
       listComments: vi.fn().mockResolvedValue({ data: [] }),
@@ -207,8 +216,12 @@ describe("summary reporting", () => {
         owner: "zaphiro-technologies",
       }),
     );
-    expect(issues.createComment.mock.calls[0]?.[0].body).toContain(
-      "Manual license approvals",
+    const commentBody = issues.createComment.mock.calls[0]?.[0].body as string;
+    expect(commentBody).not.toContain("Distribution review warnings");
+    expect(commentBody).not.toContain("Manual license approvals");
+    expect(commentBody).toContain("Dependency license failures");
+    expect(commentBody).toContain(
+      "[View the full report in the workflow summary](https://github.com/zaphiro-technologies/license-checker/actions/runs/12345)",
     );
 
     issues.listComments.mockResolvedValueOnce({

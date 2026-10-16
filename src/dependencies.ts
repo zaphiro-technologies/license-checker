@@ -194,6 +194,120 @@ function parseNpmLock(
   if (lock.dependencies) visitLegacy(lock.dependencies);
 }
 
+interface YarnDescriptor {
+  name: string;
+  range: string;
+}
+
+interface YarnEntry {
+  descriptors: YarnDescriptor[];
+  name: string;
+  version: string;
+  workspace: boolean;
+  dependencies: YarnDescriptor[];
+}
+
+function parseYarnDescriptor(value: string): YarnDescriptor | undefined {
+  const normalized = value.trim().replace(/^['"]|['"]$/g, "");
+  const separator = normalized.startsWith("@")
+    ? normalized.indexOf("@", normalized.indexOf("/") + 1)
+    : normalized.indexOf("@");
+  if (separator <= 0) return undefined;
+  return {
+    name: normalized.slice(0, separator),
+    range: normalized.slice(separator + 1),
+  };
+}
+
+function unquoteYarn(value: string): string {
+  return value.trim().replace(/^['"]|['"]$/g, "");
+}
+
+function parseYarnVersion(line: string): string | undefined {
+  const trimmed = line.trimStart();
+  if (!trimmed.startsWith("version")) return undefined;
+  let value = trimmed.slice("version".length).trimStart();
+  if (value.startsWith(":")) value = value.slice(1).trimStart();
+  value = value.replace(/^['"]/, "");
+  const end = [...value].findIndex((character) => /['"\s]/.test(character));
+  return value.slice(0, end < 0 ? value.length : end);
+}
+
+function yarnEntryFromSelectorLine(line: string): YarnEntry {
+  const selectors = line.slice(0, -1).trim().split(/,\s*/);
+  const descriptors = selectors
+    .map(parseYarnDescriptor)
+    .filter((item): item is YarnDescriptor => item !== undefined);
+  const aliasName = descriptors
+    .map((descriptor) =>
+      descriptor.range.startsWith("npm:")
+        ? parseYarnDescriptor(descriptor.range.slice(4))?.name
+        : undefined,
+    )
+    .find((name): name is string => name !== undefined);
+  return {
+    descriptors,
+    name: aliasName ?? descriptors[0]?.name ?? "",
+    version: "*",
+    workspace: selectors.some((item) => item.includes("@workspace:")),
+    dependencies: [],
+  };
+}
+
+function parseYarnEntryLine(
+  line: string,
+  entry: YarnEntry,
+  dependencySection: boolean,
+): boolean {
+  const trimmed = line.trimStart();
+  const indentation = line.length - trimmed.length;
+  if (indentation === 2) {
+    if (trimmed === "dependencies:" || trimmed === "optionalDependencies:")
+      return true;
+    const version = parseYarnVersion(line);
+    if (version) entry.version = version;
+    if (!trimmed.startsWith("resolution:")) return false;
+    const resolution = unquoteYarn(trimmed.slice("resolution:".length));
+    const locator = resolution.indexOf("@npm:");
+    if (locator >= 0) {
+      const target = parseYarnDescriptor(resolution.slice(locator + 5));
+      if (target) entry.name = target.name;
+    }
+    if (resolution.includes("@workspace:")) entry.workspace = true;
+    return false;
+  }
+  if (indentation <= 2) return false;
+  if (indentation === 3) return dependencySection;
+  if (!dependencySection) return false;
+  const colon = trimmed.indexOf(":");
+  const separator = colon > 0 ? colon : trimmed.search(/\s/);
+  if (separator <= 0) return dependencySection;
+  const descriptor = parseYarnDescriptor(
+    `${unquoteYarn(trimmed.slice(0, separator))}@${unquoteYarn(trimmed.slice(separator + 1))}`,
+  );
+  if (descriptor) entry.dependencies.push(descriptor);
+  return true;
+}
+
+function parseYarnLockEntries(lockText: string): YarnEntry[] {
+  const entries: YarnEntry[] = [];
+  let current: YarnEntry | undefined;
+  let dependencySection = false;
+  for (const line of lockText.split(/\r?\n/)) {
+    if (!line.trim() || line.startsWith("#")) continue;
+    if (!line.startsWith(" ") && !line.startsWith("\t") && line.endsWith(":")) {
+      if (current) entries.push(current);
+      current = yarnEntryFromSelectorLine(line);
+      dependencySection = false;
+      continue;
+    }
+    if (current)
+      dependencySection = parseYarnEntryLine(line, current, dependencySection);
+  }
+  if (current) entries.push(current);
+  return entries;
+}
+
 function parseYarnLock(
   manifest: string,
   lockPath: string,
@@ -201,176 +315,103 @@ function parseYarnLock(
   packageJson: PackageJson,
   includeDevDependencies: boolean,
 ): void {
-  const text = readFileSync(lockPath, "utf8");
-  interface YarnDescriptor {
-    name: string;
-    range: string;
-  }
-  interface YarnEntry {
-    descriptors: YarnDescriptor[];
-    name: string;
-    version: string;
-    workspace: boolean;
-    dependencies: YarnDescriptor[];
-  }
-  const parseDescriptor = (value: string): YarnDescriptor | undefined => {
-    const normalized = value.trim().replace(/^['"]|['"]$/g, "");
-    const separator = normalized.startsWith("@")
-      ? normalized.indexOf("@", normalized.indexOf("/") + 1)
-      : normalized.indexOf("@");
-    if (separator <= 0) return undefined;
-    return {
-      name: normalized.slice(0, separator),
-      range: normalized.slice(separator + 1),
-    };
-  };
-  const unquote = (value: string): string =>
-    value.trim().replace(/^['"]|['"]$/g, "");
-  const entries: YarnEntry[] = [];
-  let current: YarnEntry | undefined;
-  let dependencySection = false;
-  const flush = (): void => {
-    if (current) entries.push(current);
-    current = undefined;
-    dependencySection = false;
-  };
-  const parseVersion = (line: string): string | undefined => {
-    const trimmed = line.trimStart();
-    if (!trimmed.startsWith("version")) return undefined;
-    let value = trimmed.slice("version".length).trimStart();
-    if (value.startsWith(":")) value = value.slice(1).trimStart();
-    value = value.replace(/^['"]/, "");
-    const end = [...value].findIndex(
-      (character) =>
-        character === "'" ||
-        character === '"' ||
-        character === " " ||
-        character === "\t",
-    );
-    return value.slice(0, end < 0 ? value.length : end);
-  };
-  for (const line of text.split(/\r?\n/)) {
-    if (line.trim() === "" || line.startsWith("#")) continue;
-    if (!line.startsWith(" ") && !line.startsWith("\t") && line.endsWith(":")) {
-      flush();
-      const selectors = line.slice(0, -1).trim().split(/,\s*/);
-      const descriptors = selectors
-        .map(parseDescriptor)
-        .filter((item): item is YarnDescriptor => item !== undefined);
-      current = {
-        descriptors,
-        name:
-          descriptors
-            .map((descriptor) => {
-              if (!descriptor.range.startsWith("npm:")) return undefined;
-              return parseDescriptor(descriptor.range.slice(4))?.name;
-            })
-            .find((name): name is string => name !== undefined) ??
-          descriptors[0]?.name ??
-          "",
-        version: "*",
-        workspace: selectors.some((item) => item.includes("@workspace:")),
-        dependencies: [],
-      };
-      continue;
-    }
-    if (!current) continue;
-    const trimmed = line.trimStart();
-    const indentation = line.length - trimmed.length;
-    if (indentation === 2) {
-      dependencySection =
-        trimmed === "dependencies:" || trimmed === "optionalDependencies:";
-      const version = parseVersion(line);
-      if (version) current.version = version;
-      if (trimmed.startsWith("resolution:")) {
-        const resolution = unquote(trimmed.slice("resolution:".length));
-        const locator = resolution.indexOf("@npm:");
-        if (locator >= 0) {
-          const target = parseDescriptor(resolution.slice(locator + 5));
-          if (target) current.name = target.name;
-        }
-        if (resolution.includes("@workspace:")) current.workspace = true;
-      }
-    } else if (indentation >= 4 && dependencySection) {
-      const colon = trimmed.indexOf(":");
-      const separator = colon > 0 ? colon : trimmed.search(/\s/);
-      if (separator > 0) {
-        const descriptor = parseDescriptor(
-          `${unquote(trimmed.slice(0, separator))}@${unquote(trimmed.slice(separator + 1))}`,
-        );
-        if (descriptor) current.dependencies.push(descriptor);
-      }
-    } else if (indentation <= 2) {
-      dependencySection = false;
-    }
-  }
-  flush();
-
+  const entries = parseYarnLockEntries(readFileSync(lockPath, "utf8"));
   if (includeDevDependencies) {
-    for (const entry of entries) {
-      if (entry.workspace || !entry.name) continue;
-      dependencies.push({
-        name: entry.name,
-        version: entry.version,
-        ecosystem: "npm",
-        manifest,
-        versionResolved: npmVersionIsExact(entry.version),
-      });
-    }
+    appendAllYarnEntries(manifest, entries, dependencies);
     return;
   }
+  const graph = collectYarnDependencyGraph(entries, packageJson);
+  appendYarnGraphResults(manifest, graph, dependencies);
+}
 
-  const findEntry = (descriptor: YarnDescriptor): YarnEntry | undefined =>
-    entries.find(
-      (entry) =>
-        !entry.workspace &&
-        entry.descriptors.some(
-          (candidate) =>
-            candidate.name === descriptor.name &&
-            candidate.range.replace(/^npm:/, "") ===
-              descriptor.range.replace(/^npm:/, ""),
-        ),
-    );
-  const resolveEntry = (
-    descriptor: YarnDescriptor,
-    parentName?: string,
-  ): YarnEntry | undefined => {
-    const dependencyPath = parentName
-      ? `${parentName}/${descriptor.name}`
-      : descriptor.name;
-    const resolution = Object.entries(packageJson.resolutions ?? {}).find(
-      ([pattern]) =>
-        pattern === descriptor.name ||
-        minimatch(dependencyPath, pattern, { dot: true }),
-    );
-    if (resolution) {
-      return findEntry({
-        name: descriptor.name,
-        range: resolution[1].replace(/^npm:/, ""),
-      });
-    }
-    return findEntry(descriptor);
-  };
-  const roots = [
+function appendAllYarnEntries(
+  manifest: string,
+  entries: YarnEntry[],
+  dependencies: Dependency[],
+): void {
+  for (const entry of entries) {
+    if (entry.workspace || !entry.name) continue;
+    dependencies.push({
+      name: entry.name,
+      version: entry.version,
+      ecosystem: "npm",
+      manifest,
+      versionResolved: npmVersionIsExact(entry.version),
+    });
+  }
+}
+
+function findYarnEntry(
+  entries: YarnEntry[],
+  descriptor: YarnDescriptor,
+): YarnEntry | undefined {
+  return entries.find(
+    (entry) =>
+      !entry.workspace &&
+      entry.descriptors.some(
+        (candidate) =>
+          candidate.name === descriptor.name &&
+          candidate.range.replace(/^npm:/, "") ===
+            descriptor.range.replace(/^npm:/, ""),
+      ),
+  );
+}
+
+function resolveYarnEntry(
+  entries: YarnEntry[],
+  descriptor: YarnDescriptor,
+  parentName: string | undefined,
+  resolutions: Record<string, string>,
+): YarnEntry | undefined {
+  const dependencyPath = parentName
+    ? `${parentName}/${descriptor.name}`
+    : descriptor.name;
+  const resolution = Object.entries(resolutions).find(
+    ([pattern]) =>
+      pattern === descriptor.name ||
+      minimatch(dependencyPath, pattern, { dot: true }),
+  );
+  if (!resolution) return findYarnEntry(entries, descriptor);
+  return findYarnEntry(entries, {
+    name: descriptor.name,
+    range: resolution[1].replace(/^npm:/, ""),
+  });
+}
+
+function yarnRootDependencies(
+  packageJson: PackageJson,
+): Array<YarnDescriptor & { parentName?: string }> {
+  const sections = [
     packageJson.dependencies,
     packageJson.optionalDependencies,
     packageJson.peerDependencies,
-    ...(includeDevDependencies ? [packageJson.devDependencies] : []),
   ];
-  const pending = roots.flatMap((section) =>
+  return sections.flatMap((section) =>
     Object.entries(section ?? {}).map(([name, range]) => ({
       name,
       range,
       parentName: packageJson.name,
     })),
   );
+}
+
+function collectYarnDependencyGraph(
+  entries: YarnEntry[],
+  packageJson: PackageJson,
+): { visited: Set<YarnEntry>; unresolved: Set<string> } {
+  const pending = yarnRootDependencies(packageJson);
   const visited = new Set<YarnEntry>();
   const unresolved = new Set<string>();
   while (pending.length > 0) {
     const descriptor = pending.pop();
-    if (!descriptor) continue;
-    if (/^(workspace:|file:|link:)/.test(descriptor.range)) continue;
-    const entry = resolveEntry(descriptor, descriptor.parentName);
+    if (!descriptor || /^(workspace:|file:|link:)/.test(descriptor.range))
+      continue;
+    const entry = resolveYarnEntry(
+      entries,
+      descriptor,
+      descriptor.parentName,
+      packageJson.resolutions ?? {},
+    );
     if (!entry) {
       unresolved.add(`${descriptor.name}@${descriptor.range}`);
       continue;
@@ -384,7 +425,15 @@ function parseYarnLock(
       })),
     );
   }
-  for (const entry of visited) {
+  return { visited, unresolved };
+}
+
+function appendYarnGraphResults(
+  manifest: string,
+  graph: { visited: Set<YarnEntry>; unresolved: Set<string> },
+  dependencies: Dependency[],
+): void {
+  for (const entry of graph.visited) {
     dependencies.push({
       name: entry.name,
       version: entry.version,
@@ -393,16 +442,15 @@ function parseYarnLock(
       versionResolved: npmVersionIsExact(entry.version),
     });
   }
-  if (unresolved.size > 0) {
-    dependencies.push({
-      name: "(incomplete Yarn dependency graph)",
-      version: "unresolved",
-      ecosystem: "npm",
-      manifest,
-      versionResolved: false,
-      versionResolutionError: `Yarn lock entries not found for ${[...unresolved].join(", ")}.`,
-    });
-  }
+  if (graph.unresolved.size === 0) return;
+  dependencies.push({
+    name: "(incomplete Yarn dependency graph)",
+    version: "unresolved",
+    ecosystem: "npm",
+    manifest,
+    versionResolved: false,
+    versionResolutionError: `Yarn lock entries not found for ${[...graph.unresolved].join(", ")}.`,
+  });
 }
 
 function packageFromLockKey(
@@ -423,6 +471,178 @@ function packageFromLockKey(
     : undefined;
 }
 
+type PnpmEntries = Record<string, Record<string, unknown>>;
+
+function appendAllPnpmEntries(
+  manifest: string,
+  parsed: Record<string, unknown>,
+  dependencies: Dependency[],
+): void {
+  for (const section of ["packages", "snapshots"]) {
+    const entries = parsed[section];
+    if (!entries || typeof entries !== "object") continue;
+    for (const key of Object.keys(entries as Record<string, unknown>)) {
+      const packageInfo = packageFromLockKey(key);
+      if (!packageInfo) continue;
+      dependencies.push({
+        ...packageInfo,
+        ecosystem: "npm",
+        manifest,
+        versionResolved: npmVersionIsExact(packageInfo.version),
+      });
+    }
+  }
+}
+
+function getPnpmRootImporter(
+  parsed: Record<string, unknown>,
+  importers: PnpmEntries,
+): Record<string, unknown> | undefined {
+  if (importers["."]) return importers["."];
+  if (!parsed.dependencies && !parsed.optionalDependencies) return undefined;
+  return {
+    dependencies: parsed.dependencies,
+    optionalDependencies: parsed.optionalDependencies,
+    peerDependencies: parsed.peerDependencies,
+    devDependencies: parsed.devDependencies,
+  };
+}
+
+function normalizePnpmVersion(version: string): string {
+  return version.split("(")[0].replace(/^\//, "");
+}
+
+function pnpmDependencyVersion(value: unknown): string {
+  if (typeof value === "string") return value;
+  if (value && typeof value === "object") {
+    const version = (value as { version?: unknown }).version;
+    if (typeof version === "string") return version;
+  }
+  return "";
+}
+
+function pnpmDependencyRoots(
+  rootImporter: Record<string, unknown>,
+  includeDevDependencies: boolean,
+): Array<{ name: string; version: string }> {
+  const sections = [
+    rootImporter.dependencies,
+    rootImporter.optionalDependencies,
+    rootImporter.peerDependencies,
+    ...(includeDevDependencies ? [rootImporter.devDependencies] : []),
+  ];
+  const roots: Array<{ name: string; version: string }> = [];
+  for (const section of sections) {
+    if (!section || typeof section !== "object") continue;
+    for (const [name, value] of Object.entries(section)) {
+      const version = pnpmDependencyVersion(value);
+      if (version && !/^(link:|workspace:|file:)/.test(version))
+        roots.push({ name, version });
+    }
+  }
+  return roots;
+}
+
+function pnpmLockEntries(
+  packages: PnpmEntries,
+  snapshots: PnpmEntries,
+): Map<
+  string,
+  { name: string; version: string; value: Record<string, unknown> }
+> {
+  const entries = new Map<
+    string,
+    { name: string; version: string; value: Record<string, unknown> }
+  >();
+  for (const [key, value] of Object.entries({ ...packages, ...snapshots })) {
+    const info = packageFromLockKey(key);
+    if (!info) continue;
+    entries.set(`${info.name}@${normalizePnpmVersion(info.version)}`, {
+      ...info,
+      value,
+    });
+  }
+  return entries;
+}
+
+function enqueuePnpmDependencies(
+  value: Record<string, unknown>,
+  pending: Array<{ name: string; version: string }>,
+): void {
+  for (const sectionName of ["dependencies", "optionalDependencies"]) {
+    const section = value[sectionName];
+    if (!section || typeof section !== "object") continue;
+    for (const [name, dependency] of Object.entries(section)) {
+      const version = typeof dependency === "string" ? dependency : "";
+      if (version && !/^(link:|workspace:|file:)/.test(version))
+        pending.push({ name, version });
+    }
+  }
+}
+
+function collectPnpmDependencyGraph(
+  manifest: string,
+  rootImporter: Record<string, unknown>,
+  packages: PnpmEntries,
+  snapshots: PnpmEntries,
+  includeDevDependencies: boolean,
+  dependencies: Dependency[],
+): void {
+  const pending = pnpmDependencyRoots(rootImporter, includeDevDependencies);
+  const entries = pnpmLockEntries(packages, snapshots);
+  const visited = new Set<string>();
+  const unresolved = new Set<string>();
+  while (pending.length > 0) {
+    const dependency = pending.pop();
+    if (!dependency) continue;
+    const key = `${dependency.name}@${normalizePnpmVersion(dependency.version)}`;
+    const entry = entries.get(key);
+    if (!entry) {
+      unresolved.add(key);
+      continue;
+    }
+    if (visited.has(key)) continue;
+    visited.add(key);
+    enqueuePnpmDependencies(
+      snapshots[`${entry.name}@${entry.version}`] ?? entry.value,
+      pending,
+    );
+  }
+  appendPnpmGraphResults(manifest, visited, unresolved, entries, dependencies);
+}
+
+function appendPnpmGraphResults(
+  manifest: string,
+  visited: Set<string>,
+  unresolved: Set<string>,
+  entries: Map<
+    string,
+    { name: string; version: string; value: Record<string, unknown> }
+  >,
+  dependencies: Dependency[],
+): void {
+  for (const key of visited) {
+    const entry = entries.get(key);
+    if (!entry) continue;
+    dependencies.push({
+      name: entry.name,
+      version: entry.version,
+      ecosystem: "npm",
+      manifest,
+      versionResolved: npmVersionIsExact(entry.version),
+    });
+  }
+  if (unresolved.size === 0) return;
+  dependencies.push({
+    name: "(incomplete pnpm dependency graph)",
+    version: "unresolved",
+    ecosystem: "npm",
+    manifest,
+    versionResolved: false,
+    versionResolutionError: `pnpm lock entries not found for ${[...unresolved].join(", ")}.`,
+  });
+}
+
 function parsePnpmLock(
   manifest: string,
   lockPath: string,
@@ -434,23 +654,9 @@ function parsePnpmLock(
     unknown
   >;
   if (includeDevDependencies) {
-    for (const section of ["packages", "snapshots"]) {
-      const entries = parsed[section];
-      if (!entries || typeof entries !== "object") continue;
-      for (const key of Object.keys(entries as Record<string, unknown>)) {
-        const packageInfo = packageFromLockKey(key);
-        if (packageInfo)
-          dependencies.push({
-            ...packageInfo,
-            ecosystem: "npm",
-            manifest,
-            versionResolved: npmVersionIsExact(packageInfo.version),
-          });
-      }
-    }
+    appendAllPnpmEntries(manifest, parsed, dependencies);
     return;
   }
-
   const packages = (parsed.packages ?? {}) as Record<
     string,
     Record<string, unknown>
@@ -463,16 +669,7 @@ function parsePnpmLock(
     string,
     Record<string, unknown>
   >;
-  const rootImporter =
-    importers["."] ??
-    (parsed.dependencies || parsed.optionalDependencies
-      ? {
-          dependencies: parsed.dependencies,
-          optionalDependencies: parsed.optionalDependencies,
-          peerDependencies: parsed.peerDependencies,
-          devDependencies: parsed.devDependencies,
-        }
-      : undefined);
+  const rootImporter = getPnpmRootImporter(parsed, importers);
   if (!rootImporter) {
     dependencies.push({
       name: "(incomplete pnpm dependency graph)",
@@ -485,90 +682,14 @@ function parsePnpmLock(
     });
     return;
   }
-
-  const dependencySections = [
-    rootImporter.dependencies,
-    rootImporter.optionalDependencies,
-    rootImporter.peerDependencies,
-    ...(includeDevDependencies ? [rootImporter.devDependencies] : []),
-  ];
-  const pending: Array<{ name: string; version: string }> = [];
-  for (const section of dependencySections) {
-    if (!section || typeof section !== "object") continue;
-    for (const [name, value] of Object.entries(section)) {
-      const details =
-        value && typeof value === "object"
-          ? (value as { version?: unknown })
-          : undefined;
-      const version =
-        typeof value === "string"
-          ? value
-          : typeof details?.version === "string"
-            ? details.version
-            : "";
-      if (version && !/^(link:|workspace:|file:)/.test(version))
-        pending.push({ name, version });
-    }
-  }
-  const normalizeVersion = (version: string): string =>
-    version.split("(")[0].replace(/^\//, "");
-  const entries = new Map<
-    string,
-    { name: string; version: string; value: Record<string, unknown> }
-  >();
-  for (const [key, value] of Object.entries({ ...packages, ...snapshots })) {
-    const info = packageFromLockKey(key);
-    if (!info) continue;
-    entries.set(`${info.name}@${normalizeVersion(info.version)}`, {
-      ...info,
-      value,
-    });
-  }
-  const visited = new Set<string>();
-  const unresolved = new Set<string>();
-  while (pending.length > 0) {
-    const dependency = pending.pop();
-    if (!dependency) continue;
-    const key = `${dependency.name}@${normalizeVersion(dependency.version)}`;
-    const entry = entries.get(key);
-    if (!entry) {
-      unresolved.add(key);
-      continue;
-    }
-    if (visited.has(key)) continue;
-    visited.add(key);
-    const snapshot = snapshots[`${entry.name}@${entry.version}`] ?? entry.value;
-    for (const sectionName of ["dependencies", "optionalDependencies"]) {
-      const section = snapshot[sectionName];
-      if (!section || typeof section !== "object") continue;
-      for (const [name, value] of Object.entries(section)) {
-        const version = typeof value === "string" ? value : "";
-        if (version && !/^(link:|workspace:|file:)/.test(version))
-          pending.push({ name, version });
-      }
-    }
-  }
-  for (const key of visited) {
-    const entry = entries.get(key);
-    if (!entry) continue;
-    dependencies.push({
-      name: entry.name,
-      version: entry.version,
-      ecosystem: "npm",
-      manifest,
-      versionResolved: npmVersionIsExact(entry.version),
-    });
-  }
-  if (unresolved.size > 0) {
-    dependencies.push({
-      name: "(incomplete pnpm dependency graph)",
-      version: "unresolved",
-      ecosystem: "npm",
-      manifest,
-      versionResolved: false,
-      versionResolutionError: `pnpm lock entries not found for ${[...unresolved].join(", ")}.`,
-    });
-  }
+  collectPnpmDependencyGraph(
+    manifest,
+    rootImporter,
+    packages,
+    snapshots,
+    includeDevDependencies,
+    dependencies,
+  );
 }
 
 export type GoPackageListRunner = (
@@ -643,38 +764,114 @@ function systemGoPackageList(
   );
 }
 
+interface GoJSONState {
+  start: number;
+  depth: number;
+  inString: boolean;
+  escaped: boolean;
+}
+
+function updateGoJSONState(character: string, state: GoJSONState): boolean {
+  if (state.start < 0) return false;
+  if (state.inString) {
+    if (state.escaped) state.escaped = false;
+    else if (character === "\\") state.escaped = true;
+    else if (character === '"') state.inString = false;
+    return false;
+  }
+  if (character === '"') state.inString = true;
+  else if (character === "{") state.depth++;
+  else if (character === "}") state.depth--;
+  return state.depth === 0;
+}
+
+function appendGoObject(
+  output: string,
+  start: number,
+  end: number,
+  objects: Record<string, unknown>[],
+): void {
+  const parsed: unknown = JSON.parse(output.slice(start, end + 1));
+  if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+    objects.push(parsed as Record<string, unknown>);
+  }
+}
+
 function parseGoPackageObjects(output: string): Record<string, unknown>[] {
   const objects: Record<string, unknown>[] = [];
-  let start = -1;
-  let depth = 0;
-  let inString = false;
-  let escaped = false;
+  const state: GoJSONState = {
+    start: -1,
+    depth: 0,
+    inString: false,
+    escaped: false,
+  };
   for (let index = 0; index < output.length; index++) {
     const character = output[index];
-    if (start < 0) {
+    if (state.start < 0) {
       if (character === "{") {
-        start = index;
-        depth = 1;
+        state.start = index;
+        state.depth = 1;
       }
       continue;
     }
-    if (inString) {
-      if (escaped) escaped = false;
-      else if (character === "\\") escaped = true;
-      else if (character === '"') inString = false;
-      continue;
-    }
-    if (character === '"') inString = true;
-    else if (character === "{") depth++;
-    else if (character === "}" && --depth === 0) {
-      const parsed: unknown = JSON.parse(output.slice(start, index + 1));
-      if (parsed && typeof parsed === "object" && !Array.isArray(parsed))
-        objects.push(parsed as Record<string, unknown>);
-      start = -1;
-    }
+    if (!updateGoJSONState(character, state)) continue;
+    appendGoObject(output, state.start, index, objects);
+    state.start = -1;
   }
-  if (start >= 0) throw new Error("Go returned incomplete package JSON.");
+  if (state.start >= 0) throw new Error("Go returned incomplete package JSON.");
   return objects;
+}
+
+function goModuleDependency(
+  manifest: string,
+  packageObject: Record<string, unknown>,
+): Dependency | undefined {
+  const module = packageObject.Module as
+    | {
+        Path?: unknown;
+        Version?: unknown;
+        Main?: unknown;
+        Replace?: unknown;
+      }
+    | undefined;
+  if (!module || module.Main === true || typeof module.Path !== "string")
+    return undefined;
+  const name = module.Path;
+  const version = typeof module.Version === "string" ? module.Version : "";
+  const replaced = Boolean(module.Replace);
+  const versionResolved =
+    !replaced && /^v\d+\.\d+\.\d+(?:-[\w.-]+)?(?:\+[\w.-]+)?$/.test(version);
+  let versionResolutionError: string | undefined;
+  if (replaced) {
+    versionResolutionError =
+      "The Go module is replaced; its effective source version is not established.";
+  } else if (!versionResolved) {
+    versionResolutionError =
+      "The Go package graph did not provide an exact module version.";
+  }
+  return {
+    name,
+    version: version || "unresolved",
+    ecosystem: "go",
+    manifest,
+    versionResolved,
+    versionResolutionError,
+  };
+}
+
+function addGoGraphFailure(
+  manifest: string,
+  dependencies: Dependency[],
+  message: string,
+): void {
+  dependencies.push({
+    name: "(Go package graph)",
+    version: "unresolved",
+    ecosystem: "go",
+    manifest,
+    versionResolved: false,
+    versionResolutionError: message,
+  });
 }
 
 function parseGoPackages(
@@ -692,14 +889,11 @@ function parseGoPackages(
   } catch (error) {
     const detail =
       error instanceof Error ? error.message.split("\n")[0] : String(error);
-    dependencies.push({
-      name: "(Go package graph)",
-      version: "unresolved",
-      ecosystem: "go",
+    addGoGraphFailure(
       manifest,
-      versionResolved: false,
-      versionResolutionError: `Unable to resolve Go packages ${packages.join(", ")}${includeTests ? " including tests" : ""}: ${detail}`,
-    });
+      dependencies,
+      `Unable to resolve Go packages ${packages.join(", ")}${includeTests ? " including tests" : ""}: ${detail}`,
+    );
     return;
   }
 
@@ -708,61 +902,25 @@ function parseGoPackages(
     packageObjects = parseGoPackageObjects(output);
   } catch (error) {
     const detail = error instanceof Error ? error.message : String(error);
-    dependencies.push({
-      name: "(Go package graph)",
-      version: "unresolved",
-      ecosystem: "go",
+    addGoGraphFailure(
       manifest,
-      versionResolved: false,
-      versionResolutionError: `Unable to parse Go package data: ${detail}`,
-    });
+      dependencies,
+      `Unable to parse Go package data: ${detail}`,
+    );
     return;
   }
   if (!packageObjects.length) {
-    dependencies.push({
-      name: "(Go package graph)",
-      version: "unresolved",
-      ecosystem: "go",
+    addGoGraphFailure(
       manifest,
-      versionResolved: false,
-      versionResolutionError: `Go returned no package data for ${packages.join(", ")}.`,
-    });
+      dependencies,
+      `Go returned no package data for ${packages.join(", ")}.`,
+    );
     return;
   }
-
   const modules = new Map<string, Dependency>();
   for (const packageObject of packageObjects) {
-    const module = packageObject.Module as
-      | {
-          Path?: unknown;
-          Version?: unknown;
-          Main?: unknown;
-          Replace?: unknown;
-        }
-      | undefined;
-    if (!module || module.Main === true || typeof module.Path !== "string")
-      continue;
-    const name = module.Path;
-    const version = typeof module.Version === "string" ? module.Version : "";
-    const replaced = Boolean(module.Replace);
-    const versionResolved =
-      !replaced && /^v\d+\.\d+\.\d+(?:-[\w.-]+)?(?:\+[\w.-]+)?$/.test(version);
-    let versionResolutionError: string | undefined;
-    if (replaced) {
-      versionResolutionError =
-        "The Go module is replaced; its effective source version is not established.";
-    } else if (!versionResolved) {
-      versionResolutionError =
-        "The Go package graph did not provide an exact module version.";
-    }
-    modules.set(name, {
-      name,
-      version: version || "unresolved",
-      ecosystem: "go",
-      manifest,
-      versionResolved,
-      versionResolutionError,
-    });
+    const dependency = goModuleDependency(manifest, packageObject);
+    if (dependency) modules.set(dependency.name, dependency);
   }
   dependencies.push(...modules.values());
 }
@@ -848,25 +1006,94 @@ function parseRequirements(
   }
 }
 
+interface PyprojectData {
+  project?: { dependencies?: unknown };
+  "dependency-groups"?: Record<string, unknown>;
+  tool?: {
+    poetry?: {
+      dependencies?: Record<string, unknown>;
+      "dev-dependencies"?: Record<string, unknown>;
+      group?: Record<string, { dependencies?: Record<string, unknown> }>;
+    };
+  };
+}
+
+function appendUnresolvedPythonDependency(
+  manifest: string,
+  dependency: { name: string; version: string },
+  dependencies: Dependency[],
+): void {
+  dependencies.push({
+    ...dependency,
+    ecosystem: "python",
+    manifest,
+    versionResolved: false,
+    versionResolutionError:
+      "A supported Python lockfile or fully pinned requirements file is required.",
+  });
+}
+
+function collectPyprojectGroup(
+  entries: unknown,
+  output: Array<{ name: string; version: string }>,
+): void {
+  if (Array.isArray(entries)) {
+    for (const value of entries) {
+      if (typeof value !== "string") continue;
+      const name = /^[A-Za-z0-9][A-Za-z0-9_.-]*/.exec(value)?.[0];
+      if (name)
+        output.push({ name, version: value.slice(name.length).trim() || "*" });
+    }
+    return;
+  }
+  if (!entries || typeof entries !== "object") return;
+  for (const [name, value] of Object.entries(
+    entries as Record<string, unknown>,
+  )) {
+    let version = "*";
+    if (typeof value === "string") version = value;
+    else if (
+      value &&
+      typeof value === "object" &&
+      typeof (value as { version?: unknown }).version === "string"
+    ) {
+      version = (value as { version: string }).version;
+    }
+    output.push({ name, version });
+  }
+}
+
+function appendPyprojectDevelopmentDependencies(
+  manifest: string,
+  parsed: PyprojectData,
+  dependencies: Dependency[],
+): void {
+  const requirements: Array<{ name: string; version: string }> = [];
+  collectPyprojectGroup(parsed["dependency-groups"]?.dev, requirements);
+  collectPyprojectGroup(
+    parsed.tool?.poetry?.["dev-dependencies"],
+    requirements,
+  );
+  for (const [groupName, group] of Object.entries(
+    parsed.tool?.poetry?.group ?? {},
+  )) {
+    if (groupName !== "main")
+      collectPyprojectGroup(group.dependencies, requirements);
+  }
+  for (const requirement of requirements) {
+    appendUnresolvedPythonDependency(manifest, requirement, dependencies);
+  }
+}
+
 function parsePyproject(
   manifest: string,
   path: string,
   dependencies: Dependency[],
   includeDevDependencies: boolean,
 ): void {
-  let parsed: {
-    project?: { dependencies?: unknown };
-    "dependency-groups"?: Record<string, unknown>;
-    tool?: {
-      poetry?: {
-        dependencies?: Record<string, unknown>;
-        "dev-dependencies"?: Record<string, unknown>;
-        group?: Record<string, { dependencies?: Record<string, unknown> }>;
-      };
-    };
-  };
+  let parsed: PyprojectData;
   try {
-    parsed = parseToml(readFileSync(path, "utf8")) as typeof parsed;
+    parsed = parseToml(readFileSync(path, "utf8")) as PyprojectData;
   } catch {
     dependencies.push({
       name: "(invalid pyproject.toml)",
@@ -885,15 +1112,14 @@ function parsePyproject(
       if (typeof value !== "string") continue;
       const nameMatch = /^[A-Za-z0-9][A-Za-z0-9_.-]*/.exec(value);
       if (!nameMatch) continue;
-      dependencies.push({
-        name: nameMatch[0],
-        version: value.slice(nameMatch[0].length).trim() || "*",
-        ecosystem: "python",
+      appendUnresolvedPythonDependency(
         manifest,
-        versionResolved: false,
-        versionResolutionError:
-          "A supported Python lockfile or fully pinned requirements file is required.",
-      });
+        {
+          name: nameMatch[0],
+          version: value.slice(nameMatch[0].length).trim() || "*",
+        },
+        dependencies,
+      );
     }
   }
 
@@ -901,65 +1127,15 @@ function parsePyproject(
     parsed.tool?.poetry?.dependencies ?? {},
   )) {
     if (name.toLowerCase() === "python" || typeof value !== "string") continue;
-    dependencies.push({
-      name,
-      version: value,
-      ecosystem: "python",
+    appendUnresolvedPythonDependency(
       manifest,
-      versionResolved: false,
-      versionResolutionError:
-        "A supported Python lockfile or fully pinned requirements file is required.",
-    });
+      { name, version: value },
+      dependencies,
+    );
   }
 
-  if (includeDevDependencies) {
-    const developmentRequirements: Array<{ name: string; version: string }> =
-      [];
-    const collectGroup = (entries: unknown): void => {
-      if (Array.isArray(entries)) {
-        for (const value of entries) {
-          if (typeof value !== "string") continue;
-          const name = /^[A-Za-z0-9][A-Za-z0-9_.-]*/.exec(value)?.[0];
-          if (name)
-            developmentRequirements.push({
-              name,
-              version: value.slice(name.length).trim() || "*",
-            });
-        }
-      } else if (entries && typeof entries === "object") {
-        for (const [name, value] of Object.entries(
-          entries as Record<string, unknown>,
-        )) {
-          const version =
-            typeof value === "string"
-              ? value
-              : value &&
-                  typeof value === "object" &&
-                  typeof (value as { version?: unknown }).version === "string"
-                ? (value as { version: string }).version
-                : "*";
-          developmentRequirements.push({ name, version });
-        }
-      }
-    };
-    collectGroup(parsed["dependency-groups"]?.dev);
-    collectGroup(parsed.tool?.poetry?.["dev-dependencies"]);
-    for (const [groupName, group] of Object.entries(
-      parsed.tool?.poetry?.group ?? {},
-    )) {
-      if (groupName !== "main") collectGroup(group.dependencies);
-    }
-    for (const requirement of developmentRequirements) {
-      dependencies.push({
-        ...requirement,
-        ecosystem: "python",
-        manifest,
-        versionResolved: false,
-        versionResolutionError:
-          "A supported Python lockfile or fully pinned requirements file is required.",
-      });
-    }
-  }
+  if (includeDevDependencies)
+    appendPyprojectDevelopmentDependencies(manifest, parsed, dependencies);
 }
 
 function parsePoetryLock(
@@ -1078,6 +1254,22 @@ function parsePackageJsonManifest(
     });
     return;
   }
+  parsePackageJsonLocks(
+    manifest,
+    absolute,
+    dependencies,
+    packageJson,
+    includeDevDependencies,
+  );
+}
+
+function parsePackageJsonLocks(
+  manifest: string,
+  absolute: string,
+  dependencies: Dependency[],
+  packageJson: PackageJson,
+  includeDevDependencies: boolean,
+): void {
   const lockParsers: Record<string, (lockPath: string) => void> = {
     "package-lock.json": (lockPath) =>
       parseNpmLock(
@@ -1137,6 +1329,24 @@ function parsePackageJsonManifest(
       versionResolutionError: `Multiple supported lockfiles found: ${lockFiles.join(", ")}.`,
     });
   }
+  appendMissingPackageJsonLockEntries(
+    manifest,
+    dependencies,
+    packageJson,
+    includeDevDependencies,
+    lockFiles,
+    lockDependencies,
+  );
+}
+
+function appendMissingPackageJsonLockEntries(
+  manifest: string,
+  dependencies: Dependency[],
+  packageJson: PackageJson,
+  includeDevDependencies: boolean,
+  lockFiles: string[],
+  lockDependencies: Dependency[],
+): void {
   const lockedNames = new Set(
     lockDependencies.map((dependency) => dependency.name),
   );

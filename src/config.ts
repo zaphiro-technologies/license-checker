@@ -91,14 +91,12 @@ function normalizeHeader(
   };
 }
 
-function normalizeDependencies(value: unknown): DependencyConfig | undefined {
-  if (!value || typeof value !== "object") return undefined;
-  const record = asRecord(value);
-  if (record.exceptions !== undefined && !Array.isArray(record.exceptions)) {
+function normalizeExceptions(value: unknown): DependencyConfig["exceptions"] {
+  if (value !== undefined && !Array.isArray(value)) {
     throw new Error("dependency.exceptions must be a list.");
   }
-  const exceptions = Array.isArray(record.exceptions)
-    ? record.exceptions.map((item, index) => {
+  return Array.isArray(value)
+    ? value.map((item, index) => {
         const entry = asRecord(item);
         const name = typeof entry.name === "string" ? entry.name.trim() : "";
         const version =
@@ -127,19 +125,58 @@ function normalizeDependencies(value: unknown): DependencyConfig | undefined {
         return { name, version, url, reason };
       })
     : [];
-  if (
-    record.go !== undefined &&
-    (!record.go || typeof record.go !== "object" || Array.isArray(record.go))
-  ) {
+}
+
+function normalizeLicenseOverrides(
+  value: unknown,
+): DependencyConfig["licenses"] {
+  if (!Array.isArray(value)) return [];
+  return value.flatMap((item, index) => {
+    const entry = asRecord(item);
+    if (typeof entry.name !== "string" || typeof entry.license !== "string")
+      return [];
+    const match = typeof entry.match === "string" ? entry.match : undefined;
+    if (match !== undefined) {
+      try {
+        new RegExp(match);
+      } catch {
+        throw new Error(
+          `dependency.licenses[${index}].match must be a valid regular expression.`,
+        );
+      }
+    }
+    return [
+      {
+        name: entry.name,
+        version: typeof entry.version === "string" ? entry.version : undefined,
+        ...(match !== undefined ? { match } : {}),
+        license: entry.license,
+      },
+    ];
+  });
+}
+
+function normalizeExcludes(value: unknown): DependencyConfig["excludes"] {
+  if (!Array.isArray(value)) return [];
+  return value.flatMap((item) => {
+    const entry = asRecord(item);
+    if (typeof entry.name !== "string") return [];
+    return [
+      {
+        name: entry.name,
+        version: typeof entry.version === "string" ? entry.version : undefined,
+        recursive: entry.recursive === true,
+      },
+    ];
+  });
+}
+
+function normalizeGoConfig(value: unknown): DependencyConfig["go"] {
+  if (value === undefined) return undefined;
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
     throw new Error("dependency.go must be a mapping.");
   }
-  const go = asRecord(record.go);
-  if (
-    record["include-dev-dependencies"] !== undefined &&
-    typeof record["include-dev-dependencies"] !== "boolean"
-  ) {
-    throw new Error("dependency.include-dev-dependencies must be a boolean.");
-  }
+  const go = asRecord(value);
   if (go.packages !== undefined && !Array.isArray(go.packages)) {
     throw new Error("dependency.go.packages must be a list.");
   }
@@ -155,64 +192,33 @@ function normalizeDependencies(value: unknown): DependencyConfig | undefined {
     );
   }
   return {
+    packages: Array.isArray(go.packages)
+      ? (go.packages as string[])
+      : undefined,
+  };
+}
+
+function normalizeDependencies(value: unknown): DependencyConfig | undefined {
+  if (!value || typeof value !== "object") return undefined;
+  const record = asRecord(value);
+  const exceptions = normalizeExceptions(record.exceptions);
+  const go = normalizeGoConfig(record.go);
+  if (
+    record["include-dev-dependencies"] !== undefined &&
+    typeof record["include-dev-dependencies"] !== "boolean"
+  ) {
+    throw new Error("dependency.include-dev-dependencies must be a boolean.");
+  }
+  return {
     files: Array.isArray(record.files)
       ? record.files.filter((item): item is string => typeof item === "string")
       : [],
-    go:
-      record.go !== undefined
-        ? {
-            packages: Array.isArray(go.packages)
-              ? (go.packages as string[])
-              : undefined,
-          }
-        : undefined,
+    go,
     includeDevDependencies: record["include-dev-dependencies"] === true,
-    licenses: Array.isArray(record.licenses)
-      ? record.licenses.flatMap((item, index) => {
-          const entry = asRecord(item);
-          if (
-            typeof entry.name !== "string" ||
-            typeof entry.license !== "string"
-          )
-            return [];
-          const match =
-            typeof entry.match === "string" ? entry.match : undefined;
-          if (match !== undefined) {
-            try {
-              new RegExp(match);
-            } catch {
-              throw new Error(
-                `dependency.licenses[${index}].match must be a valid regular expression.`,
-              );
-            }
-          }
-          return [
-            {
-              name: entry.name,
-              version:
-                typeof entry.version === "string" ? entry.version : undefined,
-              ...(match !== undefined ? { match } : {}),
-              license: entry.license,
-            },
-          ];
-        })
-      : [],
+    licenses: normalizeLicenseOverrides(record.licenses),
     threshold:
       typeof record.threshold === "number" ? record.threshold : undefined,
-    excludes: Array.isArray(record.excludes)
-      ? record.excludes.flatMap((item) => {
-          const entry = asRecord(item);
-          if (typeof entry.name !== "string") return [];
-          return [
-            {
-              name: entry.name,
-              version:
-                typeof entry.version === "string" ? entry.version : undefined,
-              recursive: entry.recursive === true,
-            },
-          ];
-        })
-      : [],
+    excludes: normalizeExcludes(record.excludes),
     exceptions,
     require_fsf_free: record.require_fsf_free === true,
     require_osi_approved: record.require_osi_approved === true,

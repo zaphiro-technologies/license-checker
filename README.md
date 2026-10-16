@@ -102,19 +102,22 @@ alone does not establish license terms.
 
 The table starts from the
 [archived LicenseCheck.io matrix](https://web.archive.org/web/20260613002524/https://licensecheck.io/compatibility-matrix),
-with GPL/LGPL relationships aligned to the [GNU license compatibility table](https://www.gnu.org/licenses/gpl-faq.en.html)
-and MPL/GPL combinations marked for review under [MPL Section 3.3](https://www.mozilla.org/en-US/MPL/2.0/FAQ/).
-Rows are project licenses; columns are dependency licenses. `✓` is compatible,
-`!` needs review, and `✗` is incompatible. The action's rules are in
+with GPL/LGPL relationships aligned to the
+[GNU license compatibility table](https://www.gnu.org/licenses/gpl-faq.en.html)
+and MPL/GPL combinations marked for review under
+[MPL Section 3.3](https://www.mozilla.org/en-US/MPL/2.0/FAQ/). Rows are project
+licenses; columns are dependency licenses. `✓` is compatible, `!` needs review,
+and `✗` is incompatible. The action's rules are in
 [`config/license-compatibility.yaml`](config/license-compatibility.yaml); it
 defines the matrix, fallback compatibility families, aliases, FSF/OSI
-classifications, and ordered distribution warning rules.
-FSF-free and OSI-approved identifiers are exact snapshots from the SPDX
+classifications, and ordered distribution warning rules. FSF-free and
+OSI-approved identifiers are exact snapshots from the SPDX
 [License List v3.29.0](https://github.com/spdx/license-list-data/blob/main/json/licenses.json).
-CC-BY-3.0 and CC-BY-4.0 software dependencies require manual review; they do
-not pass through the permissive fallback family. This follows
+CC-BY-3.0 and CC-BY-4.0 software dependencies require manual review; they do not
+pass through the permissive fallback family. This follows
 [Mozilla's MPL license policy](https://www.mozilla.org/en-US/MPL/license-policy/)
-and [Creative Commons' advice against using CC licenses for software](https://creativecommons.org/faq/).
+and
+[Creative Commons' advice against using CC licenses for software](https://creativecommons.org/faq/).
 
 | Project license ↓ / dependency license → | MIT | Apache 2.0 | BSD 3-Clause | BSD 2-Clause | ISC | GPL 3.0 | GPL 2.0 | LGPL 3.0 | LGPL 2.1 | MPL 2.0 | AGPL 3.0 | CC0 1.0 | Unlicense |
 | ---------------------------------------- | --- | ---------- | ------------ | ------------ | --- | ------- | ------- | -------- | -------- | ------- | -------- | ------- | --------- |

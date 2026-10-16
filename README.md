@@ -40,6 +40,13 @@ header:
 dependency:
   files:
     - go.mod
+  go:
+    # Defaults to ["./..."]. Set the package patterns CI builds for a narrower graph.
+    packages:
+      - ./cmd
+    # Optional: check test imports as a separate graph.
+    test-packages:
+      - ./...
   licenses:
     - name: github.com/zaphiro-technologies/roger
       license: Apache-2.0
@@ -57,7 +64,7 @@ Supported dependency inputs are:
 
 - JavaScript: `package.json` with `package-lock.json`, `npm-shrinkwrap.json`,
   `yarn.lock`, or `pnpm-lock.yaml`
-- Go: `go.mod`, resolved with `go list -mod=readonly -m all`
+- Go: `go.mod`, resolved from package imports with `go list -deps -json`
 - Python: `poetry.lock`, `Pipfile.lock`, or an exhaustive, fully pinned
   `requirements.txt`; `pyproject.toml` is supported with an adjacent
   `poetry.lock`
@@ -77,9 +84,14 @@ graphs are reported as unresolved and fail the check. `requirements.txt` must
 list the complete resolved set; includes, constraints, and options must be
 expanded before checking.
 
-Go module versions are computed from `go.mod` with the Go tool's build list. The
-action environment must have Go installed when checking Go dependencies.
-`go.sum` contains integrity hashes and is not used as a dependency graph; a
+Go dependencies are collected from the selected packages' `.Module` data and
+deduplicated by module. By default, the checker scans production packages under
+`./...`; configure `dependency.go.packages` to match the package patterns CI
+builds, such as `./cmd` for a service executable. Set
+`dependency.go.test-packages` to additionally check test imports with a separate
+`go list -deps -test -json` invocation. The action environment must have Go
+installed, and its OS, architecture, and build tags should match the build being
+checked. `go.sum` contains integrity hashes and is not a dependency graph; a
 `go.sum`-only configuration fails. Replaced Go modules are reported unresolved
 because the replacement source may have different license terms.
 
@@ -151,6 +163,21 @@ does not replace legal review.
 
 Matrix warnings are reported as `unknown` by default and as `weak-compatible`
 when `weak-compatible: true`.
+
+## Comparison with alternatives
+
+These tools overlap, but they make different trade-offs:
+
+| Tool                                                                                   | Stronger at                                                                                                   | Trade-off compared with this action                                                                                                                                                               |
+| -------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| This action                                                                            | Exact-version checks for supported JavaScript, Python, and Go inputs; unresolved dependencies fail the check. | Narrower ecosystem coverage and a smaller compliance workflow.                                                                                                                                    |
+| [GitHub Dependency Review](https://github.com/actions/dependency-review-action)        | Native PR checks for newly introduced dependencies with an SPDX allowlist.                                    | Checks dependency changes through GitHub's dependency graph; an unknown license is reported but does not fail the action. Private repositories require GitHub Code Security or Advanced Security. |
+| [OSS Review Toolkit (ORT)](https://github.com/oss-review-toolkit/ort-ci-github-action) | Broader license, security, and policy evaluation, with reports and SBOM generation.                           | More configuration and tooling than a focused license check. It supports allowing dynamic versions, so configure that carefully when exact versions are required.                                 |
+| [FOSSA Action](https://github.com/fossas/fossa-action)                                 | Hosted license and security compliance with policy review, license corrections, and attribution reports.      | Requires a FOSSA account and API key; it uses a separate service rather than this action's self-contained workflow.                                                                               |
+
+The earlier ORT evaluation is not documented here, so this table compares the
+current documented feature sets rather than claiming why ORT was previously
+unsatisfactory.
 
 ## Action inputs
 

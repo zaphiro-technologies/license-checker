@@ -3,7 +3,13 @@ header:
     spdx-id: Apache-2.0
 
 dependency:
-  # go list -mod=readonly -m all resolves versions from this module.
   files:
     - go.mod
+  # Defaults to ./...; configure the package patterns built in CI.
+  go:
+    packages:
+      - ./...
+    # Optional test graph, kept separate from production dependencies.
+    # test-packages:
+    #   - ./...
   licenses: []

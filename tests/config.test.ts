@@ -21,6 +21,24 @@ import { describe, expect, it } from "vitest";
 import { headerRules, loadConfig } from "../src/config.js";
 
 describe("configuration", () => {
+  it("loads Go package targets and opt-in test targets", () => {
+    const root = mkdtempSync(join(tmpdir(), "license-checker-config-"));
+    writeFileSync(
+      join(root, ".licenserc.yaml"),
+      `dependency:
+  files: [go.mod]
+  go:
+    packages: [./cmd]
+    test-packages: [./...]
+`,
+    );
+
+    expect(loadConfig(root, ".licenserc.yaml").config.dependency?.go).toEqual({
+      packages: ["./cmd"],
+      testPackages: ["./..."],
+    });
+  });
+
   it("requires complete non-SPDX exception audit details", () => {
     const root = mkdtempSync(join(tmpdir(), "license-checker-config-"));
     writeFileSync(

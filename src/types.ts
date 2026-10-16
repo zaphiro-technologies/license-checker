@@ -55,8 +55,14 @@ export interface DependencyException {
   reason: string;
 }
 
+export interface GoDependencyConfig {
+  packages?: string[];
+  testPackages?: string[];
+}
+
 export interface DependencyConfig {
   files?: string[];
+  go?: GoDependencyConfig;
   licenses?: DependencyLicenseOverride[];
   threshold?: number;
   excludes?: DependencyExclude[];

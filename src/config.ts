@@ -127,10 +127,39 @@ function normalizeDependencies(value: unknown): DependencyConfig | undefined {
         return { name, version, url, reason };
       })
     : [];
+  if (
+    record.go !== undefined &&
+    (!record.go || typeof record.go !== "object" || Array.isArray(record.go))
+  ) {
+    throw new Error("dependency.go must be a mapping.");
+  }
+  const go = asRecord(record.go);
+  for (const field of ["packages", "test-packages"] as const) {
+    if (go[field] !== undefined && !Array.isArray(go[field])) {
+      throw new Error(`dependency.go.${field} must be a list.`);
+    }
+    if (
+      Array.isArray(go[field]) &&
+      go[field].some((item) => typeof item !== "string" || !item.trim())
+    ) {
+      throw new Error(`dependency.go.${field} must contain non-empty strings.`);
+    }
+  }
   return {
     files: Array.isArray(record.files)
       ? record.files.filter((item): item is string => typeof item === "string")
       : [],
+    go:
+      record.go !== undefined
+        ? {
+            packages: Array.isArray(go.packages)
+              ? (go.packages as string[])
+              : undefined,
+            testPackages: Array.isArray(go["test-packages"])
+              ? (go["test-packages"] as string[])
+              : undefined,
+          }
+        : undefined,
     licenses: Array.isArray(record.licenses)
       ? record.licenses.flatMap((item, index) => {
           const entry = asRecord(item);

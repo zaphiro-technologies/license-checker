@@ -312,7 +312,11 @@ function parsePnpmLock(
   }
 }
 
-export type GoModuleListRunner = (moduleDirectory: string) => string;
+export type GoPackageListRunner = (
+  moduleDirectory: string,
+  packages: string[],
+  includeTests: boolean,
+) => string;
 
 function goExecutablePath(): string {
   const executable = process.platform === "win32" ? "go.exe" : "go";
@@ -361,43 +365,127 @@ function goExecutablePath(): string {
   return executablePath;
 }
 
-function systemGoModuleList(moduleDirectory: string): string {
+function systemGoPackageList(
+  moduleDirectory: string,
+  packages: string[],
+  includeTests: boolean,
+): string {
   return execFileSync(
     goExecutablePath(),
-    ["list", "-mod=readonly", "-m", "all"],
+    [
+      "list",
+      "-mod=readonly",
+      "-deps",
+      "-json",
+      ...(includeTests ? ["-test"] : []),
+      ...packages,
+    ],
     { cwd: moduleDirectory, encoding: "utf8" },
   );
 }
 
-function parseGoMod(
+function parseGoPackageObjects(output: string): Record<string, unknown>[] {
+  const objects: Record<string, unknown>[] = [];
+  let start = -1;
+  let depth = 0;
+  let inString = false;
+  let escaped = false;
+  for (let index = 0; index < output.length; index++) {
+    const character = output[index];
+    if (start < 0) {
+      if (character === "{") {
+        start = index;
+        depth = 1;
+      }
+      continue;
+    }
+    if (inString) {
+      if (escaped) escaped = false;
+      else if (character === "\\") escaped = true;
+      else if (character === '"') inString = false;
+      continue;
+    }
+    if (character === '"') inString = true;
+    else if (character === "{") depth++;
+    else if (character === "}" && --depth === 0) {
+      const parsed: unknown = JSON.parse(output.slice(start, index + 1));
+      if (parsed && typeof parsed === "object" && !Array.isArray(parsed))
+        objects.push(parsed as Record<string, unknown>);
+      start = -1;
+    }
+  }
+  if (start >= 0) throw new Error("Go returned incomplete package JSON.");
+  return objects;
+}
+
+function parseGoPackages(
   manifest: string,
-  path: string,
+  moduleDirectory: string,
+  packages: string[],
+  includeTests: boolean,
   dependencies: Dependency[],
-  goModuleList: GoModuleListRunner,
+  goPackageList: GoPackageListRunner,
 ): void {
+  if (!packages.length) return;
   let output: string;
   try {
-    output = goModuleList(dirname(path));
+    output = goPackageList(moduleDirectory, packages, includeTests);
   } catch (error) {
     const detail =
       error instanceof Error ? error.message.split("\n")[0] : String(error);
     dependencies.push({
-      name: "(Go module graph)",
+      name: "(Go package graph)",
       version: "unresolved",
       ecosystem: "go",
       manifest,
       versionResolved: false,
-      versionResolutionError: `Unable to read the Go build list: ${detail}`,
+      versionResolutionError: `Unable to resolve Go packages ${packages.join(", ")}${includeTests ? " including tests" : ""}: ${detail}`,
     });
     return;
   }
 
-  for (const line of output.split(/\r?\n/)) {
-    const fields = line.trim().split(/\s+/);
-    const name = fields[0];
-    if (!name || fields.length < 2) continue;
-    const version = fields[1];
-    const replaced = fields.includes("=>");
+  let packageObjects: Record<string, unknown>[];
+  try {
+    packageObjects = parseGoPackageObjects(output);
+  } catch (error) {
+    const detail = error instanceof Error ? error.message : String(error);
+    dependencies.push({
+      name: "(Go package graph)",
+      version: "unresolved",
+      ecosystem: "go",
+      manifest,
+      versionResolved: false,
+      versionResolutionError: `Unable to parse Go package data: ${detail}`,
+    });
+    return;
+  }
+  if (!packageObjects.length) {
+    dependencies.push({
+      name: "(Go package graph)",
+      version: "unresolved",
+      ecosystem: "go",
+      manifest,
+      versionResolved: false,
+      versionResolutionError: `Go returned no package data for ${packages.join(", ")}.`,
+    });
+    return;
+  }
+
+  const modules = new Map<string, Dependency>();
+  for (const packageObject of packageObjects) {
+    const module = packageObject.Module as
+      | {
+          Path?: unknown;
+          Version?: unknown;
+          Main?: unknown;
+          Replace?: unknown;
+        }
+      | undefined;
+    if (!module || module.Main === true || typeof module.Path !== "string")
+      continue;
+    const name = module.Path;
+    const version = typeof module.Version === "string" ? module.Version : "";
+    const replaced = Boolean(module.Replace);
     const versionResolved =
       !replaced && /^v\d+\.\d+\.\d+(?:-[\w.-]+)?(?:\+[\w.-]+)?$/.test(version);
     let versionResolutionError: string | undefined;
@@ -406,17 +494,18 @@ function parseGoMod(
         "The Go module is replaced; its effective source version is not established.";
     } else if (!versionResolved) {
       versionResolutionError =
-        "The Go build list did not provide an exact module version.";
+        "The Go package graph did not provide an exact module version.";
     }
-    dependencies.push({
+    modules.set(name, {
       name,
-      version,
+      version: version || "unresolved",
       ecosystem: "go",
       manifest,
       versionResolved,
       versionResolutionError,
     });
   }
+  dependencies.push(...modules.values());
 }
 
 function parseRequirements(
@@ -752,7 +841,8 @@ function parseManifest(
   root: string,
   path: string,
   dependencies: Dependency[],
-  goModuleList: GoModuleListRunner,
+  goPackageList: GoPackageListRunner,
+  dependencyConfig: DependencyConfig,
 ): void {
   const basename = path.split("/").pop() ?? path;
   const absolute = resolve(root, path);
@@ -763,7 +853,26 @@ function parseManifest(
     return;
   }
   if (basename === "go.mod") {
-    parseGoMod(path, absolute, dependencies, goModuleList);
+    const goConfig = dependencyConfig.go;
+    const packages = goConfig?.packages?.length ? goConfig.packages : ["./..."];
+    parseGoPackages(
+      path,
+      dirname(absolute),
+      packages,
+      false,
+      dependencies,
+      goPackageList,
+    );
+    if (goConfig?.testPackages?.length) {
+      parseGoPackages(
+        path,
+        dirname(absolute),
+        goConfig.testPackages,
+        true,
+        dependencies,
+        goPackageList,
+      );
+    }
     return;
   }
   if (basename === "go.sum") return;
@@ -1715,7 +1824,7 @@ export async function checkDependencies(
   token: string | undefined,
   weakCompatible: boolean,
   logger: Logger,
-  goModuleList: GoModuleListRunner = systemGoModuleList,
+  goPackageList: GoPackageListRunner = systemGoPackageList,
 ): Promise<DependencyReport> {
   const dependencyConfig = config.dependency;
   if (!dependencyConfig?.files?.length) {
@@ -1745,7 +1854,7 @@ export async function checkDependencies(
       });
       continue;
     }
-    parseManifest(root, path, dependencies, goModuleList);
+    parseManifest(root, path, dependencies, goPackageList, dependencyConfig);
   }
 
   const uniqueDependencies = uniqueBy(

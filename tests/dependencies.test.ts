@@ -21,10 +21,16 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { checkDependencies } from "../src/dependencies.js";
 import { Logger } from "../src/logger.js";
 import type { LicenseEyeConfig } from "../src/types.js";
-import type { GoModuleListRunner } from "../src/dependencies.js";
+import type { GoPackageListRunner } from "../src/dependencies.js";
 
-function goList(...entries: string[]): GoModuleListRunner {
-  return () => ["example.com/app", ...entries].join("\n");
+function goList(...entries: string[]): GoPackageListRunner {
+  return () =>
+    entries
+      .map((entry) => {
+        const [Path, Version] = entry.split(/\s+/);
+        return JSON.stringify({ Module: { Path, Version } });
+      })
+      .join("\n");
 }
 
 describe("dependency checker", () => {
@@ -158,7 +164,7 @@ describe("dependency checker", () => {
     expect(fetch).not.toHaveBeenCalled();
   });
 
-  it("uses the Go build-list version selected above the go.mod requirement", async () => {
+  it("uses the Go package graph version selected above the go.mod requirement", async () => {
     const root = mkdtempSync(join(tmpdir(), "license-checker-go-build-list-"));
     writeFileSync(
       join(root, "go.mod"),
@@ -194,6 +200,99 @@ describe("dependency checker", () => {
       license: "MIT",
       resolution: "configured",
     });
+  });
+
+  it("uses the configured Go target graph and deduplicates module providers", async () => {
+    const root = mkdtempSync(join(tmpdir(), "license-checker-go-targets-"));
+    writeFileSync(join(root, "go.mod"), "module example.com/app\n\ngo 1.23\n");
+    const packageList: GoPackageListRunner = vi.fn(() =>
+      [
+        {
+          ImportPath: "example.com/app/cmd",
+          Module: { Path: "example.com/app", Main: true },
+        },
+        {
+          ImportPath: "example.com/app/cmd",
+          Module: { Path: "example.com/shared", Version: "v1.2.3" },
+        },
+        {
+          ImportPath: "example.com/app/other",
+          Module: { Path: "example.com/shared", Version: "v1.2.3" },
+        },
+        { ImportPath: "fmt" },
+      ]
+        .map((item) => JSON.stringify(item))
+        .join("\n"),
+    );
+    const config: LicenseEyeConfig = {
+      header: { license: { "spdx-id": "Apache-2.0" } },
+      dependency: {
+        files: ["go.mod"],
+        licenses: [{ name: "example.com/shared", license: "MIT" }],
+      },
+    };
+
+    const report = await checkDependencies(
+      root,
+      config,
+      undefined,
+      false,
+      new Logger("error"),
+      packageList,
+    );
+
+    expect(packageList).toHaveBeenCalledWith(root, ["./..."], false);
+    expect(report.results).toHaveLength(1);
+    expect(report.results[0]).toMatchObject({
+      name: "example.com/shared",
+      version: "v1.2.3",
+      license: "MIT",
+    });
+  });
+
+  it("checks Go test dependencies only when test packages are configured", async () => {
+    const root = mkdtempSync(
+      join(tmpdir(), "license-checker-go-test-targets-"),
+    );
+    writeFileSync(join(root, "go.mod"), "module example.com/app\n\ngo 1.23\n");
+    const packageList: GoPackageListRunner = vi.fn(
+      (_directory, _packages, includeTests) =>
+        JSON.stringify({
+          Module: {
+            Path: includeTests
+              ? "example.com/test-dependency"
+              : "example.com/runtime-dependency",
+            Version: "v1.0.0",
+          },
+        }),
+    );
+    const config: LicenseEyeConfig = {
+      header: { license: { "spdx-id": "Apache-2.0" } },
+      dependency: {
+        files: ["go.mod"],
+        go: { packages: ["./cmd"], testPackages: ["./..."] },
+        licenses: [
+          { name: "example.com/runtime-dependency", license: "MIT" },
+          { name: "example.com/test-dependency", license: "MIT" },
+        ],
+      },
+    };
+
+    const report = await checkDependencies(
+      root,
+      config,
+      undefined,
+      false,
+      new Logger("error"),
+      packageList,
+    );
+
+    expect(packageList).toHaveBeenNthCalledWith(1, root, ["./cmd"], false);
+    expect(packageList).toHaveBeenNthCalledWith(2, root, ["./..."], true);
+    expect(report.results.map((result) => result.name).sort()).toEqual([
+      "example.com/runtime-dependency",
+      "example.com/test-dependency",
+    ]);
   });
 
   it("assigns a configured license when declared metadata matches", async () => {
@@ -939,11 +1038,36 @@ describe("dependency checker", () => {
 
     expect(report.failures).toHaveLength(1);
     expect(report.results[0]).toMatchObject({
-      name: "(Go module graph)",
+      name: "(Go package graph)",
       version: "unresolved",
       normalized: "Unknown",
       compatible: "unknown",
-      reason: "Unable to read the Go build list: go executable missing",
+      reason: "Unable to resolve Go packages ./...: go executable missing",
+    });
+  });
+
+  it("fails when Go returns no package data for configured targets", async () => {
+    const root = mkdtempSync(join(tmpdir(), "license-checker-go-empty-graph-"));
+    writeFileSync(join(root, "go.mod"), "module example.com/app\n\ngo 1.23\n");
+    const config: LicenseEyeConfig = {
+      header: { license: { "spdx-id": "Apache-2.0" } },
+      dependency: { files: ["go.mod"], go: { packages: ["./cmd"] } },
+    };
+
+    const report = await checkDependencies(
+      root,
+      config,
+      undefined,
+      false,
+      new Logger("error"),
+      () => "",
+    );
+
+    expect(report.failures).toHaveLength(1);
+    expect(report.results[0]).toMatchObject({
+      name: "(Go package graph)",
+      version: "unresolved",
+      reason: "Go returned no package data for ./cmd.",
     });
   });
 

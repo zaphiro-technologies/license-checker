@@ -8,7 +8,7 @@ with the action's `config` input).
 | Example                                                                | Use it when                                                                                               |
 | ---------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
 | [`javascript/`](javascript/)                                           | `package.json`, `package-lock.json`, and a config with an exact-version override.                         |
-| [`go/`](go/)                                                           | `go.mod` and a config; the checker reads the selected module graph with `go list -mod=readonly -m all`.   |
+| [`go/`](go/)                                                           | `go.mod` and a config; the checker reads selected package imports with `go list -deps -json`.             |
 | [`python-poetry/`](python-poetry/)                                     | `pyproject.toml` and a config; generate the adjacent lockfile with `poetry lock`.                         |
 | [`python-requirements/`](python-requirements/)                         | An exhaustive `requirements.txt` with every dependency pinned using `==` or `===`.                        |
 | [`match-pattern/.licenserc.yaml`](match-pattern/.licenserc.yaml)       | A reviewed package-specific rule needs to recognize declared license metadata or downloaded LICENSE text. |
@@ -19,8 +19,11 @@ stores them elsewhere, change `dependency.files` to the correct repository-
 relative path. For JavaScript, keep the lockfile in the same directory as
 `package.json`; regenerate it with the package manager after changing
 dependencies. For Poetry, run `poetry lock` to create and update `poetry.lock`.
-For Go, the runner must have Go installed. A `go.sum` file may remain in the
-project, but it is not a substitute for `go.mod`.
+For Go, the runner must have Go installed. The checker defaults to production
+packages under `./...`; set `dependency.go.packages` to the package patterns
+your build uses. Add `dependency.go.test-packages` to check test imports as a
+separate graph. A `go.sum` file may remain in the project, but it is not a
+substitute for `go.mod`.
 
 The requirements example uses `idna`, which has no transitive dependencies. For
 a real project, include every direct and transitive dependency in the

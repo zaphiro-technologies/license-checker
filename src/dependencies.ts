@@ -380,7 +380,7 @@ function systemGoPackageList(
       ...(includeTests ? ["-test"] : []),
       ...packages,
     ],
-    { cwd: moduleDirectory, encoding: "utf8" },
+    { cwd: moduleDirectory, encoding: "utf8", maxBuffer: 64 * 1024 * 1024 },
   );
 }
 

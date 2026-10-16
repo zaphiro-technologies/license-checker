@@ -22,8 +22,8 @@ dependencies. For Poetry, run `poetry lock` to create and update `poetry.lock`.
 For Go, the runner must have Go installed. A `go.sum` file may remain in the
 project, but it is not a substitute for `go.mod`.
 
-The requirements example uses `idna`, which has no transitive dependencies.
-For a real project, include every direct and transitive dependency in the
+The requirements example uses `idna`, which has no transitive dependencies. For
+a real project, include every direct and transitive dependency in the
 requirements file and pin each one.
 
 The pattern example uses a placeholder package name and notice. Replace both

@@ -77,8 +77,8 @@ graphs are reported as unresolved and fail the check. `requirements.txt` must
 list the complete resolved set; includes, constraints, and options must be
 expanded before checking.
 
-Go module versions are computed from `go.mod` with the Go tool's build list.
-The action environment must have Go installed when checking Go dependencies.
+Go module versions are computed from `go.mod` with the Go tool's build list. The
+action environment must have Go installed when checking Go dependencies.
 `go.sum` contains integrity hashes and is not used as a dependency graph; a
 `go.sum`-only configuration fails. Replaced Go modules are reported unresolved
 because the replacement source may have different license terms.
@@ -114,8 +114,8 @@ LICENSE text when that text is available. Entries without `match` remain
 unconditional name/version overrides and take precedence over pattern entries.
 Pattern entries are checked in configuration order for each source. Invalid
 regular expressions fail configuration loading. Use this for reviewed,
-package-specific cases; a copyright notice alone does not establish the terms
-of a license.
+package-specific cases; a copyright notice alone does not establish the terms of
+a license.
 
 Compatibility decisions for the supported license families follow the
 [LicenseCheck.io compatibility matrix](https://licensecheck.io/compatibility-matrix).
@@ -207,6 +207,6 @@ create pull-request comments.
 ## Usage examples
 
 The [`examples/README.md`](examples/README.md) describes the example files and
-how to copy them into a project. It includes configurations for JavaScript,
-Go, Python with Poetry, and fully pinned Python requirements, plus a GitHub
-Actions workflow and an optional license-text pattern example.
+how to copy them into a project. It includes configurations for JavaScript, Go,
+Python with Poetry, and fully pinned Python requirements, plus a GitHub Actions
+workflow and an optional license-text pattern example.

@@ -11,6 +11,8 @@ header:
     - ".github"
     - ".docker"
     - "**/*.{md,MD}"
+    - "examples/javascript/package-lock.json"
+    - "examples/python-requirements/requirements.txt"
     - "package.json"
     - "LICENSE"
     - ".vscode"

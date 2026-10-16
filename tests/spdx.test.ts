@@ -48,7 +48,6 @@ describe("SPDX normalization", () => {
     );
     for (const license of [
       "BlueOak-1.0.0",
-      "MPL-1.1",
       "CC0-1.0",
       "PSF-2.0",
       "CNRI-Python",
@@ -58,6 +57,7 @@ describe("SPDX normalization", () => {
         "compatible",
       );
     }
+    expect(checkCompatibility("Apache-2.0", "MPL-1.1", false)).toBe("unknown");
     expect(checkCompatibility("Apache-2.0", "GPL-3.0-only", false)).toBe(
       "incompatible",
     );

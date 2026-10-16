@@ -293,11 +293,6 @@ type MatrixGroup = string;
 
 function matrixGroup(id: string): MatrixGroup | undefined {
   for (const [group, rule] of Object.entries(LICENSE_RULES.matrix.groups)) {
-    if (
-      rule.family &&
-      LICENSE_RULES["license-families"][rule.family].includes(id)
-    )
-      return group;
     if (rule.exact?.includes(id)) return group;
     if (
       rule.prefixes?.some((prefix) =>
@@ -305,6 +300,13 @@ function matrixGroup(id: string): MatrixGroup | undefined {
           ? id.startsWith(prefix)
           : id === prefix || id.startsWith(`${prefix}-`),
       )
+    )
+      return group;
+  }
+  for (const [group, rule] of Object.entries(LICENSE_RULES.matrix.groups)) {
+    if (
+      rule.family &&
+      LICENSE_RULES["license-families"][rule.family].includes(id)
     )
       return group;
   }

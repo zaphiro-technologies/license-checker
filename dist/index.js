@@ -46556,7 +46556,7 @@ function goExecutablePath() {
         goRoot && (0,external_node_path_.isAbsolute)(goRoot) ? (0,external_node_path_.join)(goRoot, "bin", executable) : undefined,
         ...cachedPathCandidates,
         ...(process.platform === "win32"
-            ? ["C:\\Program Files\\Go\\bin\\go.exe"]
+            ? [String.raw `C:\Program Files\Go\bin\go.exe`]
             : [
                 "/usr/local/go/bin/go",
                 "/usr/local/bin/go",

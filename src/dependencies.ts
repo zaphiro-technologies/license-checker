@@ -342,7 +342,7 @@ function goExecutablePath(): string {
     goRoot && isAbsolute(goRoot) ? join(goRoot, "bin", executable) : undefined,
     ...cachedPathCandidates,
     ...(process.platform === "win32"
-      ? ["C:\\Program Files\\Go\\bin\\go.exe"]
+      ? [String.raw`C:\Program Files\Go\bin\go.exe`]
       : [
           "/usr/local/go/bin/go",
           "/usr/local/bin/go",

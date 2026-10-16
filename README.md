@@ -117,8 +117,38 @@ regular expressions fail configuration loading. Use this for reviewed,
 package-specific cases; a copyright notice alone does not establish the terms of
 a license.
 
-Compatibility decisions for the supported license families follow the
-[LicenseCheck.io compatibility matrix](https://licensecheck.io/compatibility-matrix).
+### Compatibility reference
+
+The table below is transcribed from the [archived LicenseCheck.io compatibility
+matrix](https://web.archive.org/web/20260613002524/https://licensecheck.io/compatibility-matrix)
+for reference. Rows are the project license; columns are the dependency license.
+`✓` means compatible, `!` means review the terms, and `✗` means incompatible
+according to that source. This historical table is not the checker's policy or
+legal advice; the checker's compatibility rules are implemented in
+[`src/spdx.ts`](src/spdx.ts).
+
+| Project license ↓ / dependency license → | MIT | Apache 2.0 | BSD 3-Clause | BSD 2-Clause | ISC | GPL 3.0 | GPL 2.0 | LGPL 3.0 | LGPL 2.1 | MPL 2.0 | AGPL 3.0 | CC0 1.0 | Unlicense |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| MIT | ✓ | ✓ | ✓ | ✓ | ✓ | ✗ | ✗ | ✓ | ✓ | ✓ | ✗ | ✓ | ✓ |
+| Apache 2.0 | ✓ | ✓ | ✓ | ✓ | ✓ | ✗ | ✗ | ✓ | ✓ | ✓ | ✗ | ✓ | ✓ |
+| BSD 3-Clause | ✓ | ✓ | ✓ | ✓ | ✓ | ✗ | ✗ | ✓ | ✓ | ✓ | ✗ | ✓ | ✓ |
+| BSD 2-Clause | ✓ | ✓ | ✓ | ✓ | ✓ | ✗ | ✗ | ✓ | ✓ | ✓ | ✗ | ✓ | ✓ |
+| ISC | ✓ | ✓ | ✓ | ✓ | ✓ | ✗ | ✗ | ✓ | ✓ | ✓ | ✗ | ✓ | ✓ |
+| GPL 3.0 | ✗ | ✗ | ✗ | ✗ | ✗ | ✓ | ! | ✗ | ✗ | ✗ | ! | ✓ | ✓ |
+| GPL 2.0 | ✗ | ✗ | ✗ | ✗ | ✗ | ! | ✓ | ✗ | ✗ | ✗ | ! | ✓ | ✓ |
+| LGPL 3.0 | ✓ | ✓ | ✓ | ✓ | ✓ | ✗ | ✗ | ✓ | ! | ! | ✗ | ✓ | ✓ |
+| LGPL 2.1 | ✓ | ✓ | ✓ | ✓ | ✓ | ✗ | ✗ | ! | ✓ | ! | ✗ | ✓ | ✓ |
+| MPL 2.0 | ✓ | ✓ | ✓ | ✓ | ✓ | ✗ | ✗ | ! | ! | ✓ | ✗ | ✓ | ✓ |
+| AGPL 3.0 | ✗ | ✗ | ✗ | ✗ | ✗ | ! | ! | ✗ | ✗ | ✗ | ✓ | ✓ | ✓ |
+| CC0 1.0 | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Unlicense | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+
+For a separate, interactive compatibility check, see the European Commission's
+[Licensing Assistant compatibility checker](https://interoperable-europe.ec.europa.eu/collection/eupl/solution/licensing-assistant/compatibility-checker).
+Choose the dependency license as the inbound license and the project's license
+as the outbound license. The assistant covers a different set of licenses and
+does not replace legal review.
+
 Matrix warnings are reported as `unknown` by default and as `weak-compatible`
 when `weak-compatible: true`.
 
@@ -178,15 +208,6 @@ GITHUB_WORKSPACE="$TARGET_REPO" \
   yarn run check \
   --config "$TARGET_CONFIG" \
   --log info
-```
-
-For example:
-
-```sh
-GITHUB_WORKSPACE=/Users/ffacca/Code/documentation \
-  yarn run check \
-  --config /Users/ffacca/Code/documentation/.github/config/.licenserc.yaml \
-  --log debug
 ```
 
 The target repository must already be checked out and contain the dependency

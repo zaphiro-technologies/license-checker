@@ -27,6 +27,7 @@ describe("configuration", () => {
       join(root, ".licenserc.yaml"),
       `dependency:
   files: [go.mod]
+  include-dev-dependencies: true
   go:
     packages: [./cmd]
     test-packages: [./...]
@@ -37,6 +38,10 @@ describe("configuration", () => {
       packages: ["./cmd"],
       testPackages: ["./..."],
     });
+    expect(
+      loadConfig(root, ".licenserc.yaml").config.dependency
+        ?.includeDevDependencies,
+    ).toBe(true);
   });
 
   it("requires complete non-SPDX exception audit details", () => {

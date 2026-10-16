@@ -40,11 +40,13 @@ header:
 dependency:
   files:
     - go.mod
+  # Optional; JavaScript/Python development dependencies and Go test imports are excluded by default.
+  # include-dev-dependencies: true
   go:
     # Defaults to ["./..."]. Set the package patterns CI builds for a narrower graph.
     packages:
       - ./cmd
-    # Optional: check test imports as a separate graph.
+    # Optional: use these patterns for test imports; otherwise the dev flag uses packages above.
     test-packages:
       - ./...
   licenses:
@@ -84,12 +86,25 @@ graphs are reported as unresolved and fail the check. `requirements.txt` must
 list the complete resolved set; includes, constraints, and options must be
 expanded before checking.
 
+Development dependencies are excluded by default. Set
+`dependency.include-dev-dependencies: true` to include JavaScript
+`devDependencies`, Poetry non-main groups, `Pipfile.lock`'s `develop` section,
+and Go test imports for the package patterns in `dependency.go.packages`.
+JavaScript lockfiles are traversed from runtime dependency roots so
+transitive production dependencies remain included even when also used by
+development tools. A `requirements.txt` is treated as the complete dependency
+set explicitly listed in that file; split runtime and development requirements
+into separate files and list the desired inputs in `dependency.files`.
+
 Go dependencies are collected from the selected packages' `.Module` data and
 deduplicated by module. By default, the checker scans production packages under
 `./...`; configure `dependency.go.packages` to match the package patterns CI
 builds, such as `./cmd` for a service executable. Set
-`dependency.go.test-packages` to additionally check test imports with a separate
-`go list -deps -test -json` invocation. The action environment must have Go
+`dependency.go.test-packages` to opt in to test imports independently and/or
+check a separate set of patterns with `go list -deps -test -json`. If omitted,
+enabling `include-dev-dependencies` checks tests for the production package
+patterns.
+The action environment must have Go
 installed, and its OS, architecture, and build tags should match the build being
 checked. `go.sum` contains integrity hashes and is not a dependency graph; a
 `go.sum`-only configuration fails. Replaced Go modules are reported unresolved

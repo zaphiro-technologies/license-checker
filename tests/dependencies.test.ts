@@ -126,6 +126,120 @@ describe("dependency checker", () => {
     expect(fetch).not.toHaveBeenCalled();
   });
 
+  it("excludes npm lock entries marked as development-only by default", async () => {
+    const root = mkdtempSync(join(tmpdir(), "license-checker-npm-dev-lock-"));
+    writeFileSync(
+      join(root, "package.json"),
+      JSON.stringify({
+        dependencies: { runtime: "^1.0.0" },
+        devDependencies: { tooling: "^2.0.0" },
+      }),
+    );
+    writeFileSync(
+      join(root, "package-lock.json"),
+      JSON.stringify({
+        lockfileVersion: 3,
+        packages: {
+          "": { name: "app", version: "1.0.0" },
+          "node_modules/runtime": { version: "1.2.0" },
+          "node_modules/tooling": { version: "2.3.0", dev: true },
+        },
+      }),
+    );
+    const config: LicenseEyeConfig = {
+      header: { license: { "spdx-id": "Apache-2.0" } },
+      dependency: {
+        files: ["package.json"],
+        licenses: [
+          { name: "runtime", license: "MIT" },
+          { name: "tooling", license: "MIT" },
+        ],
+      },
+    };
+
+    const report = await checkDependencies(
+      root,
+      config,
+      undefined,
+      false,
+      new Logger("error"),
+    );
+
+    expect(report.results.map((result) => result.name)).toEqual(["runtime"]);
+  });
+
+  it("includes npm dev-only lock entries when development dependencies are opted in", async () => {
+    const root = mkdtempSync(join(tmpdir(), "license-checker-npm-dev-opt-in-"));
+    writeFileSync(
+      join(root, "package.json"),
+      JSON.stringify({ devDependencies: { tooling: "^2.0.0" } }),
+    );
+    writeFileSync(
+      join(root, "package-lock.json"),
+      JSON.stringify({
+        lockfileVersion: 3,
+        packages: {
+          "": { name: "app", version: "1.0.0" },
+          "node_modules/tooling": { version: "2.3.0", dev: true },
+        },
+      }),
+    );
+    const config: LicenseEyeConfig = {
+      header: { license: { "spdx-id": "Apache-2.0" } },
+      dependency: {
+        files: ["package.json"],
+        includeDevDependencies: true,
+        licenses: [{ name: "tooling", license: "MIT" }],
+      },
+    };
+
+    const report = await checkDependencies(
+      root,
+      config,
+      undefined,
+      false,
+      new Logger("error"),
+    );
+
+    expect(report.results.map((result) => result.name)).toEqual(["tooling"]);
+  });
+
+  it("resolves pnpm production dependency closure without dev-only packages", async () => {
+    const root = mkdtempSync(join(tmpdir(), "license-checker-pnpm-prod-"));
+    writeFileSync(
+      join(root, "package.json"),
+      JSON.stringify({ dependencies: { runtime: "^1.0.0" } }),
+    );
+    writeFileSync(
+      join(root, "pnpm-lock.yaml"),
+      `lockfileVersion: '9.0'\nimporters:\n  .:\n    dependencies:\n      runtime:\n        specifier: ^1.0.0\n        version: 1.2.0\n    devDependencies:\n      testTool:\n        specifier: ^2.0.0\n        version: 2.1.0\npackages:\n  runtime@1.2.0: {}\n  shared@3.0.0: {}\n  testTool@2.1.0: {}\nsnapshots:\n  runtime@1.2.0:\n    dependencies:\n      shared: 3.0.0\n  shared@3.0.0: {}\n  testTool@2.1.0: {}\n`,
+    );
+    const config: LicenseEyeConfig = {
+      header: { license: { "spdx-id": "Apache-2.0" } },
+      dependency: {
+        files: ["package.json"],
+        licenses: [
+          { name: "runtime", license: "MIT" },
+          { name: "shared", license: "MIT" },
+          { name: "testTool", license: "MIT" },
+        ],
+      },
+    };
+
+    const report = await checkDependencies(
+      root,
+      config,
+      undefined,
+      false,
+      new Logger("error"),
+    );
+
+    expect(report.results.map((result) => result.name).sort()).toEqual([
+      "runtime",
+      "shared",
+    ]);
+  });
+
   it("uses the exact Pipfile lock version for Python dependencies", async () => {
     const root = mkdtempSync(join(tmpdir(), "license-checker-pipfile-lock-"));
     writeFileSync(
@@ -162,6 +276,83 @@ describe("dependency checker", () => {
       resolution: "configured",
     });
     expect(fetch).not.toHaveBeenCalled();
+  });
+
+  it("includes Pipfile development dependencies only when opted in", async () => {
+    const root = mkdtempSync(join(tmpdir(), "license-checker-pipfile-dev-"));
+    writeFileSync(
+      join(root, "Pipfile.lock"),
+      JSON.stringify({
+        default: { runtime: { version: "==1.0.0" } },
+        develop: { pytest: { version: "==8.0.0" } },
+      }),
+    );
+    const config: LicenseEyeConfig = {
+      header: { license: { "spdx-id": "Apache-2.0" } },
+      dependency: {
+        files: ["Pipfile.lock"],
+        licenses: [
+          { name: "runtime", license: "MIT" },
+          { name: "pytest", license: "MIT" },
+        ],
+      },
+    };
+
+    const runtimeReport = await checkDependencies(
+      root,
+      config,
+      undefined,
+      false,
+      new Logger("error"),
+    );
+    const developmentReport = await checkDependencies(
+      root,
+      {
+        ...config,
+        dependency: { ...config.dependency, includeDevDependencies: true },
+      },
+      undefined,
+      false,
+      new Logger("error"),
+    );
+
+    expect(runtimeReport.results.map((result) => result.name)).toEqual([
+      "runtime",
+    ]);
+    expect(
+      developmentReport.results.map((result) => result.name).sort(),
+    ).toEqual(["pytest", "runtime"]);
+  });
+
+  it("requires a lockfile for opted-in pyproject development groups", async () => {
+    const root = mkdtempSync(join(tmpdir(), "license-checker-pyproject-dev-"));
+    writeFileSync(
+      join(root, "pyproject.toml"),
+      `[dependency-groups]\ndev = ["pytest>=8.0"]\n\n[tool.poetry.group.test.dependencies]\ncoverage = "^7.0"\n`,
+    );
+    const config: LicenseEyeConfig = {
+      header: { license: { "spdx-id": "Apache-2.0" } },
+      dependency: {
+        files: ["pyproject.toml"],
+        includeDevDependencies: true,
+      },
+    };
+
+    const report = await checkDependencies(
+      root,
+      config,
+      undefined,
+      false,
+      new Logger("error"),
+    );
+
+    expect(report.failures.map((result) => result.name).sort()).toEqual([
+      "coverage",
+      "pytest",
+    ]);
+    expect(
+      report.failures.every((result) => result.versionResolved === false),
+    ).toBe(true);
   });
 
   it("uses the Go package graph version selected above the go.mod requirement", async () => {
@@ -289,6 +480,50 @@ describe("dependency checker", () => {
 
     expect(packageList).toHaveBeenNthCalledWith(1, root, ["./cmd"], false);
     expect(packageList).toHaveBeenNthCalledWith(2, root, ["./..."], true);
+    expect(report.results.map((result) => result.name).sort()).toEqual([
+      "example.com/runtime-dependency",
+      "example.com/test-dependency",
+    ]);
+  });
+
+  it("includes Go test dependencies when development dependencies are opted in", async () => {
+    const root = mkdtempSync(join(tmpdir(), "license-checker-go-dev-opt-in-"));
+    writeFileSync(join(root, "go.mod"), "module example.com/app\n\ngo 1.23\n");
+    const packageList: GoPackageListRunner = vi.fn(
+      (_directory, _packages, includeTests) =>
+        JSON.stringify({
+          Module: {
+            Path: includeTests
+              ? "example.com/test-dependency"
+              : "example.com/runtime-dependency",
+            Version: "v1.0.0",
+          },
+        }),
+    );
+    const config: LicenseEyeConfig = {
+      header: { license: { "spdx-id": "Apache-2.0" } },
+      dependency: {
+        files: ["go.mod"],
+        includeDevDependencies: true,
+        go: { packages: ["./cmd"] },
+        licenses: [
+          { name: "example.com/runtime-dependency", license: "MIT" },
+          { name: "example.com/test-dependency", license: "MIT" },
+        ],
+      },
+    };
+
+    const report = await checkDependencies(
+      root,
+      config,
+      undefined,
+      false,
+      new Logger("error"),
+      packageList,
+    );
+
+    expect(packageList).toHaveBeenNthCalledWith(1, root, ["./cmd"], false);
+    expect(packageList).toHaveBeenNthCalledWith(2, root, ["./cmd"], true);
     expect(report.results.map((result) => result.name).sort()).toEqual([
       "example.com/runtime-dependency",
       "example.com/test-dependency",
@@ -535,7 +770,16 @@ describe("dependency checker", () => {
 
   it("parses Yarn Berry selectors and versions", async () => {
     const root = mkdtempSync(join(tmpdir(), "license-checker-yarn-"));
-    writeFileSync(join(root, "package.json"), "{}\n");
+    writeFileSync(
+      join(root, "package.json"),
+      JSON.stringify({
+        dependencies: {
+          foo: "^1.0.0",
+          "@scope/bar": "^2.0.0",
+          "react-loadable": "npm:@docusaurus/react-loadable@6.0.0",
+        },
+      }),
+    );
     writeFileSync(
       join(root, "yarn.lock"),
       `__metadata:\n  version: 6\n\n"documentation@workspace:.":\n  version: 0.0.0-use.local\n  resolution: "documentation@workspace:."\n\nfoo@npm:^1.0.0:\n  version: 1.2.3\n\n"@scope/bar@npm:^2.0.0":\n  version: 2.1.0\n\n"react-loadable@npm:@docusaurus/react-loadable@6.0.0":\n  version: 6.0.0\n`,
@@ -559,13 +803,55 @@ describe("dependency checker", () => {
       new Logger("error"),
     );
     expect(
-      report.results.map((result) => `${result.name}@${result.version}`),
-    ).toEqual([
-      "foo@1.2.3",
-      "@scope/bar@2.1.0",
-      "@docusaurus/react-loadable@6.0.0",
-    ]);
+      report.results.map((result) => `${result.name}@${result.version}`).sort(),
+    ).toEqual(
+      [
+        "@scope/bar@2.1.0",
+        "@docusaurus/react-loadable@6.0.0",
+        "foo@1.2.3",
+      ].sort(),
+    );
     expect(report.failures).toHaveLength(0);
+  });
+
+  it("omits Yarn development-only dependency trees unless opted in", async () => {
+    const root = mkdtempSync(join(tmpdir(), "license-checker-yarn-dev-"));
+    writeFileSync(
+      join(root, "package.json"),
+      JSON.stringify({
+        dependencies: { runtime: "^1.0.0" },
+        devDependencies: { testTool: "^2.0.0" },
+      }),
+    );
+    writeFileSync(
+      join(root, "yarn.lock"),
+      `runtime@npm:^1.0.0:\n  version: 1.2.0\n  resolution: "runtime@npm:1.2.0"\n  dependencies:\n    shared: "npm:^3.0.0"\n\nshared@npm:^3.0.0:\n  version: 3.1.0\n\ntestTool@npm:^2.0.0:\n  version: 2.4.0\n  dependencies:\n    testOnly: "npm:^4.0.0"\n\ntestOnly@npm:^4.0.0:\n  version: 4.1.0\n`,
+    );
+    const config: LicenseEyeConfig = {
+      header: { license: { "spdx-id": "Apache-2.0" } },
+      dependency: {
+        files: ["package.json"],
+        licenses: [
+          { name: "runtime", license: "MIT" },
+          { name: "shared", license: "MIT" },
+          { name: "testTool", license: "MIT" },
+          { name: "testOnly", license: "MIT" },
+        ],
+      },
+    };
+
+    const report = await checkDependencies(
+      root,
+      config,
+      undefined,
+      false,
+      new Logger("error"),
+    );
+
+    expect(report.results.map((result) => result.name).sort()).toEqual([
+      "runtime",
+      "shared",
+    ]);
   });
 
   it("prefers the adjacent Poetry lockfile's exact package versions", async () => {
@@ -576,7 +862,7 @@ describe("dependency checker", () => {
     );
     writeFileSync(
       join(root, "poetry.lock"),
-      `[[package]]\nname = "markdown"\nversion = "3.8.2"\n\n[[package]]\nname = "transitive-package"\nversion = "1.2.3"\n`,
+      `[[package]]\nname = "markdown"\nversion = "3.8.2"\ngroups = ["main"]\n\n[[package]]\nname = "transitive-package"\nversion = "1.2.3"\ngroups = ["main"]\n\n[[package]]\nname = "test-tool"\nversion = "4.5.6"\ngroups = ["test"]\n`,
     );
     const config: LicenseEyeConfig = {
       header: { license: { "spdx-id": "Apache-2.0" } },
@@ -589,6 +875,7 @@ describe("dependency checker", () => {
             version: "1.2.3",
             license: "Apache-2.0",
           },
+          { name: "test-tool", version: "4.5.6", license: "MIT" },
         ],
       },
     };
@@ -607,6 +894,20 @@ describe("dependency checker", () => {
     expect(
       report.results.every((result) => result.resolution === "configured"),
     ).toBe(true);
+
+    const developmentReport = await checkDependencies(
+      root,
+      {
+        ...config,
+        dependency: { ...config.dependency, includeDevDependencies: true },
+      },
+      undefined,
+      false,
+      new Logger("error"),
+    );
+    expect(
+      developmentReport.results.map((result) => result.name).sort(),
+    ).toEqual(["markdown", "test-tool", "transitive-package"]);
   });
 
   it("uses PyPI SPDX license expressions", async () => {
@@ -944,6 +1245,7 @@ describe("dependency checker", () => {
           "pyproject.toml",
           "Pipfile.lock",
         ],
+        includeDevDependencies: true,
         licenses: [{ name: "**", license: "Apache-2.0" }],
       },
     };
@@ -1003,11 +1305,10 @@ describe("dependency checker", () => {
 
     expect(report.results.map((result) => result.name)).toEqual([
       "production",
-      "development",
       "optional",
       "peer",
     ]);
-    expect(report.failures).toHaveLength(4);
+    expect(report.failures).toHaveLength(3);
     expect(
       report.results.every(
         (result) =>
@@ -1015,6 +1316,36 @@ describe("dependency checker", () => {
           result.reason === "A supported npm lockfile is required.",
       ),
     ).toBe(true);
+  });
+
+  it("includes JavaScript development dependencies when opted in", async () => {
+    const root = mkdtempSync(
+      join(tmpdir(), "license-checker-package-json-dev-"),
+    );
+    writeFileSync(
+      join(root, "package.json"),
+      JSON.stringify({ devDependencies: { development: "2.0.0" } }),
+    );
+    const config: LicenseEyeConfig = {
+      header: { license: { "spdx-id": "Apache-2.0" } },
+      dependency: {
+        files: ["package.json"],
+        includeDevDependencies: true,
+        licenses: [{ name: "development", license: "MIT" }],
+      },
+    };
+
+    const report = await checkDependencies(
+      root,
+      config,
+      undefined,
+      false,
+      new Logger("error"),
+    );
+
+    expect(report.results.map((result) => result.name)).toEqual([
+      "development",
+    ]);
   });
 
   it("reports the Go graph unresolved when go list cannot produce it", async () => {

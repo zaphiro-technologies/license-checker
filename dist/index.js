@@ -43195,6 +43195,10 @@ function normalizeDependencies(value) {
         throw new Error("dependency.go must be a mapping.");
     }
     const go = asRecord(record.go);
+    if (record["include-dev-dependencies"] !== undefined &&
+        typeof record["include-dev-dependencies"] !== "boolean") {
+        throw new Error("dependency.include-dev-dependencies must be a boolean.");
+    }
     for (const field of ["packages", "test-packages"]) {
         if (go[field] !== undefined && !Array.isArray(go[field])) {
             throw new Error(`dependency.go.${field} must be a list.`);
@@ -43218,6 +43222,7 @@ function normalizeDependencies(value) {
                     : undefined,
             }
             : undefined,
+        includeDevDependencies: record["include-dev-dependencies"] === true,
         licenses: Array.isArray(record.licenses)
             ? record.licenses.flatMap((item, index) => {
                 const entry = asRecord(item);
@@ -46384,13 +46389,14 @@ function pythonVersionIsExact(version) {
     }
     return true;
 }
-function addPackageJsonDependencies(dependencies, manifest, packageJson) {
-    for (const section of [
+function addPackageJsonDependencies(dependencies, manifest, packageJson, includeDevDependencies) {
+    const sections = [
         "dependencies",
-        "devDependencies",
         "optionalDependencies",
         "peerDependencies",
-    ]) {
+        ...(includeDevDependencies ? ["devDependencies"] : []),
+    ];
+    for (const section of sections) {
         for (const [name, version] of Object.entries(packageJson[section] ?? {})) {
             dependencies.push({
                 name,
@@ -46403,7 +46409,7 @@ function addPackageJsonDependencies(dependencies, manifest, packageJson) {
         }
     }
 }
-function parseNpmLock(manifest, lockPath, dependencies) {
+function parseNpmLock(manifest, lockPath, dependencies, includeDevDependencies = false) {
     const lock = readJson(lockPath);
     if (!lock) {
         dependencies.push({
@@ -46420,6 +46426,8 @@ function parseNpmLock(manifest, lockPath, dependencies) {
         for (const [location, value] of Object.entries(lock.packages)) {
             if (!location.startsWith("node_modules/"))
                 continue;
+            if (!includeDevDependencies && value.dev === true)
+                continue;
             const name = location.slice(location.lastIndexOf("node_modules/") + "node_modules/".length);
             const version = typeof value.version === "string" ? value.version : "*";
             dependencies.push({
@@ -46434,6 +46442,8 @@ function parseNpmLock(manifest, lockPath, dependencies) {
     }
     const visitLegacy = (entries) => {
         for (const [name, value] of Object.entries(entries)) {
+            if (!includeDevDependencies && value.dev === true)
+                continue;
             dependencies.push({
                 name,
                 version: typeof value.version === "string" ? value.version : "*",
@@ -46450,54 +46460,31 @@ function parseNpmLock(manifest, lockPath, dependencies) {
     if (lock.dependencies)
         visitLegacy(lock.dependencies);
 }
-function parseYarnLock(manifest, lockPath, dependencies) {
+function parseYarnLock(manifest, lockPath, dependencies, packageJson, includeDevDependencies) {
     const text = (0,external_node_fs_.readFileSync)(lockPath, "utf8");
-    let names = [];
-    let version = "*";
-    let workspaceEntry = false;
+    const parseDescriptor = (value) => {
+        const normalized = value.trim().replace(/^['"]|['"]$/g, "");
+        const separator = normalized.startsWith("@")
+            ? normalized.indexOf("@", normalized.indexOf("/") + 1)
+            : normalized.indexOf("@");
+        if (separator <= 0)
+            return undefined;
+        return {
+            name: normalized.slice(0, separator),
+            range: normalized.slice(separator + 1),
+        };
+    };
+    const unquote = (value) => value.trim().replace(/^['"]|['"]$/g, "");
+    const entries = [];
+    let current;
+    let dependencySection = false;
     const flush = () => {
-        if (!workspaceEntry) {
-            for (const name of names)
-                dependencies.push({
-                    name,
-                    version,
-                    ecosystem: "npm",
-                    manifest,
-                    versionResolved: npmVersionIsExact(version),
-                });
-        }
-        names = [];
-        version = "*";
-        workspaceEntry = false;
+        if (current)
+            entries.push(current);
+        current = undefined;
+        dependencySection = false;
     };
-    const parseSelector = (selector) => {
-        for (const item of selector.split(",").map((value) => value.trim())) {
-            const normalized = item.replace(/^['"]|['"]$/g, "");
-            if (normalized.includes("@workspace:")) {
-                workspaceEntry = true;
-                continue;
-            }
-            const berryAlias = normalized.indexOf("@npm:");
-            if (berryAlias > 0) {
-                // A Berry descriptor such as `alias@npm:real-package@1.0.0`
-                // installs the target package, rather than `alias`. Keep the
-                // original name for ordinary descriptors like `foo@npm:^1.0.0`.
-                const target = normalized.slice(berryAlias + "@npm:".length);
-                const targetScoped = /^(@[^/]+\/[^@]+)@/.exec(target);
-                const targetPlain = /^([^@/]+)@/.exec(target);
-                names.push(targetScoped?.[1] ??
-                    targetPlain?.[1] ??
-                    normalized.slice(0, berryAlias));
-                continue;
-            }
-            const scoped = /^(@[^/]+\/[^@]+)@/.exec(normalized);
-            const plain = /^([^@]+)@/.exec(normalized);
-            const name = scoped?.[1] ?? plain?.[1];
-            if (name)
-                names.push(name);
-        }
-    };
-    const versionFromLine = (line) => {
+    const parseVersion = (line) => {
         const trimmed = line.trimStart();
         if (!trimmed.startsWith("version"))
             return undefined;
@@ -46516,21 +46503,134 @@ function parseYarnLock(manifest, lockPath, dependencies) {
             continue;
         if (!line.startsWith(" ") && !line.startsWith("\t") && line.endsWith(":")) {
             flush();
-            parseSelector(line.slice(0, -1).trim());
+            const selectors = line.slice(0, -1).trim().split(/,\s*/);
+            const descriptors = selectors
+                .map(parseDescriptor)
+                .filter((item) => item !== undefined);
+            current = {
+                descriptors,
+                name: descriptors
+                    .map((descriptor) => {
+                    if (!descriptor.range.startsWith("npm:"))
+                        return undefined;
+                    return parseDescriptor(descriptor.range.slice(4))?.name;
+                })
+                    .find((name) => name !== undefined) ??
+                    descriptors[0]?.name ??
+                    "",
+                version: "*",
+                workspace: selectors.some((item) => item.includes("@workspace:")),
+                dependencies: [],
+            };
+            continue;
         }
-        else {
-            const parsedVersion = versionFromLine(line);
-            if (parsedVersion)
-                version = parsedVersion;
-            const trimmed = line.trimStart();
-            if (trimmed.startsWith("resolution:") && trimmed.includes("@workspace:"))
-                workspaceEntry = true;
+        if (!current)
+            continue;
+        const trimmed = line.trimStart();
+        const indentation = line.length - trimmed.length;
+        if (indentation === 2) {
+            dependencySection =
+                trimmed === "dependencies:" || trimmed === "optionalDependencies:";
+            const version = parseVersion(line);
+            if (version)
+                current.version = version;
+            if (trimmed.startsWith("resolution:")) {
+                const resolution = unquote(trimmed.slice("resolution:".length));
+                const locator = resolution.indexOf("@npm:");
+                if (locator >= 0) {
+                    const target = parseDescriptor(resolution.slice(locator + 5));
+                    if (target)
+                        current.name = target.name;
+                }
+                if (resolution.includes("@workspace:"))
+                    current.workspace = true;
+            }
+        }
+        else if (indentation >= 4 && dependencySection) {
+            const colon = trimmed.indexOf(":");
+            const separator = colon > 0 ? colon : trimmed.search(/\s/);
+            if (separator > 0) {
+                const descriptor = parseDescriptor(`${unquote(trimmed.slice(0, separator))}@${unquote(trimmed.slice(separator + 1))}`);
+                if (descriptor)
+                    current.dependencies.push(descriptor);
+            }
+        }
+        else if (indentation <= 2) {
+            dependencySection = false;
         }
     }
     flush();
+    if (includeDevDependencies) {
+        for (const entry of entries) {
+            if (entry.workspace || !entry.name)
+                continue;
+            dependencies.push({
+                name: entry.name,
+                version: entry.version,
+                ecosystem: "npm",
+                manifest,
+                versionResolved: npmVersionIsExact(entry.version),
+            });
+        }
+        return;
+    }
+    const resolveEntry = (descriptor) => entries.find((entry) => !entry.workspace &&
+        entry.descriptors.some((candidate) => candidate.name === descriptor.name &&
+            candidate.range.replace(/^npm:/, "") ===
+                descriptor.range.replace(/^npm:/, "")));
+    const roots = [
+        packageJson.dependencies,
+        packageJson.optionalDependencies,
+        packageJson.peerDependencies,
+        ...(includeDevDependencies ? [packageJson.devDependencies] : []),
+    ];
+    const pending = roots.flatMap((section) => Object.entries(section ?? {}).map(([name, range]) => ({ name, range })));
+    const visited = new Set();
+    const unresolved = new Set();
+    while (pending.length > 0) {
+        const descriptor = pending.pop();
+        if (!descriptor)
+            continue;
+        if (/^(workspace:|file:|link:)/.test(descriptor.range))
+            continue;
+        const entry = resolveEntry(descriptor);
+        if (!entry) {
+            unresolved.add(`${descriptor.name}@${descriptor.range}`);
+            continue;
+        }
+        if (visited.has(entry))
+            continue;
+        visited.add(entry);
+        pending.push(...entry.dependencies);
+    }
+    for (const entry of visited) {
+        dependencies.push({
+            name: entry.name,
+            version: entry.version,
+            ecosystem: "npm",
+            manifest,
+            versionResolved: npmVersionIsExact(entry.version),
+        });
+    }
+    if (unresolved.size > 0) {
+        dependencies.push({
+            name: "(incomplete Yarn dependency graph)",
+            version: "unresolved",
+            ecosystem: "npm",
+            manifest,
+            versionResolved: false,
+            versionResolutionError: `Yarn lock entries not found for ${[...unresolved].join(", ")}.`,
+        });
+    }
 }
 function packageFromLockKey(key) {
     const normalized = key.replace(/^\//, "").replace(/^npm:/, "");
+    const scopedSlash = /^(@[^/]+\/[^/]+)\/(.+)$/.exec(normalized);
+    if (scopedSlash)
+        return { name: scopedSlash[1], version: scopedSlash[2].split("(")[0] };
+    const plainSlash = /^([^/@]+)\/(.+)$/.exec(normalized);
+    if (plainSlash)
+        return { name: plainSlash[1], version: plainSlash[2].split("(")[0] };
     const scoped = /^(@[^/]+\/[^@]+)@(.+)$/.exec(normalized);
     if (scoped)
         return { name: scoped[1], version: scoped[2].split("(")[0] };
@@ -46539,22 +46639,131 @@ function packageFromLockKey(key) {
         ? { name: plain[1], version: plain[2].split("(")[0] }
         : undefined;
 }
-function parsePnpmLock(manifest, lockPath, dependencies) {
+function parsePnpmLock(manifest, lockPath, dependencies, includeDevDependencies = false) {
     const parsed = (0,dist/* parse */.qg)((0,external_node_fs_.readFileSync)(lockPath, "utf8"));
-    for (const section of ["packages", "snapshots"]) {
-        const entries = parsed[section];
-        if (!entries || typeof entries !== "object")
-            continue;
-        for (const key of Object.keys(entries)) {
-            const packageInfo = packageFromLockKey(key);
-            if (packageInfo)
-                dependencies.push({
-                    ...packageInfo,
-                    ecosystem: "npm",
-                    manifest,
-                    versionResolved: npmVersionIsExact(packageInfo.version),
-                });
+    if (includeDevDependencies) {
+        for (const section of ["packages", "snapshots"]) {
+            const entries = parsed[section];
+            if (!entries || typeof entries !== "object")
+                continue;
+            for (const key of Object.keys(entries)) {
+                const packageInfo = packageFromLockKey(key);
+                if (packageInfo)
+                    dependencies.push({
+                        ...packageInfo,
+                        ecosystem: "npm",
+                        manifest,
+                        versionResolved: npmVersionIsExact(packageInfo.version),
+                    });
+            }
         }
+        return;
+    }
+    const packages = (parsed.packages ?? {});
+    const snapshots = (parsed.snapshots ?? {});
+    const importers = (parsed.importers ?? {});
+    const rootImporter = importers["."] ??
+        (parsed.dependencies || parsed.optionalDependencies
+            ? {
+                dependencies: parsed.dependencies,
+                optionalDependencies: parsed.optionalDependencies,
+                peerDependencies: parsed.peerDependencies,
+                devDependencies: parsed.devDependencies,
+            }
+            : undefined);
+    if (!rootImporter) {
+        dependencies.push({
+            name: "(incomplete pnpm dependency graph)",
+            version: "unresolved",
+            ecosystem: "npm",
+            manifest,
+            versionResolved: false,
+            versionResolutionError: "The pnpm lockfile does not identify root dependency groups; enable dev dependencies or regenerate the lockfile.",
+        });
+        return;
+    }
+    const dependencySections = [
+        rootImporter.dependencies,
+        rootImporter.optionalDependencies,
+        rootImporter.peerDependencies,
+        ...(includeDevDependencies ? [rootImporter.devDependencies] : []),
+    ];
+    const pending = [];
+    for (const section of dependencySections) {
+        if (!section || typeof section !== "object")
+            continue;
+        for (const [name, value] of Object.entries(section)) {
+            const details = value && typeof value === "object"
+                ? value
+                : undefined;
+            const version = typeof value === "string"
+                ? value
+                : typeof details?.version === "string"
+                    ? details.version
+                    : "";
+            if (version && !/^(link:|workspace:|file:)/.test(version))
+                pending.push({ name, version });
+        }
+    }
+    const normalizeVersion = (version) => version.split("(")[0].replace(/^\//, "");
+    const entries = new Map();
+    for (const [key, value] of Object.entries({ ...packages, ...snapshots })) {
+        const info = packageFromLockKey(key);
+        if (!info)
+            continue;
+        entries.set(`${info.name}@${normalizeVersion(info.version)}`, {
+            ...info,
+            value,
+        });
+    }
+    const visited = new Set();
+    const unresolved = new Set();
+    while (pending.length > 0) {
+        const dependency = pending.pop();
+        if (!dependency)
+            continue;
+        const key = `${dependency.name}@${normalizeVersion(dependency.version)}`;
+        const entry = entries.get(key);
+        if (!entry) {
+            unresolved.add(key);
+            continue;
+        }
+        if (visited.has(key))
+            continue;
+        visited.add(key);
+        const snapshot = snapshots[`${entry.name}@${entry.version}`] ?? entry.value;
+        for (const sectionName of ["dependencies", "optionalDependencies"]) {
+            const section = snapshot[sectionName];
+            if (!section || typeof section !== "object")
+                continue;
+            for (const [name, value] of Object.entries(section)) {
+                const version = typeof value === "string" ? value : "";
+                if (version && !/^(link:|workspace:|file:)/.test(version))
+                    pending.push({ name, version });
+            }
+        }
+    }
+    for (const key of visited) {
+        const entry = entries.get(key);
+        if (!entry)
+            continue;
+        dependencies.push({
+            name: entry.name,
+            version: entry.version,
+            ecosystem: "npm",
+            manifest,
+            versionResolved: npmVersionIsExact(entry.version),
+        });
+    }
+    if (unresolved.size > 0) {
+        dependencies.push({
+            name: "(incomplete pnpm dependency graph)",
+            version: "unresolved",
+            ecosystem: "npm",
+            manifest,
+            versionResolved: false,
+            versionResolutionError: `pnpm lock entries not found for ${[...unresolved].join(", ")}.`,
+        });
     }
 }
 function goExecutablePath() {
@@ -46789,7 +46998,7 @@ function parseRequirements(manifest, path, dependencies) {
         });
     }
 }
-function parsePyproject(manifest, path, dependencies) {
+function parsePyproject(manifest, path, dependencies, includeDevDependencies) {
     let parsed;
     try {
         parsed = (0,toml.parse)((0,external_node_fs_.readFileSync)(path, "utf8"));
@@ -46835,11 +47044,61 @@ function parsePyproject(manifest, path, dependencies) {
             versionResolutionError: "A supported Python lockfile or fully pinned requirements file is required.",
         });
     }
+    if (includeDevDependencies) {
+        const developmentRequirements = [];
+        const collectGroup = (entries) => {
+            if (Array.isArray(entries)) {
+                for (const value of entries) {
+                    if (typeof value !== "string")
+                        continue;
+                    const name = /^[A-Za-z0-9][A-Za-z0-9_.-]*/.exec(value)?.[0];
+                    if (name)
+                        developmentRequirements.push({
+                            name,
+                            version: value.slice(name.length).trim() || "*",
+                        });
+                }
+            }
+            else if (entries && typeof entries === "object") {
+                for (const [name, value] of Object.entries(entries)) {
+                    const version = typeof value === "string"
+                        ? value
+                        : value &&
+                            typeof value === "object" &&
+                            typeof value.version === "string"
+                            ? value.version
+                            : "*";
+                    developmentRequirements.push({ name, version });
+                }
+            }
+        };
+        collectGroup(parsed["dependency-groups"]?.dev);
+        collectGroup(parsed.tool?.poetry?.["dev-dependencies"]);
+        for (const [groupName, group] of Object.entries(parsed.tool?.poetry?.group ?? {})) {
+            if (groupName !== "main")
+                collectGroup(group.dependencies);
+        }
+        for (const requirement of developmentRequirements) {
+            dependencies.push({
+                ...requirement,
+                ecosystem: "python",
+                manifest,
+                versionResolved: false,
+                versionResolutionError: "A supported Python lockfile or fully pinned requirements file is required.",
+            });
+        }
+    }
 }
-function parsePoetryLock(manifest, path, dependencies) {
+function parsePoetryLock(manifest, path, dependencies, includeDevDependencies) {
     try {
         const lock = (0,toml.parse)((0,external_node_fs_.readFileSync)(path, "utf8"));
         for (const entry of lock.package ?? []) {
+            const isDevOnly = entry.category === "dev" ||
+                (Array.isArray(entry.groups) &&
+                    entry.groups.length > 0 &&
+                    !entry.groups.includes("main"));
+            if (!includeDevDependencies && isDevOnly)
+                continue;
             if (entry.name)
                 dependencies.push({
                     name: entry.name,
@@ -46861,7 +47120,7 @@ function parsePoetryLock(manifest, path, dependencies) {
         return false;
     }
 }
-function parsePipfileLock(manifest, path, dependencies) {
+function parsePipfileLock(manifest, path, dependencies, includeDevDependencies = false) {
     const lock = readJson(path);
     if (!lock) {
         dependencies.push({
@@ -46874,7 +47133,10 @@ function parsePipfileLock(manifest, path, dependencies) {
         });
         return;
     }
-    for (const section of [lock?.default, lock?.develop]) {
+    for (const section of [
+        lock?.default,
+        ...(includeDevDependencies ? [lock?.develop] : []),
+    ]) {
         for (const [name, value] of Object.entries(section ?? {})) {
             const versionIsExact = typeof value.version === "string" &&
                 value.version.startsWith("==") &&
@@ -46892,7 +47154,7 @@ function parsePipfileLock(manifest, path, dependencies) {
         }
     }
 }
-function parsePackageJsonManifest(manifest, absolute, dependencies) {
+function parsePackageJsonManifest(manifest, absolute, dependencies, includeDevDependencies) {
     const packageJson = readJson(absolute);
     if (!packageJson) {
         dependencies.push({
@@ -46906,10 +47168,10 @@ function parsePackageJsonManifest(manifest, absolute, dependencies) {
         return;
     }
     const lockParsers = {
-        "package-lock.json": parseNpmLock,
-        "npm-shrinkwrap.json": parseNpmLock,
-        "yarn.lock": parseYarnLock,
-        "pnpm-lock.yaml": parsePnpmLock,
+        "package-lock.json": (lockPath) => parseNpmLock(manifest, lockPath, lockDependencies, includeDevDependencies),
+        "npm-shrinkwrap.json": (lockPath) => parseNpmLock(manifest, lockPath, lockDependencies, includeDevDependencies),
+        "yarn.lock": (lockPath) => parseYarnLock(manifest, lockPath, lockDependencies, packageJson, includeDevDependencies),
+        "pnpm-lock.yaml": (lockPath) => parsePnpmLock(manifest, lockPath, lockDependencies, includeDevDependencies),
     };
     const lockFiles = [];
     const lockDependencies = [];
@@ -46918,10 +47180,10 @@ function parsePackageJsonManifest(manifest, absolute, dependencies) {
         if (!isFile(lockPath))
             continue;
         lockFiles.push(lockName);
-        parser(manifest, lockPath, lockDependencies);
+        parser(lockPath);
     }
     if (lockFiles.length === 0) {
-        addPackageJsonDependencies(dependencies, manifest, packageJson);
+        addPackageJsonDependencies(dependencies, manifest, packageJson, includeDevDependencies);
         return;
     }
     dependencies.push(...lockDependencies);
@@ -46936,14 +47198,20 @@ function parsePackageJsonManifest(manifest, absolute, dependencies) {
         });
     }
     const lockedNames = new Set(lockDependencies.map((dependency) => dependency.name));
-    for (const section of [
+    const sections = [
         "dependencies",
-        "devDependencies",
         "optionalDependencies",
         "peerDependencies",
-    ]) {
+        ...(includeDevDependencies ? ["devDependencies"] : []),
+    ];
+    for (const section of sections) {
         for (const [name, version] of Object.entries(packageJson[section] ?? {})) {
-            if (version.startsWith("workspace:") || lockedNames.has(name))
+            const aliasTarget = version.startsWith("npm:")
+                ? parseNpmAliasName(version.slice("npm:".length))
+                : undefined;
+            if (version.startsWith("workspace:") ||
+                lockedNames.has(name) ||
+                (aliasTarget !== undefined && lockedNames.has(aliasTarget)))
                 continue;
             dependencies.push({
                 name,
@@ -46956,10 +47224,16 @@ function parsePackageJsonManifest(manifest, absolute, dependencies) {
         }
     }
 }
-function parsePyprojectManifest(manifest, path, dependencies) {
+function parseNpmAliasName(value) {
+    const separator = value.startsWith("@")
+        ? value.indexOf("@", value.indexOf("/") + 1)
+        : value.indexOf("@");
+    return separator > 0 ? value.slice(0, separator) : undefined;
+}
+function parsePyprojectManifest(manifest, path, dependencies, includeDevDependencies) {
     const poetryLockPath = (0,external_node_path_.join)((0,external_node_path_.dirname)(path), "poetry.lock");
     if (isFile(poetryLockPath)) {
-        if (parsePoetryLock(manifest, poetryLockPath, dependencies))
+        if (parsePoetryLock(manifest, poetryLockPath, dependencies, includeDevDependencies))
             return;
         dependencies.push({
             name: "(invalid poetry.lock)",
@@ -46970,17 +47244,20 @@ function parsePyprojectManifest(manifest, path, dependencies) {
             versionResolutionError: "Could not parse the adjacent poetry.lock.",
         });
     }
-    parsePyproject(manifest, path, dependencies);
+    parsePyproject(manifest, path, dependencies, includeDevDependencies);
 }
 const MANIFEST_PARSERS = {
     "package-lock.json": parseNpmLock,
     "npm-shrinkwrap.json": parseNpmLock,
-    "yarn.lock": parseYarnLock,
+    "yarn.lock": (manifest, path, dependencies, includeDevDependencies) => {
+        const packageJson = readJson((0,external_node_path_.join)((0,external_node_path_.dirname)(path), "package.json"));
+        parseYarnLock(manifest, path, dependencies, packageJson ?? {}, includeDevDependencies === true);
+    },
     "pnpm-lock.yaml": parsePnpmLock,
     "requirements.txt": parseRequirements,
-    "pyproject.toml": parsePyprojectManifest,
-    "poetry.lock": (manifest, path, dependencies) => {
-        if (!parsePoetryLock(manifest, path, dependencies))
+    "pyproject.toml": (manifest, path, dependencies, includeDevDependencies) => parsePyprojectManifest(manifest, path, dependencies, includeDevDependencies === true),
+    "poetry.lock": (manifest, path, dependencies, includeDevDependencies) => {
+        if (!parsePoetryLock(manifest, path, dependencies, includeDevDependencies === true))
             dependencies.push({
                 name: "(invalid poetry.lock)",
                 version: "unresolved",
@@ -46990,23 +47267,29 @@ const MANIFEST_PARSERS = {
                 versionResolutionError: "Could not parse poetry.lock.",
             });
     },
-    "Pipfile.lock": parsePipfileLock,
+    "Pipfile.lock": (manifest, path, dependencies, includeDevDependencies) => parsePipfileLock(manifest, path, dependencies, includeDevDependencies === true),
 };
 function parseManifest(root, path, dependencies, goPackageList, dependencyConfig) {
     const basename = path.split("/").pop() ?? path;
     const absolute = (0,external_node_path_.resolve)(root, path);
+    const includeDevDependencies = dependencyConfig.includeDevDependencies === true;
     if (!isFile(absolute))
         return;
     if (basename === "package.json") {
-        parsePackageJsonManifest(path, absolute, dependencies);
+        parsePackageJsonManifest(path, absolute, dependencies, includeDevDependencies);
         return;
     }
     if (basename === "go.mod") {
         const goConfig = dependencyConfig.go;
         const packages = goConfig?.packages?.length ? goConfig.packages : ["./..."];
         parseGoPackages(path, (0,external_node_path_.dirname)(absolute), packages, false, dependencies, goPackageList);
-        if (goConfig?.testPackages?.length) {
-            parseGoPackages(path, (0,external_node_path_.dirname)(absolute), goConfig.testPackages, true, dependencies, goPackageList);
+        const testPackages = goConfig?.testPackages?.length
+            ? goConfig.testPackages
+            : includeDevDependencies
+                ? packages
+                : [];
+        if (testPackages.length > 0) {
+            parseGoPackages(path, (0,external_node_path_.dirname)(absolute), testPackages, true, dependencies, goPackageList);
         }
         return;
     }
@@ -47015,7 +47298,7 @@ function parseManifest(root, path, dependencies, goPackageList, dependencyConfig
     const parser = MANIFEST_PARSERS[basename] ??
         (basename.endsWith(".txt") ? parseRequirements : undefined);
     if (parser) {
-        parser(path, absolute, dependencies);
+        parser(path, absolute, dependencies, includeDevDependencies);
         return;
     }
     dependencies.push({

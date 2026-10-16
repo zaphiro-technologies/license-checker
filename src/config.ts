@@ -134,6 +134,12 @@ function normalizeDependencies(value: unknown): DependencyConfig | undefined {
     throw new Error("dependency.go must be a mapping.");
   }
   const go = asRecord(record.go);
+  if (
+    record["include-dev-dependencies"] !== undefined &&
+    typeof record["include-dev-dependencies"] !== "boolean"
+  ) {
+    throw new Error("dependency.include-dev-dependencies must be a boolean.");
+  }
   for (const field of ["packages", "test-packages"] as const) {
     if (go[field] !== undefined && !Array.isArray(go[field])) {
       throw new Error(`dependency.go.${field} must be a list.`);
@@ -160,6 +166,7 @@ function normalizeDependencies(value: unknown): DependencyConfig | undefined {
               : undefined,
           }
         : undefined,
+    includeDevDependencies: record["include-dev-dependencies"] === true,
     licenses: Array.isArray(record.licenses)
       ? record.licenses.flatMap((item, index) => {
           const entry = asRecord(item);

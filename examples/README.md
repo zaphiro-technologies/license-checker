@@ -21,9 +21,16 @@ relative path. For JavaScript, keep the lockfile in the same directory as
 dependencies. For Poetry, run `poetry lock` to create and update `poetry.lock`.
 For Go, the runner must have Go installed. The checker defaults to production
 packages under `./...`; set `dependency.go.packages` to the package patterns
-your build uses. Add `dependency.go.test-packages` to check test imports as a
-separate graph. A `go.sum` file may remain in the project, but it is not a
-substitute for `go.mod`.
+your build uses. Set `dependency.include-dev-dependencies: true` to include
+test imports for those same patterns. Set `dependency.go.test-packages` to opt
+in independently and/or check tests for a separate set of patterns.
+A `go.sum` file may remain in the project, but it is not a substitute for
+`go.mod`.
+
+JavaScript and Python development dependency groups are excluded by default;
+Go test imports are excluded too. Set `dependency.include-dev-dependencies: true`
+to include them. For requirements files, `dependency.files` explicitly selects
+which complete lists are checked.
 
 The requirements example uses `idna`, which has no transitive dependencies. For
 a real project, include every direct and transitive dependency in the

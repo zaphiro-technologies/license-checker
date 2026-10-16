@@ -63,6 +63,7 @@ export interface GoDependencyConfig {
 export interface DependencyConfig {
   files?: string[];
   go?: GoDependencyConfig;
+  includeDevDependencies?: boolean;
   licenses?: DependencyLicenseOverride[];
   threshold?: number;
   excludes?: DependencyExclude[];

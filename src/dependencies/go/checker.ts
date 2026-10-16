@@ -21,13 +21,10 @@ import {
   type LicenseEvidence,
   type LicenseResolutionContext,
 } from "../checker.js";
-import {
-  collectGoDependencies,
-  systemGoPackageList,
-} from "./parsers/package-graph.js";
+import { collectGoDependencies } from "./parsers/package-graph.js";
 import { resolveGoLicense } from "./license-resolver.js";
 
-export { systemGoPackageList };
+export { systemGoPackageList } from "./parsers/package-graph.js";
 
 export class GoDependencyChecker extends DependencyChecker {
   readonly ecosystem = "go" as const;

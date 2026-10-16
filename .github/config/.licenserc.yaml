@@ -25,3 +25,11 @@ dependency:
   files:
     - package.json
     - yarn.lock
+  exceptions:
+    - name: spdx-exceptions
+      version: "2.5.0"
+      url: https://creativecommons.org/licenses/by/3.0/
+      reason: >-
+        Approved for the SPDX exception identifier data consumed by
+        spdx-expression-parse; preserve the CC BY 3.0 attribution and license
+        notice when distributing the action.

@@ -33,7 +33,7 @@ function loadDefaultLicenseRules(): Record<LicenseRuleSource, LicenseRule[]> {
   const loadSource = (source: LicenseRuleSource): LicenseRule[] => {
     const entries = parsed[source];
     if (!Array.isArray(entries)) {
-      throw new Error(`Missing default license rules for ${source}.`);
+      throw new TypeError(`Missing default license rules for ${source}.`);
     }
     return entries.map((entry: unknown) => {
       if (

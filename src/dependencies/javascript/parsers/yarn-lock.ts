@@ -87,23 +87,37 @@ function parseYarnEntryLine(
 ): boolean {
   const trimmed = line.trimStart();
   const indentation = line.length - trimmed.length;
-  if (indentation === 2) {
-    if (trimmed === "dependencies:" || trimmed === "optionalDependencies:")
-      return true;
-    const version = parseYarnVersion(line);
-    if (version) entry.version = version;
-    if (!trimmed.startsWith("resolution:")) return false;
-    const resolution = unquoteYarn(trimmed.slice("resolution:".length));
-    const locator = resolution.indexOf("@npm:");
-    if (locator >= 0) {
-      const target = parseYarnDescriptor(resolution.slice(locator + 5));
-      if (target) entry.name = target.name;
-    }
-    if (resolution.includes("@workspace:")) entry.workspace = true;
-    return false;
-  }
+  if (indentation === 2) return parseYarnMetadataLine(line, trimmed, entry);
   if (indentation <= 2) return false;
   if (indentation === 3) return dependencySection;
+  return parseYarnDependencyLine(trimmed, entry, dependencySection);
+}
+
+function parseYarnMetadataLine(
+  line: string,
+  trimmed: string,
+  entry: YarnEntry,
+): boolean {
+  if (trimmed === "dependencies:" || trimmed === "optionalDependencies:")
+    return true;
+  const version = parseYarnVersion(line);
+  if (version) entry.version = version;
+  if (!trimmed.startsWith("resolution:")) return false;
+  const resolution = unquoteYarn(trimmed.slice("resolution:".length));
+  const locator = resolution.indexOf("@npm:");
+  if (locator >= 0) {
+    const target = parseYarnDescriptor(resolution.slice(locator + 5));
+    if (target) entry.name = target.name;
+  }
+  if (resolution.includes("@workspace:")) entry.workspace = true;
+  return false;
+}
+
+function parseYarnDependencyLine(
+  trimmed: string,
+  entry: YarnEntry,
+  dependencySection: boolean,
+): boolean {
   if (!dependencySection) return false;
   const colon = trimmed.indexOf(":");
   const separator = colon > 0 ? colon : trimmed.search(/\s/);

@@ -43218,7 +43218,7 @@ function normalizeLicenseRules(value) {
     if (value === undefined)
         return undefined;
     if (!Array.isArray(value)) {
-        throw new Error("dependency.license-rules must be a list.");
+        throw new TypeError("dependency.license-rules must be a list.");
     }
     return value.map((item, index) => {
         const entry = asRecord(item);
@@ -46517,7 +46517,7 @@ function loadDefaultLicenseRules() {
     const loadSource = (source) => {
         const entries = parsed[source];
         if (!Array.isArray(entries)) {
-            throw new Error(`Missing default license rules for ${source}.`);
+            throw new TypeError(`Missing default license rules for ${source}.`);
         }
         return entries.map((entry) => {
             if (!default_license_rules_isRecord(entry) ||
@@ -46980,29 +46980,34 @@ function yarnEntryFromSelectorLine(line) {
 function parseYarnEntryLine(line, entry, dependencySection) {
     const trimmed = line.trimStart();
     const indentation = line.length - trimmed.length;
-    if (indentation === 2) {
-        if (trimmed === "dependencies:" || trimmed === "optionalDependencies:")
-            return true;
-        const version = parseYarnVersion(line);
-        if (version)
-            entry.version = version;
-        if (!trimmed.startsWith("resolution:"))
-            return false;
-        const resolution = unquoteYarn(trimmed.slice("resolution:".length));
-        const locator = resolution.indexOf("@npm:");
-        if (locator >= 0) {
-            const target = parseYarnDescriptor(resolution.slice(locator + 5));
-            if (target)
-                entry.name = target.name;
-        }
-        if (resolution.includes("@workspace:"))
-            entry.workspace = true;
-        return false;
-    }
+    if (indentation === 2)
+        return parseYarnMetadataLine(line, trimmed, entry);
     if (indentation <= 2)
         return false;
     if (indentation === 3)
         return dependencySection;
+    return parseYarnDependencyLine(trimmed, entry, dependencySection);
+}
+function parseYarnMetadataLine(line, trimmed, entry) {
+    if (trimmed === "dependencies:" || trimmed === "optionalDependencies:")
+        return true;
+    const version = parseYarnVersion(line);
+    if (version)
+        entry.version = version;
+    if (!trimmed.startsWith("resolution:"))
+        return false;
+    const resolution = unquoteYarn(trimmed.slice("resolution:".length));
+    const locator = resolution.indexOf("@npm:");
+    if (locator >= 0) {
+        const target = parseYarnDescriptor(resolution.slice(locator + 5));
+        if (target)
+            entry.name = target.name;
+    }
+    if (resolution.includes("@workspace:"))
+        entry.workspace = true;
+    return false;
+}
+function parseYarnDependencyLine(trimmed, entry, dependencySection) {
     if (!dependencySection)
         return false;
     const colon = trimmed.indexOf(":");
@@ -47437,14 +47442,19 @@ function collectJavaScriptDependencies(context) {
         parsePackageJsonManifest(path, absolutePath, dependencies, includeDevDependencies);
         return dependencies;
     }
-    const parser = basename === "package-lock.json" || basename === "npm-shrinkwrap.json"
-        ? parseNpmLock
-        : basename === "pnpm-lock.yaml"
-            ? parsePnpmLock
-            : (manifest, lockPath, output, includeDev) => {
-                const packageJson = readJson((0,external_node_path_.join)((0,external_node_path_.dirname)(lockPath), "package.json"));
-                parseYarnLock(manifest, lockPath, output, packageJson ?? {}, includeDev === true);
-            };
+    let parser;
+    if (basename === "package-lock.json" || basename === "npm-shrinkwrap.json") {
+        parser = parseNpmLock;
+    }
+    else if (basename === "pnpm-lock.yaml") {
+        parser = parsePnpmLock;
+    }
+    else {
+        parser = (manifest, lockPath, output, includeDev) => {
+            const packageJson = readJson((0,external_node_path_.join)((0,external_node_path_.dirname)(lockPath), "package.json"));
+            parseYarnLock(manifest, lockPath, output, packageJson ?? {}, includeDev === true);
+        };
+    }
     parser(path, absolutePath, dependencies, includeDevDependencies);
     return dependencies;
 }

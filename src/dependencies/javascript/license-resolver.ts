@@ -15,7 +15,7 @@
  */
 
 import { dirname, join } from "node:path";
-import type { Dependency } from "../../types.js";
+import type { Dependency, LicenseRule } from "../../types.js";
 import type { Logger } from "../../logger.js";
 import { readJson } from "../../util.js";
 import { packageLicense, type PackageJson } from "./parsers/package-json.js";
@@ -25,7 +25,6 @@ import {
   resolveGithubRepositoryLicense,
 } from "../sources/metadata.js";
 import type { LicenseEvidence } from "../checker.js";
-import type { LicenseRule } from "../../types.js";
 
 function installedNpmPackage(
   root: string,

@@ -161,7 +161,7 @@ function normalizeLicenseOverrides(
 function normalizeLicenseRules(value: unknown): LicenseRule[] | undefined {
   if (value === undefined) return undefined;
   if (!Array.isArray(value)) {
-    throw new Error("dependency.license-rules must be a list.");
+    throw new TypeError("dependency.license-rules must be a list.");
   }
   return value.map((item, index) => {
     const entry = asRecord(item);

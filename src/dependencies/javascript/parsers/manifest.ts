@@ -197,23 +197,24 @@ export function collectJavaScriptDependencies(
     );
     return dependencies;
   }
-  const parser: ManifestParser =
-    basename === "package-lock.json" || basename === "npm-shrinkwrap.json"
-      ? parseNpmLock
-      : basename === "pnpm-lock.yaml"
-        ? parsePnpmLock
-        : (manifest, lockPath, output, includeDev) => {
-            const packageJson = readJson(
-              join(dirname(lockPath), "package.json"),
-            ) as PackageJson | undefined;
-            parseYarnLock(
-              manifest,
-              lockPath,
-              output,
-              packageJson ?? {},
-              includeDev === true,
-            );
-          };
+  let parser: ManifestParser;
+  if (basename === "package-lock.json" || basename === "npm-shrinkwrap.json") {
+    parser = parseNpmLock;
+  } else if (basename === "pnpm-lock.yaml") {
+    parser = parsePnpmLock;
+  } else {
+    parser = (manifest, lockPath, output, includeDev) => {
+      const packageJson = readJson(join(dirname(lockPath), "package.json")) as
+        PackageJson | undefined;
+      parseYarnLock(
+        manifest,
+        lockPath,
+        output,
+        packageJson ?? {},
+        includeDev === true,
+      );
+    };
+  }
   parser(path, absolutePath, dependencies, includeDevDependencies);
   return dependencies;
 }

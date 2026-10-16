@@ -289,9 +289,7 @@ function isOsi(id: string): boolean {
   return OSI_APPROVED.has(id);
 }
 
-type MatrixGroup = string;
-
-function matrixGroup(id: string): MatrixGroup | undefined {
+function matrixGroup(id: string): string | undefined {
   for (const [group, rule] of Object.entries(LICENSE_RULES.matrix.groups)) {
     if (rule.exact?.includes(id)) return group;
     if (
@@ -314,8 +312,8 @@ function matrixGroup(id: string): MatrixGroup | undefined {
 }
 
 function matrixCompatibility(
-  main: MatrixGroup,
-  dependency: MatrixGroup,
+  main: string,
+  dependency: string,
   weakCompatible: boolean,
 ): Compatibility {
   const dependencyIndex = MATRIX_GROUPS.indexOf(dependency);

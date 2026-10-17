@@ -158,6 +158,25 @@ describe("action entry point", () => {
     );
   });
 
+  it("uses the configured distribution when no input overrides it", async () => {
+    mocks.loadConfig.mockReturnValue({
+      config: { dependency: { distribution: "open-source-redistribution" } },
+    });
+    mocks.checkDependencies.mockResolvedValue(report([], []).dependency);
+
+    await import("../src/index.js");
+
+    expect(mocks.checkDependencies).toHaveBeenCalledWith(
+      "/workspace",
+      { dependency: { distribution: "open-source-redistribution" } },
+      undefined,
+      false,
+      expect.any(Object),
+      undefined,
+      "open-source-redistribution",
+    );
+  });
+
   it("skips comments when disabled in the header configuration", async () => {
     const warning = dependency("reciprocal-package");
     const value = report([warning], []);

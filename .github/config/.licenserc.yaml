@@ -22,6 +22,7 @@ header:
 
 # If you don't want to check dependencies' license compatibility, remove the following part
 dependency:
+  distribution: open-source-redistribution
   project-license: header
   files:
     - package.json

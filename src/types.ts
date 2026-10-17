@@ -70,6 +70,7 @@ export interface GoDependencyConfig {
 export interface DependencyConfig {
   files?: string[];
   go?: GoDependencyConfig;
+  distribution?: DistributionModel;
   includeDevDependencies?: boolean;
   projectLicense?: "header" | "proprietary";
   licenses?: DependencyLicenseOverride[];

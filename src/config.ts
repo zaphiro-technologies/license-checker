@@ -251,11 +251,29 @@ function normalizeDependencies(value: unknown): DependencyConfig | undefined {
       "dependency.project-license must be either header or proprietary.",
     );
   }
+  const distributionModels = [
+    "internal-use",
+    "proprietary-binary",
+    "public-saas",
+    "open-source-redistribution",
+    "static-linking",
+    "dynamic-linking",
+  ];
+  if (
+    record.distribution !== undefined &&
+    (typeof record.distribution !== "string" ||
+      !distributionModels.includes(record.distribution))
+  ) {
+    throw new Error(
+      `dependency.distribution must be one of: ${distributionModels.join(", ")}.`,
+    );
+  }
   return {
     files: Array.isArray(record.files)
       ? record.files.filter((item): item is string => typeof item === "string")
       : [],
     go,
+    distribution: record.distribution as DependencyConfig["distribution"],
     includeDevDependencies: record["include-dev-dependencies"] === true,
     projectLicense:
       record["project-license"] === "proprietary" ? "proprietary" : "header",

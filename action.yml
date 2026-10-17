@@ -38,7 +38,6 @@ inputs:
   distribution:
     description: "Licensecompat model: internal-use, proprietary-binary, public-saas, open-source-redistribution, static-linking, or dynamic-linking."
     required: false
-    default: public-saas
   report-all:
     description: Include compatible dependencies in the job summary.
     required: false

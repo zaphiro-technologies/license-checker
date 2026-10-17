@@ -57,6 +57,26 @@ describe("configuration", () => {
     ).toBe("proprietary");
   });
 
+  it("loads and validates the distribution model", () => {
+    const root = mkdtempSync(join(tmpdir(), "license-checker-config-"));
+    writeFileSync(
+      join(root, ".licenserc.yaml"),
+      `dependency:\n  distribution: open-source-redistribution\n`,
+    );
+
+    expect(
+      loadConfig(root, ".licenserc.yaml").config.dependency?.distribution,
+    ).toBe("open-source-redistribution");
+
+    writeFileSync(
+      join(root, ".licenserc.yaml"),
+      `dependency:\n  distribution: unsupported\n`,
+    );
+    expect(() => loadConfig(root, ".licenserc.yaml")).toThrow(
+      "dependency.distribution must be one of",
+    );
+  });
+
   it("rejects the removed Go test-packages setting", () => {
     const root = mkdtempSync(join(tmpdir(), "license-checker-config-"));
     writeFileSync(

@@ -45,7 +45,7 @@ dependency:
   # the project's SPDX license in header. Defaults to header.
   project-license: proprietary
   # Choose the product intent explicitly when the project is proprietary.
-  # The distribution model is an action input; it defaults to public-saas.
+  # The action input overrides this setting; defaults to public-saas if omitted.
   # Optional; includes JS/Python dev dependencies and Go test imports.
   # include-dev-dependencies: true
   go:
@@ -88,8 +88,9 @@ Examples are in [`examples/`](examples/).
 
 | Setting                               | Purpose                                                                                                                                                                                                             |
 | ------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `header.license.spdx-id`              | Project SPDX license used when `dependency.project-license` is `header`.                                                                                                                                           |
+| `header.license.spdx-id`              | Project SPDX license used when `dependency.project-license` is `header`.                                                                                                                                            |
 | `dependency.project-license`          | `header` (default) compares SPDX license expressions. `proprietary` checks whether each dependency fits a proprietary product under the selected distribution model.                                                |
+| `dependency.distribution`             | Distribution model used by proprietary checks; action input overrides it. Defaults to `public-saas`.                                                                                                                |
 | `dependency.files`                    | Manifests and lockfiles to scan. Versions must be exact; Python requirements must pin and list every dependency. Unresolved inputs fail the check.                                                                  |
 | `dependency.include-dev-dependencies` | Defaults to `false`. Includes JS `devDependencies`, Python non-main groups and Pipfile `develop`, and Go tests.                                                                                                     |
 | `dependency.go.packages`              | Go build targets; defaults to `./...`.                                                                                                                                                                              |
@@ -117,17 +118,18 @@ non-commercial. The proprietary outcomes are conservative category-level
 policies in this repository, not a copy of licensecompat's complete pair
 dataset.
 
-| `distribution` model | Use case |
-| -------------------- | -------- |
-| `internal-use` | Used only inside the organization; not distributed to users. |
-| `public-saas` | Public hosted service; the default. |
-| `proprietary-binary` | Closed-source software delivered as a binary. |
-| `static-linking` | Product statically links the dependency. |
-| `dynamic-linking` | Product dynamically links the dependency. |
-| `open-source-redistribution` | Product and dependencies are redistributed as open source. |
+| `distribution` model         | Use case                                                     |
+| ---------------------------- | ------------------------------------------------------------ |
+| `internal-use`               | Used only inside the organization; not distributed to users. |
+| `public-saas`                | Public hosted service; the default.                          |
+| `proprietary-binary`         | Closed-source software delivered as a binary.                |
+| `static-linking`             | Product statically links the dependency.                     |
+| `dynamic-linking`            | Product dynamically links the dependency.                    |
+| `open-source-redistribution` | Product and dependencies are redistributed as open source.   |
 
-The selected model is a `distribution` action input; it defaults to
-`public-saas`. Pair checks against `header.license.spdx-id` are independent of
+Set the model with `dependency.distribution`; the `distribution` action input
+overrides it. If neither is set, the model defaults to `public-saas`. Pair
+checks against `header.license.spdx-id` are independent of
 the distribution model. Use `project-license: header` for
 `open-source-redistribution`; proprietary target checks cannot determine the
 license of a new open-source combined work. For
@@ -159,14 +161,14 @@ applying different tools to different ecosystem, we came up with our own tool.
 
 ## Action inputs
 
-| Input             | Default                  | Description                                                                               |
-| ----------------- | ------------------------ | ----------------------------------------------------------------------------------------- |
-| `config`          | `.licenserc.yaml`        | License Eye-compatible YAML configuration path                                            |
-| `token`           | `${{ github.token }}`    | Token used for pull-request comments                                                      |
-| `log`             | `info`                   | `error`, `warn`, `info`, or `debug`                                                       |
-| `weak-compatible` | `false`                  | Accept matrix review pairings when comparing SPDX project and dependency licenses         |
-| `distribution`    | `public-saas`            | `internal-use`, `public-saas`, `proprietary-binary`, `static-linking`, `dynamic-linking`, or `open-source-redistribution` |
-| `report-all`      | `false`                  | Include compatible dependencies in the job summary                                        |
+| Input             | Default                               | Description                                                                                                               |
+| ----------------- | ------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
+| `config`          | `.licenserc.yaml`                     | License Eye-compatible YAML configuration path                                                                            |
+| `token`           | `${{ github.token }}`                 | Token used for pull-request comments                                                                                      |
+| `log`             | `info`                                | `error`, `warn`, `info`, or `debug`                                                                                       |
+| `weak-compatible` | `false`                               | Accept matrix review pairings when comparing SPDX project and dependency licenses                                         |
+| `distribution`    | Config value, otherwise `public-saas` | `internal-use`, `public-saas`, `proprietary-binary`, `static-linking`, `dynamic-linking`, or `open-source-redistribution` |
+| `report-all`      | `false`                               | Include compatible dependencies in the job summary                                                                        |
 
 The summary shows the full report. PR comments show dependency issues and link
 to the summary; distribution warnings and approved exceptions appear only in the

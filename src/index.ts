@@ -18,6 +18,7 @@ import * as core from "@actions/core";
 import { headerRules, loadConfig } from "./config.js";
 import { checkDependencies } from "./dependencies.js";
 import { Logger } from "./logger.js";
+import { DEFAULT_DISTRIBUTION } from "./spdx.js";
 import {
   annotate,
   commentOnPullRequest,
@@ -65,18 +66,18 @@ async function run(): Promise<void> {
   const reportAllInput =
     core.getInput("report-all") || argumentValue("--report-all") || "false";
   const reportAll = reportAllInput.toLowerCase() === "true";
+  logger.info(`Loading configuration from ${configInput}`);
+  const { config } = loadConfig(root, configInput);
   const distributionInput =
     core.getInput("distribution") ||
     argumentValue("--distribution") ||
-    "public-saas";
+    config.dependency?.distribution ||
+    DEFAULT_DISTRIBUTION;
   if (!DISTRIBUTION_MODELS.has(distributionInput as DistributionModel)) {
     throw new Error(
       "Invalid distribution. Use internal-use, proprietary-binary, public-saas, open-source-redistribution, static-linking, or dynamic-linking.",
     );
   }
-
-  logger.info(`Loading configuration from ${configInput}`);
-  const { config } = loadConfig(root, configInput);
   const dependency = await checkDependencies(
     root,
     config,

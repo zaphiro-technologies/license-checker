@@ -17,6 +17,7 @@ header:
     - "LICENSE"
     - ".vscode"
     - "yarn.lock"
+    - "sonar-project.properties"
 
   comment: on-failure
 

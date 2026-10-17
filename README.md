@@ -88,7 +88,7 @@ Examples are in [`examples/`](examples/).
 
 | Setting                               | Purpose                                                                                                                                                                                                             |
 | ------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `header.license.spdx-id`              | Project SPDX license used when `dependency.project-license` is `header`.                                                                                                                                           |
+| `header.license.spdx-id`              | Project SPDX license used when `dependency.project-license` is `header`.                                                                                                                                            |
 | `dependency.project-license`          | `header` (default) compares SPDX license expressions. `proprietary` checks whether each dependency fits a proprietary product under the selected distribution model.                                                |
 | `dependency.files`                    | Manifests and lockfiles to scan. Versions must be exact; Python requirements must pin and list every dependency. Unresolved inputs fail the check.                                                                  |
 | `dependency.include-dev-dependencies` | Defaults to `false`. Includes JS `devDependencies`, Python non-main groups and Pipfile `develop`, and Go tests.                                                                                                     |
@@ -106,39 +106,38 @@ alone does not establish license terms.
 
 ### Compatibility reference
 
-Compatibility models follow [licensecompat](https://licensecompat.com/compatibility/).
-The action's rules are in [`config/license-compatibility.yaml`](config/license-compatibility.yaml).
+Compatibility models follow
+[licensecompat](https://licensecompat.com/compatibility/). The action's rules
+are in [`config/license-compatibility.yaml`](config/license-compatibility.yaml).
 With `project-license: proprietary`, the selected model decides whether a known
 dependency is compatible with keeping the product proprietary, needs manual
-review, or is incompatible. Commercial use is generally permitted by open
-source licenses; this setting is about the obligations that may prevent a
-closed-source product. It does not claim that the dependency itself is
-non-commercial. The proprietary outcomes are conservative category-level
-policies in this repository, not a copy of licensecompat's complete pair
-dataset.
+review, or is incompatible. Commercial use is generally permitted by open source
+licenses; this setting is about the obligations that may prevent a closed-source
+product. It does not claim that the dependency itself is non-commercial. The
+proprietary outcomes are conservative category-level policies in this
+repository, not a copy of licensecompat's complete pair dataset.
 
-| `distribution` model | Use case |
-| -------------------- | -------- |
-| `internal-use` | Used only inside the organization; not distributed to users. |
-| `public-saas` | Public hosted service; the default. |
-| `proprietary-binary` | Closed-source software delivered as a binary. |
-| `static-linking` | Product statically links the dependency. |
-| `dynamic-linking` | Product dynamically links the dependency. |
-| `open-source-redistribution` | Product and dependencies are redistributed as open source. |
+| `distribution` model         | Use case                                                     |
+| ---------------------------- | ------------------------------------------------------------ |
+| `internal-use`               | Used only inside the organization; not distributed to users. |
+| `public-saas`                | Public hosted service; the default.                          |
+| `proprietary-binary`         | Closed-source software delivered as a binary.                |
+| `static-linking`             | Product statically links the dependency.                     |
+| `dynamic-linking`            | Product dynamically links the dependency.                    |
+| `open-source-redistribution` | Product and dependencies are redistributed as open source.   |
 
 The selected model is a `distribution` action input; it defaults to
 `public-saas`. Pair checks against `header.license.spdx-id` are independent of
 the distribution model. Use `project-license: header` for
 `open-source-redistribution`; proprietary target checks cannot determine the
-license of a new open-source combined work. For
-`project-license: proprietary`, the YAML policy uses broad license families
-and may request manual review. Unlisted licenses and CC-BY-3.0/4.0 remain
-unresolved for manual review. Outcomes requiring review fail until covered by
-a manual exception in `dependency.exceptions`.
-Set the model under the action's `with:` section, for example
-`distribution: proprietary-binary`.
-Licensecompat provides general guidance, not legal advice. FSF-free and
-OSI-approved identifiers are exact snapshots from the SPDX
+license of a new open-source combined work. For `project-license: proprietary`,
+the YAML policy uses broad license families and may request manual review.
+Unlisted licenses and CC-BY-3.0/4.0 remain unresolved for manual review.
+Outcomes requiring review fail until covered by a manual exception in
+`dependency.exceptions`. Set the model under the action's `with:` section, for
+example `distribution: proprietary-binary`. Licensecompat provides general
+guidance, not legal advice. FSF-free and OSI-approved identifiers are exact
+snapshots from the SPDX
 [License List v3.29.0](https://github.com/spdx/license-list-data/blob/main/json/licenses.json).
 Conditional or review outcomes include a link to the
 [licensecompat checker](https://licensecompat.com/).
@@ -159,14 +158,14 @@ applying different tools to different ecosystem, we came up with our own tool.
 
 ## Action inputs
 
-| Input             | Default                  | Description                                                                               |
-| ----------------- | ------------------------ | ----------------------------------------------------------------------------------------- |
-| `config`          | `.licenserc.yaml`        | License Eye-compatible YAML configuration path                                            |
-| `token`           | `${{ github.token }}`    | Token used for pull-request comments                                                      |
-| `log`             | `info`                   | `error`, `warn`, `info`, or `debug`                                                       |
-| `weak-compatible` | `false`                  | Accept matrix review pairings when comparing SPDX project and dependency licenses         |
-| `distribution`    | `public-saas`            | `internal-use`, `public-saas`, `proprietary-binary`, `static-linking`, `dynamic-linking`, or `open-source-redistribution` |
-| `report-all`      | `false`                  | Include compatible dependencies in the job summary                                        |
+| Input             | Default               | Description                                                                                                               |
+| ----------------- | --------------------- | ------------------------------------------------------------------------------------------------------------------------- |
+| `config`          | `.licenserc.yaml`     | License Eye-compatible YAML configuration path                                                                            |
+| `token`           | `${{ github.token }}` | Token used for pull-request comments                                                                                      |
+| `log`             | `info`                | `error`, `warn`, `info`, or `debug`                                                                                       |
+| `weak-compatible` | `false`               | Accept matrix review pairings when comparing SPDX project and dependency licenses                                         |
+| `distribution`    | `public-saas`         | `internal-use`, `public-saas`, `proprietary-binary`, `static-linking`, `dynamic-linking`, or `open-source-redistribution` |
+| `report-all`      | `false`               | Include compatible dependencies in the job summary                                                                        |
 
 The summary shows the full report. PR comments show dependency issues and link
 to the summary; distribution warnings and approved exceptions appear only in the

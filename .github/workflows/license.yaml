@@ -16,3 +16,4 @@ jobs:
     secrets: inherit
     with:
       skip-fix: false
+      distribution: open-source-redistribution

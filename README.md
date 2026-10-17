@@ -34,13 +34,18 @@ The default config path is `.licenserc.yaml`. Example:
 
 ```yaml
 header:
-  # Used only as the project license for dependency compatibility.
+  # Used for dependency checks when project-license is `header`.
   license:
     spdx-id: Apache-2.0
 
 dependency:
   files:
     - go.mod
+  # Compare dependencies against a proprietary product outcome instead of
+  # the project's SPDX license in header. Defaults to header.
+  project-license: proprietary
+  # Choose the product intent explicitly when the project is proprietary.
+  # The distribution model is an action input; it defaults to public-saas.
   # Optional; includes JS/Python dev dependencies and Go test imports.
   # include-dev-dependencies: true
   go:
@@ -83,7 +88,8 @@ Examples are in [`examples/`](examples/).
 
 | Setting                               | Purpose                                                                                                                                                                                                             |
 | ------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `header.license.spdx-id`              | Project license used for compatibility checks.                                                                                                                                                                      |
+| `header.license.spdx-id`              | Project SPDX license used when `dependency.project-license` is `header`.                                                                                                                                           |
+| `dependency.project-license`          | `header` (default) compares SPDX license expressions. `proprietary` checks whether each dependency fits a proprietary product under the selected distribution model.                                                |
 | `dependency.files`                    | Manifests and lockfiles to scan. Versions must be exact; Python requirements must pin and list every dependency. Unresolved inputs fail the check.                                                                  |
 | `dependency.include-dev-dependencies` | Defaults to `false`. Includes JS `devDependencies`, Python non-main groups and Pipfile `develop`, and Go tests.                                                                                                     |
 | `dependency.go.packages`              | Go build targets; defaults to `./...`.                                                                                                                                                                              |
@@ -100,48 +106,42 @@ alone does not establish license terms.
 
 ### Compatibility reference
 
-The table starts from the
-[archived LicenseCheck.io matrix](https://web.archive.org/web/20260613002524/https://licensecheck.io/compatibility-matrix),
-with GPL/LGPL relationships aligned to the
-[GNU license compatibility table](https://www.gnu.org/licenses/gpl-faq.en.html)
-and MPL/GPL combinations marked for review under
-[MPL Section 3.3](https://www.mozilla.org/en-US/MPL/2.0/FAQ/). Rows are project
-licenses; columns are dependency licenses. `✓` is compatible, `!` needs review,
-and `✗` is incompatible. The action's rules are in
-[`config/license-compatibility.yaml`](config/license-compatibility.yaml); it
-defines the matrix, fallback compatibility families, aliases, FSF/OSI
-classifications, and ordered distribution warning rules. FSF-free and
+Compatibility models follow [licensecompat](https://licensecompat.com/compatibility/).
+The action's rules are in [`config/license-compatibility.yaml`](config/license-compatibility.yaml).
+With `project-license: proprietary`, the selected model decides whether a known
+dependency is compatible with keeping the product proprietary, needs manual
+review, or is incompatible. Commercial use is generally permitted by open
+source licenses; this setting is about the obligations that may prevent a
+closed-source product. It does not claim that the dependency itself is
+non-commercial. The proprietary outcomes are conservative category-level
+policies in this repository, not a copy of licensecompat's complete pair
+dataset.
+
+| `distribution` model | Use case |
+| -------------------- | -------- |
+| `internal-use` | Used only inside the organization; not distributed to users. |
+| `public-saas` | Public hosted service; the default. |
+| `proprietary-binary` | Closed-source software delivered as a binary. |
+| `static-linking` | Product statically links the dependency. |
+| `dynamic-linking` | Product dynamically links the dependency. |
+| `open-source-redistribution` | Product and dependencies are redistributed as open source. |
+
+The selected model is a `distribution` action input; it defaults to
+`public-saas`. Pair checks against `header.license.spdx-id` are independent of
+the distribution model. Use `project-license: header` for
+`open-source-redistribution`; proprietary target checks cannot determine the
+license of a new open-source combined work. For
+`project-license: proprietary`, the YAML policy uses broad license families
+and may request manual review. Unlisted licenses and CC-BY-3.0/4.0 remain
+unresolved for manual review. Outcomes requiring review fail until covered by
+a manual exception in `dependency.exceptions`.
+Set the model under the action's `with:` section, for example
+`distribution: proprietary-binary`.
+Licensecompat provides general guidance, not legal advice. FSF-free and
 OSI-approved identifiers are exact snapshots from the SPDX
 [License List v3.29.0](https://github.com/spdx/license-list-data/blob/main/json/licenses.json).
-CC-BY-3.0 and CC-BY-4.0 software dependencies require manual review; they do not
-pass through the permissive fallback family. This follows
-[Mozilla's MPL license policy](https://www.mozilla.org/en-US/MPL/license-policy/)
-and
-[Creative Commons' advice against using CC licenses for software](https://creativecommons.org/faq/).
-
-| Project license ↓ / dependency license → | MIT | Apache 2.0 | BSD 3-Clause | BSD 2-Clause | ISC | GPL 3.0 | GPL 2.0 | LGPL 3.0 | LGPL 2.1 | MPL 2.0 | AGPL 3.0 | CC0 1.0 | Unlicense |
-| ---------------------------------------- | --- | ---------- | ------------ | ------------ | --- | ------- | ------- | -------- | -------- | ------- | -------- | ------- | --------- |
-| MIT                                      | ✓   | ✓          | ✓            | ✓            | ✓   | ✗       | ✗       | ✓        | ✓        | ✓       | ✗        | ✓       | ✓         |
-| Apache 2.0                               | ✓   | ✓          | ✓            | ✓            | ✓   | ✗       | ✗       | ✓        | ✓        | ✓       | ✗        | ✓       | ✓         |
-| BSD 3-Clause                             | ✓   | ✓          | ✓            | ✓            | ✓   | ✗       | ✗       | ✓        | ✓        | ✓       | ✗        | ✓       | ✓         |
-| BSD 2-Clause                             | ✓   | ✓          | ✓            | ✓            | ✓   | ✗       | ✗       | ✓        | ✓        | ✓       | ✗        | ✓       | ✓         |
-| ISC                                      | ✓   | ✓          | ✓            | ✓            | ✓   | ✗       | ✗       | ✓        | ✓        | ✓       | ✗        | ✓       | ✓         |
-| GPL 3.0                                  | ✗   | ✗          | ✗            | ✗            | ✗   | ✓       | !       | ✓        | ✓        | !       | !        | !       | ✓         |
-| GPL 2.0                                  | ✗   | ✗          | ✗            | ✗            | ✗   | !       | ✓       | ✗        | ✓        | !       | !        | !       | ✓         |
-| LGPL 3.0                                 | ✓   | ✓          | ✓            | ✓            | ✓   | ✗       | ✗       | ✓        | !        | !       | ✗        | ✓       | ✓         |
-| LGPL 2.1                                 | ✓   | ✓          | ✓            | ✓            | ✓   | ✗       | ✗       | !        | ✓        | !       | ✗        | ✓       | ✓         |
-| MPL 2.0                                  | ✓   | ✓          | ✓            | ✓            | ✓   | !       | !       | !        | !        | ✓       | ✗        | ✓       | ✓         |
-| AGPL 3.0                                 | ✗   | ✗          | ✗            | ✗            | ✗   | !       | !       | ✗        | ✗        | ✗       | ✓        | ✓       | ✓         |
-| CC0 1.0                                  | ✓   | ✓          | ✓            | ✓            | ✓   | ✓       | ✓       | ✓        | ✓        | ✓       | ✓        | ✓       | ✓         |
-| Unlicense                                | ✓   | ✓          | ✓            | ✓            | ✓   | ✓       | ✓       | ✓        | ✓        | ✓       | ✓        | ✓       | ✓         |
-
-The European Commission's
-[Licensing Assistant](https://interoperable-europe.ec.europa.eu/collection/eupl/solution/licensing-assistant/compatibility-checker)
-provides an interactive check. Select the dependency license as inbound and the
-project license as outbound.
-
-Matrix warnings are reported as `unknown` by default and as `weak-compatible`
-when `weak-compatible: true`.
+Conditional or review outcomes include a link to the
+[licensecompat checker](https://licensecompat.com/).
 
 ## Comparison with alternatives
 
@@ -159,19 +159,21 @@ applying different tools to different ecosystem, we came up with our own tool.
 
 ## Action inputs
 
-| Input             | Default               | Description                                              |
-| ----------------- | --------------------- | -------------------------------------------------------- |
-| `config`          | `.licenserc.yaml`     | License Eye-compatible YAML configuration path           |
-| `token`           | `${{ github.token }}` | Token used for pull-request comments                     |
-| `log`             | `info`                | `error`, `warn`, `info`, or `debug`                      |
-| `weak-compatible` | `false`               | Enable License Eye weak-compatible compatibility entries |
-| `report-all`      | `false`               | Include compatible dependencies in the job summary       |
+| Input             | Default                  | Description                                                                               |
+| ----------------- | ------------------------ | ----------------------------------------------------------------------------------------- |
+| `config`          | `.licenserc.yaml`        | License Eye-compatible YAML configuration path                                            |
+| `token`           | `${{ github.token }}`    | Token used for pull-request comments                                                      |
+| `log`             | `info`                   | `error`, `warn`, `info`, or `debug`                                                       |
+| `weak-compatible` | `false`                  | Accept matrix review pairings when comparing SPDX project and dependency licenses         |
+| `distribution`    | `public-saas`            | `internal-use`, `public-saas`, `proprietary-binary`, `static-linking`, `dynamic-linking`, or `open-source-redistribution` |
+| `report-all`      | `false`                  | Include compatible dependencies in the job summary                                        |
 
 The summary shows the full report. PR comments show dependency issues and link
 to the summary; distribution warnings and approved exceptions appear only in the
 summary. `report-all: true` includes compatible dependencies in the summary.
-Reciprocal licenses such as LGPL, MPL, GPL/AGPL, and CAL produce non-blocking
-distribution warnings.
+Reciprocal licenses such as LGPL, MPL, GPL/AGPL, and CAL produce distribution
+review warnings. Outcomes requiring review fail until covered by a manual
+exception in `dependency.exceptions`.
 
 ## Local usage
 
@@ -186,6 +188,9 @@ yarn run check --config .github/config/.licenserc.yaml --log debug
 The local command checks dependency licenses and exits non-zero on failures.
 Network access may be needed for registry and repository license resolution;
 configured `dependency.licenses` entries work offline.
+
+Third-party component attributions are listed in
+[`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md).
 
 ## Checking another repository locally
 

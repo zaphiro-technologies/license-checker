@@ -1,7 +1,7 @@
 # see https://github.com/marketplace/actions/license-eye-header#configurations
 
 header:
-  # this is not the actual license, but the desired compatibility
+  # This repository's published license, also used as the compatibility target.
   license:
     spdx-id: Apache-2.0
     copyright-year: 2026
@@ -22,6 +22,7 @@ header:
 
 # If you don't want to check dependencies' license compatibility, remove the following part
 dependency:
+  project-license: header
   files:
     - package.json
     - yarn.lock
@@ -31,5 +32,5 @@ dependency:
       url: https://creativecommons.org/licenses/by/3.0/
       reason: >-
         Approved for the SPDX exception identifier data consumed by
-        spdx-expression-parse; preserve the CC BY 3.0 attribution and license
-        notice when distributing the action.
+        spdx-expression-parse; see THIRD_PARTY_NOTICES.md for the CC BY 3.0
+        attribution and license notice included with the action.

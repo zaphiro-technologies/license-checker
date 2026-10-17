@@ -41,114 +41,116 @@ review-required:
     - CC-BY-3.0
     - CC-BY-4.0
 
-license-families:
-  # Fallback groups used when a license has no explicit matrix group. These
-  # describe checker behavior, not formal SPDX classifications. Members of
-  # permissive-compatible match one another; reciprocal-compatible members
-  # match one another; the last group is incompatible with both families.
-  permissive-compatible:
-    - Apache-2.0
-    - PHP-3.01
-    - 0BSD
-    - BSD-3-Clause
-    - BSD-2-Clause
-    - BSD-2-Clause-Views
-    - PostgreSQL
-    - EDL-1.0
-    - ISC
-    - SMLNJ
-    - ICU
-    - NCSA
-    - W3C
-    - Xnet
-    - Zlib
-    - Libpng
-    - AFL-3.0
-    - MS-PL
-    - Python-2.0
-    - PSF-2.0
-    - CNRI-Python
-    - BSL-1.0
-    - WTFPL
-    - Unicode-DFS-2016
-    - Unicode-DFS-2015
-    - ZPL-2.0
-    - Unlicense
-    - HPND
-    - MulanPSL-2.0
-    - MIT
-    - MIT-0
-    - MIT-CMU
-    - BlueOak-1.0.0
-    - CC0-1.0
-  reciprocal-compatible:
-    - CDDL-1.0
-    - CDDL-1.1
-    - CPL-1.0
-    - EPL-1.0
-    - EPL-2.0
-    - ErlPL-1.1
-    - IPA
-    - IPL-1.0
-    - UFL-1.0
-    - UnRAR
-    - MPL-1.0
-    - MPL-1.1
-    - MPL-2.0
-    - OFL-1.1
-    - OSL-3.0
-    - Ruby
-    - SPL-1.0
-  incompatible-with-permissive:
-    - CAL-1.0
-    - LGPL-2.0+
-    - LGPL-2.0
-    - LGPL-2.0-only
-    - LGPL-2.0-or-later
-    - LGPL-2.1+
-    - LGPL-2.1
-    - LGPL-2.1-only
-    - LGPL-2.1-or-later
-    - LGPL-3.0+
-    - LGPL-3.0
-    - LGPL-3.0-linking-exception
-    - LGPL-3.0-only
-    - LGPL-3.0-or-later
-    - LGPLLR
-    - GPL-1.0+
-    - GPL-1.0
-    - GPL-1.0-only
-    - GPL-1.0-or-later
-    - GPL-2.0+
-    - GPL-2.0
-    - GPL-2.0-only
-    - GPL-2.0-or-later
-    - GPL-2.0-with-autoconf-exception
-    - GPL-2.0-with-bison-exception
-    - GPL-2.0-with-classpath-exception
-    - GPL-2.0-with-font-exception
-    - GPL-2.0-with-GCC-exception
-    - GPL-3.0+
-    - GPL-3.0
-    - GPL-3.0-linking-exception
-    - GPL-3.0-linking-source-exception
-    - GPL-3.0-only
-    - GPL-3.0-or-later
-    - GPL-3.0-with-autoconf-exception
-    - GPL-3.0-with-GCC-exception
-    - GPL-CC-1.0
-    - QPL-1.0
-    - Sleepycat
-    - SSPL-1.0
-    - CPOL-1.02
-    - NPL-1.0
-    - NPL-1.1
+# License families used by compatibility and proprietary-product policies.
+license-categories:
+  permissive:
+    exact:
+      - Apache-2.0
+      - 0BSD
+      - BSD-2-Clause
+      - BSD-2-Clause-Views
+      - BSD-3-Clause
+      - PostgreSQL
+      - EDL-1.0
+      - ISC
+      - SMLNJ
+      - ICU
+      - NCSA
+      - W3C
+      - Xnet
+      - Zlib
+      - Libpng
+      - AFL-3.0
+      - MS-PL
+      - Python-2.0
+      - PSF-2.0
+      - CNRI-Python
+      - BSL-1.0
+      - WTFPL
+      - Unicode-DFS-2016
+      - Unicode-DFS-2015
+      - ZPL-2.0
+      - Unlicense
+      - HPND
+      - MulanPSL-2.0
+      - MIT
+      - MIT-0
+      - MIT-CMU
+      - BlueOak-1.0.0
+      - CC0-1.0
+      - PHP-3.01
+  strong-copyleft:
+    prefixes: [GPL-]
+  weak-copyleft:
+    exact:
+      - CDDL-1.0
+      - CDDL-1.1
+      - CPL-1.0
+      - EPL-1.0
+      - EPL-2.0
+      - ErlPL-1.1
+      - IPA
+      - IPL-1.0
+      - UFL-1.0
+      - UnRAR
+      - MPL-1.0
+      - MPL-1.1
+      - MPL-2.0
+      - OFL-1.1
+      - OSL-3.0
+      - Ruby
+      - SPL-1.0
+    prefixes: [LGPL-, EUPL-]
+  network-copyleft:
+    prefixes: [AGPL-]
+  other:
+    exact: [Unknown]
+
+# Proprietary-product outcomes by licensecompat distribution model.
+# Unclassified licenses are always unresolved, regardless of these categories.
+proprietary-policies:
+  internal-use:
+    permissive: approve
+    weak-copyleft: approve
+    strong-copyleft: approve
+    network-copyleft: review
+    other: review
+  proprietary-binary:
+    permissive: approve
+    weak-copyleft: review
+    strong-copyleft: deny
+    network-copyleft: deny
+    other: review
+  public-saas:
+    permissive: approve
+    weak-copyleft: approve
+    strong-copyleft: approve
+    network-copyleft: review
+    other: review
+  open-source-redistribution:
+    permissive: approve
+    weak-copyleft: review
+    strong-copyleft: review
+    network-copyleft: review
+    other: review
+  static-linking:
+    permissive: approve
+    weak-copyleft: review
+    strong-copyleft: deny
+    network-copyleft: deny
+    other: review
+  dynamic-linking:
+    permissive: approve
+    weak-copyleft: review
+    strong-copyleft: deny
+    network-copyleft: deny
+    other: review
 
 matrix:
   # Group order defines both row and column order in each values array.
   groups:
     permissive:
-      family: permissive-compatible
+      category: permissive
     gpl-3:
       prefixes: [GPL-3.0]
     gpl-2:

@@ -18,7 +18,7 @@ import { readFileSync } from "node:fs";
 import spdxCorrect from "spdx-correct";
 import parseExpression from "spdx-expression-parse";
 import { parse as parseYaml } from "yaml";
-import type { DependencyConfig } from "./types.js";
+import type { DependencyConfig, DistributionModel } from "./types.js";
 
 export type SpdxExpression =
   | { type: "license"; id: string }
@@ -32,20 +32,30 @@ export type SpdxExpression =
 export type Compatibility =
   "compatible" | "weak-compatible" | "incompatible" | "unknown";
 
-type LicenseFamily =
-  | "permissive-compatible"
-  | "reciprocal-compatible"
-  | "incompatible-with-permissive";
 type MatrixValue = "compatible" | "warning" | "incompatible";
+type LicenseCategory =
+  | "permissive"
+  | "strong-copyleft"
+  | "weak-copyleft"
+  | "network-copyleft"
+  | "other";
+type PolicyDecision = "approve" | "review" | "deny";
 
 interface LicenseCompatibilityRules {
   aliases: Record<string, string>;
   "review-required": { licenses: string[] };
-  "license-families": Record<LicenseFamily, string[]>;
+  "license-categories": Record<
+    LicenseCategory,
+    { exact?: string[]; prefixes?: string[] }
+  >;
+  "proprietary-policies": Record<
+    DistributionModel,
+    Record<LicenseCategory, PolicyDecision>
+  >;
   matrix: {
     groups: Record<
       string,
-      { family?: LicenseFamily; exact?: string[]; prefixes?: string[] }
+      { category?: LicenseCategory; exact?: string[]; prefixes?: string[] }
     >;
     values: Record<string, MatrixValue[]>;
   };
@@ -79,7 +89,8 @@ function loadLicenseCompatibilityRules(): LicenseCompatibilityRules {
     !isRecord(parsed["review-required"]) ||
     !Array.isArray(parsed["review-required"].licenses) ||
     !parsed["review-required"].licenses.every((id) => typeof id === "string") ||
-    !isRecord(parsed["license-families"]) ||
+    !isRecord(parsed["license-categories"]) ||
+    !isRecord(parsed["proprietary-policies"]) ||
     !isRecord(matrix) ||
     !isRecord(matrix.groups) ||
     !isRecord(matrix.values)
@@ -108,17 +119,51 @@ function loadLicenseCompatibilityRules(): LicenseCompatibilityRules {
       throw new Error(`Invalid license compatibility value in row: ${group}.`);
     }
   }
-  for (const key of [
-    "permissive-compatible",
-    "reciprocal-compatible",
-    "incompatible-with-permissive",
+  for (const category of [
+    "permissive",
+    "strong-copyleft",
+    "weak-copyleft",
+    "network-copyleft",
+    "other",
   ] as const) {
+    const rule = parsed["license-categories"][category];
     if (
-      !Array.isArray(parsed["license-families"][key]) ||
-      !parsed["license-families"][key].every((id) => typeof id === "string")
-    ) {
-      throw new Error(`Invalid license family in compatibility YAML: ${key}.`);
-    }
+      !isRecord(rule) ||
+      (!Array.isArray(rule.exact) && !Array.isArray(rule.prefixes)) ||
+      (Array.isArray(rule.exact) &&
+        !rule.exact.every((id) => typeof id === "string")) ||
+      (Array.isArray(rule.prefixes) &&
+        !rule.prefixes.every((id) => typeof id === "string"))
+    )
+      throw new Error(
+        `Invalid license category in compatibility YAML: ${category}.`,
+      );
+  }
+  for (const model of [
+    "internal-use",
+    "proprietary-binary",
+    "public-saas",
+    "open-source-redistribution",
+    "static-linking",
+    "dynamic-linking",
+  ] as const) {
+    const policy = parsed["proprietary-policies"][model];
+    if (
+      !isRecord(policy) ||
+      [
+        "permissive",
+        "strong-copyleft",
+        "weak-copyleft",
+        "network-copyleft",
+        "other",
+      ].some(
+        (category) =>
+          !["approve", "review", "deny"].includes(String(policy[category])),
+      )
+    )
+      throw new Error(
+        `Invalid proprietary policy in compatibility YAML: ${model}.`,
+      );
   }
   for (const key of ["fsf-free", "osi-approved"] as const) {
     const classification = parsed[key];
@@ -165,19 +210,13 @@ function loadLicenseCompatibilityRules(): LicenseCompatibilityRules {
 
 const LICENSE_RULES = loadLicenseCompatibilityRules();
 const REVIEW_REQUIRED = new Set(LICENSE_RULES["review-required"].licenses);
-const PERMISSIVE_COMPATIBLE = new Set(
-  LICENSE_RULES["license-families"]["permissive-compatible"],
-);
-const RECIPROCAL_COMPATIBLE = new Set(
-  LICENSE_RULES["license-families"]["reciprocal-compatible"],
-);
-const INCOMPATIBLE_WITH_PERMISSIVE = new Set(
-  LICENSE_RULES["license-families"]["incompatible-with-permissive"],
-);
 const MATRIX_GROUPS = Object.keys(LICENSE_RULES.matrix.groups);
 const FSF_FREE = new Set(LICENSE_RULES["fsf-free"].licenses);
 const OSI_APPROVED = new Set(LICENSE_RULES["osi-approved"].licenses);
 const ALIASES = LICENSE_RULES.aliases;
+
+export const DEFAULT_DISTRIBUTION: DistributionModel = "public-saas";
+const LICENSECOMPAT_CHECKER_URL = "https://licensecompat.com/";
 
 export function normalizeLicenseId(value: string): string {
   const trimmed = value.trim();
@@ -266,6 +305,7 @@ function licenseIds(expression: SpdxExpression): string[] {
 
 export function distributionWarningFor(
   expression: string | undefined,
+  distribution?: DistributionModel,
 ): string | undefined {
   const ids = licenseIds(parseLicenseExpression(expression));
   for (const rule of LICENSE_RULES["distribution-warnings"]) {
@@ -276,7 +316,7 @@ export function distributionWarningFor(
           rule.prefixes?.some((prefix) => id.startsWith(prefix)),
       )
     )
-      return rule.message;
+      return `${rule.message} Distribution model: ${distribution ?? DEFAULT_DISTRIBUTION}.`;
   }
   return undefined;
 }
@@ -302,13 +342,38 @@ function matrixGroup(id: string): string | undefined {
       return group;
   }
   for (const [group, rule] of Object.entries(LICENSE_RULES.matrix.groups)) {
-    if (
-      rule.family &&
-      LICENSE_RULES["license-families"][rule.family].includes(id)
-    )
-      return group;
+    if (rule.category && licenseCategory(id) === rule.category) return group;
   }
   return undefined;
+}
+
+function licenseCategory(id: string): LicenseCategory {
+  for (const [category, rule] of Object.entries(
+    LICENSE_RULES["license-categories"],
+  ) as Array<[LicenseCategory, { exact?: string[]; prefixes?: string[] }]>) {
+    if (
+      rule.exact?.includes(id) ||
+      rule.prefixes?.some((prefix) => id.startsWith(prefix))
+    )
+      return category;
+  }
+  return "other";
+}
+
+export function licenseCompatAdviceUrl(
+  projectExpression: string | undefined,
+  dependencyExpression: string | undefined,
+  distribution: DistributionModel = DEFAULT_DISTRIBUTION,
+): string {
+  const ids = [
+    ...new Set(
+      [
+        ...licenseIds(parseLicenseExpression(projectExpression)),
+        ...licenseIds(parseLicenseExpression(dependencyExpression)),
+      ].filter((id) => id !== "Unknown"),
+    ),
+  ];
+  return `${LICENSECOMPAT_CHECKER_URL}?licenses=${encodeURIComponent(ids.join(","))}&model=${distribution.replaceAll("-", "_")}`;
 }
 
 function matrixCompatibility(
@@ -337,18 +402,29 @@ function categoryCompatibility(
   dependency: string,
   weakCompatible: boolean,
 ): Compatibility {
-  if (PERMISSIVE_COMPATIBLE.has(main)) {
-    if (PERMISSIVE_COMPATIBLE.has(dependency)) return "compatible";
-    if (RECIPROCAL_COMPATIBLE.has(dependency))
+  const mainCategory = licenseCategory(main);
+  const dependencyCategory = licenseCategory(dependency);
+  if (mainCategory === "permissive") {
+    if (dependencyCategory === "permissive") return "compatible";
+    if (dependencyCategory === "weak-copyleft")
       return weakCompatible ? "weak-compatible" : "unknown";
-    if (INCOMPATIBLE_WITH_PERMISSIVE.has(dependency)) return "incompatible";
+    if (
+      dependencyCategory === "strong-copyleft" ||
+      dependencyCategory === "network-copyleft"
+    )
+      return "incompatible";
     return "unknown";
   }
-  if (RECIPROCAL_COMPATIBLE.has(main)) {
-    if (RECIPROCAL_COMPATIBLE.has(dependency)) return "compatible";
-    if (PERMISSIVE_COMPATIBLE.has(dependency))
+  if (mainCategory === "weak-copyleft") {
+    if (dependencyCategory === "weak-copyleft") return "compatible";
+    if (dependencyCategory === "permissive")
       return weakCompatible ? "weak-compatible" : "unknown";
-    return "incompatible";
+    if (
+      dependencyCategory === "strong-copyleft" ||
+      dependencyCategory === "network-copyleft"
+    )
+      return "incompatible";
+    return "unknown";
   }
   return main === dependency ? "compatible" : "unknown";
 }
@@ -359,7 +435,13 @@ function compareSingle(
   weakCompatible: boolean,
   config?: DependencyConfig,
 ): Compatibility {
-  if (dependency === "Unknown") return "incompatible";
+  if (
+    main === "Unknown" ||
+    dependency === "Unknown" ||
+    licenseCategory(main) === "other" ||
+    licenseCategory(dependency) === "other"
+  )
+    return "unknown";
   if (REVIEW_REQUIRED.has(main) || REVIEW_REQUIRED.has(dependency))
     return "unknown";
   const configured = configuredCompatibility(dependency, config);
@@ -367,10 +449,61 @@ function compareSingle(
 
   const mainGroup = matrixGroup(main);
   const dependencyGroup = matrixGroup(dependency);
-  if (mainGroup && dependencyGroup)
-    return matrixCompatibility(mainGroup, dependencyGroup, weakCompatible);
+  const compatibility =
+    mainGroup && dependencyGroup
+      ? matrixCompatibility(mainGroup, dependencyGroup, weakCompatible)
+      : categoryCompatibility(main, dependency, weakCompatible);
+  return compatibility;
+}
 
-  return categoryCompatibility(main, dependency, weakCompatible);
+function proprietaryLicenseDecision(
+  id: string,
+  distribution: DistributionModel,
+): Compatibility {
+  const category = licenseCategory(id);
+  if (category === "other") return "unknown";
+  const decision =
+    LICENSE_RULES["proprietary-policies"][distribution][category];
+  if (decision === "deny") return "incompatible";
+  if (decision === "review") return "unknown";
+  return "compatible";
+}
+
+export function checkProprietaryCompatibility(
+  expression: string | undefined,
+  distribution: DistributionModel = DEFAULT_DISTRIBUTION,
+  config?: DependencyConfig,
+): Compatibility {
+  if (distribution === "open-source-redistribution") return "unknown";
+  const dependency = parseLicenseExpression(expression);
+  const compare = (node: SpdxExpression): Compatibility => {
+    if (node.type === "and")
+      return combineAnd(compare(node.left), compare(node.right));
+    if (node.type === "or")
+      return combineOr(compare(node.left), compare(node.right));
+    if (node.type === "with") {
+      const base = compare(node.license);
+      if (base !== "incompatible") return base;
+      const allowedConditionally = LICENSE_RULES["conditional-exceptions"].some(
+        (rule) =>
+          rule.exception === node.exception &&
+          (node.license.id === rule["license-prefix"] ||
+            node.license.id.startsWith(`${rule["license-prefix"]}-`)),
+      );
+      return allowedConditionally ? "unknown" : base;
+    }
+    if (node.type !== "license") return "unknown";
+    if (
+      node.id === "Unknown" ||
+      licenseCategory(node.id) === "other" ||
+      REVIEW_REQUIRED.has(node.id)
+    )
+      return "unknown";
+    const configured = configuredCompatibility(node.id, config);
+    if (configured) return configured;
+    return proprietaryLicenseDecision(node.id, distribution);
+  };
+  return compare(dependency);
 }
 
 function combineAnd(left: Compatibility, right: Compatibility): Compatibility {

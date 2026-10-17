@@ -19,6 +19,7 @@ import { headerRules } from "../config.js";
 import { Logger } from "../logger.js";
 import {
   checkCompatibility,
+  checkProprietaryCompatibility,
   distributionWarningFor,
   normalizeLicenseExpression,
 } from "../spdx.js";
@@ -26,8 +27,10 @@ import type {
   Dependency,
   DependencyReport,
   DependencyResult,
+  DistributionModel,
   LicenseEyeConfig,
 } from "../types.js";
+import { DEFAULT_DISTRIBUTION, licenseCompatAdviceUrl } from "../spdx.js";
 import { isFile, matchesPath, uniqueBy } from "../util.js";
 import { collectDependencyManifest } from "./registry.js";
 import { systemGoPackageList } from "./go/checker.js";
@@ -58,6 +61,7 @@ export async function checkDependencies(
   weakCompatible: boolean,
   logger: Logger,
   goPackageList: GoPackageListRunner = systemGoPackageList,
+  distribution: DistributionModel = DEFAULT_DISTRIBUTION,
 ): Promise<DependencyReport> {
   const dependencyConfig = config.dependency;
   if (!dependencyConfig?.files?.length) {
@@ -163,13 +167,24 @@ export async function checkDependencies(
       ? { ...dependency, version: resolved.version }
       : dependency;
     const normalized = normalizeLicenseExpression(resolved.license);
-    const distributionWarning = distributionWarningFor(normalized);
-    const compatibility = checkCompatibility(
-      mainLicenseFor(dependency.manifest, config),
+    const distributionWarning = distributionWarningFor(
       normalized,
-      weakCompatible,
-      dependencyConfig,
+      distribution,
     );
+    const projectLicense = mainLicenseFor(dependency.manifest, config);
+    const compatibility =
+      dependencyConfig.projectLicense === "proprietary"
+        ? checkProprietaryCompatibility(
+            normalized,
+            distribution,
+            dependencyConfig,
+          )
+        : checkCompatibility(
+            projectLicense,
+            normalized,
+            weakCompatible,
+            dependencyConfig,
+          );
     resultSlots[index] = {
       ...resolvedDependency,
       license: resolved.license,
@@ -178,10 +193,21 @@ export async function checkDependencies(
       source: resolved.source,
       compatible: compatibility,
       distributionWarning,
+      adviceUrl: licenseCompatAdviceUrl(
+        dependencyConfig.projectLicense === "proprietary"
+          ? undefined
+          : projectLicense,
+        normalized,
+        distribution,
+      ),
       reason:
         compatibility === "compatible"
           ? undefined
-          : `${compatibility} with project license`,
+          : compatibility === "unknown" || compatibility === "weak-compatible"
+            ? "Manual approval required: conditional, unlisted, or unverified license compatibility."
+            : dependencyConfig.projectLicense === "proprietary"
+              ? `${compatibility} with proprietary software under ${distribution}`
+              : `${compatibility} with project license`,
     };
     logger.debug(
       `Dependency ${dependency.name}@${dependency.version}: ${normalized} (${compatibility})`,

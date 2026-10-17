@@ -692,7 +692,7 @@ describe("dependency checker", () => {
     });
   });
 
-  it("reports non-blocking distribution review warnings", async () => {
+  it("requires approval for reciprocal licenses in a proprietary binary", async () => {
     const root = mkdtempSync(join(tmpdir(), "license-checker-distribution-"));
     writeFileSync(
       join(root, "go.mod"),
@@ -702,6 +702,7 @@ describe("dependency checker", () => {
       header: { license: { "spdx-id": "Apache-2.0" } },
       dependency: {
         files: ["go.mod"],
+        projectLicense: "proprietary",
         licenses: [
           {
             name: "example.com/reciprocal",
@@ -718,12 +719,15 @@ describe("dependency checker", () => {
       false,
       new Logger("error"),
       goList("example.com/reciprocal v1.2.3"),
+      "proprietary-binary",
     );
 
-    expect(report.failures).toHaveLength(0);
+    expect(report.failures).toHaveLength(1);
     expect(report.results[0]).toMatchObject({
-      compatible: "compatible",
+      compatible: "unknown",
       distributionWarning: expect.stringContaining("LGPL"),
+      reason: expect.stringContaining("Manual approval required"),
+      adviceUrl: expect.stringContaining("licensecompat.com"),
     });
   });
 

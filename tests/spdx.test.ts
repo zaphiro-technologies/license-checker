@@ -17,7 +17,9 @@
 import { describe, expect, it } from "vitest";
 import {
   checkCompatibility,
+  checkProprietaryCompatibility,
   distributionWarningFor,
+  licenseCompatAdviceUrl,
   normalizeLicenseExpression,
   normalizeLicenseId,
 } from "../src/spdx.js";
@@ -61,10 +63,11 @@ describe("SPDX normalization", () => {
     expect(checkCompatibility("Apache-2.0", "GPL-3.0-only", false)).toBe(
       "incompatible",
     );
-    expect(checkCompatibility("Apache-2.0", "CAL-1.0", false)).toBe(
-      "incompatible",
-    );
+    expect(checkCompatibility("Apache-2.0", "CAL-1.0", false)).toBe("unknown");
     expect(checkCompatibility("Apache-2.0", "BSD-4-Clause", false)).toBe(
+      "unknown",
+    );
+    expect(checkCompatibility("BSD-4-Clause", "BSD-4-Clause", false)).toBe(
       "unknown",
     );
     for (const license of ["CC-BY-3.0", "CC-BY-4.0"]) {
@@ -120,6 +123,43 @@ describe("SPDX normalization", () => {
 
     expect(checkCompatibility("GPL-3.0-only", "GPL-2.0-only", true)).toBe(
       "weak-compatible",
+    );
+  });
+
+  it("keeps pair compatibility separate from distribution models", () => {
+    expect(checkCompatibility("MIT", "MPL-2.0", false)).toBe("compatible");
+  });
+
+  it("checks proprietary use by licensecompat distribution model", () => {
+    expect(
+      checkProprietaryCompatibility(
+        "AGPL-3.0-only",
+        "public-saas",
+      ),
+    ).toBe("unknown");
+    expect(
+      checkProprietaryCompatibility("GPL-3.0-only", "public-saas"),
+    ).toBe("compatible");
+    expect(
+      checkProprietaryCompatibility("GPL-3.0-only", "proprietary-binary"),
+    ).toBe("incompatible");
+    expect(
+      checkProprietaryCompatibility("LGPL-3.0-or-later", "dynamic-linking"),
+    ).toBe("unknown");
+    expect(
+      checkProprietaryCompatibility("BSD-4-Clause", "public-saas"),
+    ).toBe("unknown");
+    expect(
+      checkProprietaryCompatibility("CC-BY-4.0", "public-saas"),
+    ).toBe("unknown");
+  });
+
+  it("links licenses and distribution model to licensecompat", () => {
+    expect(licenseCompatAdviceUrl("MIT", "MPL-2.0", "dynamic-linking")).toBe(
+      "https://licensecompat.com/?licenses=MIT%2CMPL-2.0&model=dynamic_linking",
+    );
+    expect(licenseCompatAdviceUrl(undefined, "BSD-4-Clause")).toBe(
+      "https://licensecompat.com/?licenses=BSD-4-Clause&model=public_saas",
     );
   });
 });

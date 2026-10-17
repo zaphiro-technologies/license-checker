@@ -24,7 +24,20 @@ import {
   distributionWarnings,
   writeSummary,
 } from "./report.js";
-import type { CheckReport, LicenseEyeConfig } from "./types.js";
+import type {
+  CheckReport,
+  DistributionModel,
+  LicenseEyeConfig,
+} from "./types.js";
+
+const DISTRIBUTION_MODELS = new Set<DistributionModel>([
+  "internal-use",
+  "proprietary-binary",
+  "public-saas",
+  "open-source-redistribution",
+  "static-linking",
+  "dynamic-linking",
+]);
 
 function commentsEnabled(config: LicenseEyeConfig): boolean {
   const rules = headerRules(config);
@@ -52,6 +65,15 @@ async function run(): Promise<void> {
   const reportAllInput =
     core.getInput("report-all") || argumentValue("--report-all") || "false";
   const reportAll = reportAllInput.toLowerCase() === "true";
+  const distributionInput =
+    core.getInput("distribution") ||
+    argumentValue("--distribution") ||
+    "public-saas";
+  if (!DISTRIBUTION_MODELS.has(distributionInput as DistributionModel)) {
+    throw new Error(
+      "Invalid distribution. Use internal-use, proprietary-binary, public-saas, open-source-redistribution, static-linking, or dynamic-linking.",
+    );
+  }
 
   logger.info(`Loading configuration from ${configInput}`);
   const { config } = loadConfig(root, configInput);
@@ -61,6 +83,8 @@ async function run(): Promise<void> {
     token,
     weakCompatible,
     logger,
+    undefined,
+    distributionInput as DistributionModel,
   );
   const report: CheckReport = {
     dependency,

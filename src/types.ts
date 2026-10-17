@@ -71,6 +71,7 @@ export interface DependencyConfig {
   files?: string[];
   go?: GoDependencyConfig;
   includeDevDependencies?: boolean;
+  projectLicense?: "header" | "proprietary";
   licenses?: DependencyLicenseOverride[];
   licenseRules?: LicenseRule[];
   threshold?: number;
@@ -86,6 +87,13 @@ export interface LicenseEyeConfig {
 }
 
 export type Ecosystem = "npm" | "go" | "python" | "unknown";
+export type DistributionModel =
+  | "internal-use"
+  | "proprietary-binary"
+  | "public-saas"
+  | "open-source-redistribution"
+  | "static-linking"
+  | "dynamic-linking";
 
 export interface Dependency {
   name: string;
@@ -119,6 +127,7 @@ export interface DependencyResult extends Dependency {
   approval?: Pick<DependencyException, "url" | "reason">;
   reason?: string;
   distributionWarning?: string;
+  adviceUrl?: string;
 }
 
 export interface DependencyReport {

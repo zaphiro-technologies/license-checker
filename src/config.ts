@@ -243,12 +243,22 @@ function normalizeDependencies(value: unknown): DependencyConfig | undefined {
   ) {
     throw new Error("dependency.include-dev-dependencies must be a boolean.");
   }
+  if (
+    record["project-license"] !== undefined &&
+    !["header", "proprietary"].includes(String(record["project-license"]))
+  ) {
+    throw new Error(
+      "dependency.project-license must be either header or proprietary.",
+    );
+  }
   return {
     files: Array.isArray(record.files)
       ? record.files.filter((item): item is string => typeof item === "string")
       : [],
     go,
     includeDevDependencies: record["include-dev-dependencies"] === true,
+    projectLicense:
+      record["project-license"] === "proprietary" ? "proprietary" : "header",
     licenses: normalizeLicenseOverrides(record.licenses),
     licenseRules: normalizeLicenseRules(record["license-rules"]),
     threshold:

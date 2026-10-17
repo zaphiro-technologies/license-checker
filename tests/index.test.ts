@@ -63,7 +63,10 @@ function dependency(name: string): DependencyResult {
   };
 }
 
-function report(results: DependencyResult[], failures: DependencyResult[]): CheckReport {
+function report(
+  results: DependencyResult[],
+  failures: DependencyResult[],
+): CheckReport {
   return {
     dependency: { checked: results.length, results, failures },
     failed: failures.length > 0,
@@ -102,6 +105,8 @@ describe("action entry point", () => {
       "true",
       "--report-all",
       "true",
+      "--distribution",
+      "proprietary-binary",
     );
     const warning = dependency("reciprocal-package");
     const value = report([warning], []);
@@ -117,13 +122,21 @@ describe("action entry point", () => {
       "token-value",
       true,
       expect.any(Object),
+      undefined,
+      "proprietary-binary",
     );
     expect(mocks.writeSummary).toHaveBeenCalledWith(value, "all");
-    expect(mocks.commentOnPullRequest).toHaveBeenCalledWith("token-value", value);
+    expect(mocks.commentOnPullRequest).toHaveBeenCalledWith(
+      "token-value",
+      value,
+    );
   });
 
   it("uses action inputs and reports license failures", async () => {
-    const failure = { ...dependency("unknown-package"), compatible: "unknown" as const };
+    const failure = {
+      ...dependency("unknown-package"),
+      compatible: "unknown" as const,
+    };
     const value = report([failure], [failure]);
     mocks.checkDependencies.mockResolvedValue(value.dependency);
     mocks.core.getInput.mockImplementation((name: string) => {

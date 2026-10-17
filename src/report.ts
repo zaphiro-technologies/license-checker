@@ -47,6 +47,7 @@ function dependencyRows(results: DependencyResult[]): string[][] {
     approvalDetails(result),
     result.distributionWarning ?? "",
     result.reason ? escapeTableCell(result.reason) : "",
+    result.adviceUrl ? `[licensecompat advice](${result.adviceUrl})` : "",
   ]);
 }
 
@@ -75,12 +76,12 @@ function commentBody(report: CheckReport): string {
     lines.push(
       "### Dependency license failures",
       "",
-      "| Dependency | Version | License | Result | Reason |",
-      "|---|---:|---|---|---|",
+      "| Dependency | Version | License | Result | Reason | licensecompat advice |",
+      "|---|---:|---|---|---|---|",
     );
     for (const result of report.dependency.failures.slice(0, 100)) {
       lines.push(
-        `| ${result.name} | ${result.version} | ${result.normalized} | ${result.compatible} | ${escapeTableCell(result.reason ?? "")} |`,
+        `| ${result.name} | ${result.version} | ${result.normalized} | ${result.compatible} | ${escapeTableCell(result.reason ?? "")} | ${result.adviceUrl ? `[Open](${result.adviceUrl})` : ""} |`,
       );
     }
     lines.push("");
@@ -169,6 +170,7 @@ export async function writeSummary(
           { data: "Manual approval", header: true },
           { data: "Distribution review", header: true },
           { data: "Reason", header: true },
+          { data: "licensecompat advice", header: true },
         ],
         ...dependencyRows(displayedDependencies),
       ]);
@@ -184,6 +186,7 @@ export async function writeSummary(
         { data: "Manual approval", header: true },
         { data: "Distribution review", header: true },
         { data: "Reason", header: true },
+        { data: "licensecompat advice", header: true },
       ],
       ...dependencyRows(approvals),
     ]);

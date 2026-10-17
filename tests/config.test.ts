@@ -42,6 +42,21 @@ describe("configuration", () => {
     ).toBe(true);
   });
 
+  it("loads proprietary product intent", () => {
+    const root = mkdtempSync(join(tmpdir(), "license-checker-config-"));
+    writeFileSync(
+      join(root, ".licenserc.yaml"),
+      `dependency:
+  files: [package.json]
+  project-license: proprietary
+`,
+    );
+
+    expect(
+      loadConfig(root, ".licenserc.yaml").config.dependency?.projectLicense,
+    ).toBe("proprietary");
+  });
+
   it("rejects the removed Go test-packages setting", () => {
     const root = mkdtempSync(join(tmpdir(), "license-checker-config-"));
     writeFileSync(

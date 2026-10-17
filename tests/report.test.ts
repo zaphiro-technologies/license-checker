@@ -66,7 +66,11 @@ function dependency(
 }
 
 function report(): CheckReport {
-  const failure = dependency("unknown-license", "unknown");
+  const failure = {
+    ...dependency("unknown-license", "unknown"),
+    adviceUrl:
+      "https://licensecompat.com/?licenses=MIT%2CMPL-2.0&model=public_saas",
+  };
   const warning = {
     ...dependency("lgpl-license", "compatible"),
     distributionWarning: "Include LGPL notices | review distribution.",
@@ -220,6 +224,9 @@ describe("summary reporting", () => {
     expect(commentBody).not.toContain("Distribution review warnings");
     expect(commentBody).not.toContain("Manual license approvals");
     expect(commentBody).toContain("Dependency license failures");
+    expect(commentBody).toContain(
+      "[Open](https://licensecompat.com/?licenses=MIT%2CMPL-2.0&model=public_saas)",
+    );
     expect(commentBody).toContain(
       "[View the full report in the workflow summary](https://github.com/zaphiro-technologies/license-checker/actions/runs/12345)",
     );

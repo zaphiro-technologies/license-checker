@@ -43291,7 +43291,8 @@ function normalizeDependencies(value) {
         throw new Error("dependency.include-dev-dependencies must be a boolean.");
     }
     if (record["project-license"] !== undefined &&
-        !["header", "proprietary"].includes(String(record["project-license"]))) {
+        (typeof record["project-license"] !== "string" ||
+            !["header", "proprietary"].includes(record["project-license"]))) {
         throw new Error("dependency.project-license must be either header or proprietary.");
     }
     const distributionModels = [
@@ -48179,13 +48180,22 @@ async function resolveLicense(root, dependency, config, token, logger) {
 
 
 
-
 function mainLicenseFor(manifest, config) {
     const rules = (0,lib_config/* headerRules */.$)(config);
     const selected = rules
         .filter((rule) => !rule.path || matchesPath(manifest, [rule.path]))
         .sort((left, right) => (right.path?.length ?? 0) - (left.path?.length ?? 0))[0];
     return selected?.license["spdx-id"] ?? rules[0]?.license["spdx-id"];
+}
+function compatibilityReason(compatibility, proprietary, distribution) {
+    if (compatibility === "compatible")
+        return undefined;
+    if (compatibility === "unknown" || compatibility === "weak-compatible") {
+        return "Manual approval required: conditional, unlisted, or unverified license compatibility.";
+    }
+    if (proprietary)
+        return `${compatibility} with proprietary software under ${distribution}`;
+    return `${compatibility} with project license`;
 }
 async function checkDependencies(root, config, token, weakCompatible, logger, goPackageList = systemGoPackageList, distribution = spdx/* DEFAULT_DISTRIBUTION */.Xr) {
     const dependencyConfig = config.dependency;
@@ -48279,13 +48289,7 @@ async function checkDependencies(root, config, token, weakCompatible, logger, go
             adviceUrl: (0,spdx/* licenseCompatAdviceUrl */.rK)(dependencyConfig.projectLicense === "proprietary"
                 ? undefined
                 : projectLicense, normalized, distribution),
-            reason: compatibility === "compatible"
-                ? undefined
-                : compatibility === "unknown" || compatibility === "weak-compatible"
-                    ? "Manual approval required: conditional, unlisted, or unverified license compatibility."
-                    : dependencyConfig.projectLicense === "proprietary"
-                        ? `${compatibility} with proprietary software under ${distribution}`
-                        : `${compatibility} with project license`,
+            reason: compatibilityReason(compatibility, dependencyConfig.projectLicense === "proprietary", distribution),
         };
         logger.debug(`Dependency ${dependency.name}@${dependency.version}: ${normalized} (${compatibility})`);
     };
@@ -48556,7 +48560,8 @@ function commentBody(report) {
     if (report.dependency.failures.length > 0) {
         lines.push("### Dependency license failures", "", "| Dependency | Version | License | Result | Reason | licensecompat advice |", "|---|---:|---|---|---|---|");
         for (const result of report.dependency.failures.slice(0, 100)) {
-            lines.push(`| ${result.name} | ${result.version} | ${result.normalized} | ${result.compatible} | ${escapeTableCell(result.reason ?? "")} | ${result.adviceUrl ? `[Open](${result.adviceUrl})` : ""} |`);
+            const adviceLink = result.adviceUrl ? `[Open](${result.adviceUrl})` : "";
+            lines.push(`| ${result.name} | ${result.version} | ${result.normalized} | ${result.compatible} | ${escapeTableCell(result.reason ?? "")} | ${adviceLink} |`);
         }
         lines.push("");
     }
@@ -48737,16 +48742,30 @@ async function commentOnPullRequest(token, report) {
 function isRecord(value) {
     return typeof value === "object" && value !== null && !Array.isArray(value);
 }
-function loadLicenseCompatibilityRules() {
-    const rulesPath = __nccwpck_require__.ab + "license-compatibility.yaml";
-    const parsed = (0,yaml__WEBPACK_IMPORTED_MODULE_3__/* .parse */ .qg)((0,node_fs__WEBPACK_IMPORTED_MODULE_0__.readFileSync)(rulesPath, "utf8"));
-    if (!isRecord(parsed))
-        throw new Error("Invalid license compatibility YAML.");
-    const { aliases, matrix } = parsed;
-    if (!isRecord(aliases) ||
+const LICENSE_CATEGORIES = [
+    "permissive",
+    "strong-copyleft",
+    "weak-copyleft",
+    "network-copyleft",
+    "other",
+];
+const DISTRIBUTION_MODELS = [
+    "internal-use",
+    "proprietary-binary",
+    "public-saas",
+    "open-source-redistribution",
+    "static-linking",
+    "dynamic-linking",
+];
+const POLICY_DECISIONS = ["approve", "review", "deny"];
+function isStringArray(value) {
+    return (Array.isArray(value) && value.every((item) => typeof item === "string"));
+}
+function validateRequiredSections(parsed) {
+    const matrix = parsed.matrix;
+    if (!isRecord(parsed.aliases) ||
         !isRecord(parsed["review-required"]) ||
-        !Array.isArray(parsed["review-required"].licenses) ||
-        !parsed["review-required"].licenses.every((id) => typeof id === "string") ||
+        !isStringArray(parsed["review-required"].licenses) ||
         !isRecord(parsed["license-categories"]) ||
         !isRecord(parsed["proprietary-policies"]) ||
         !isRecord(matrix) ||
@@ -48754,6 +48773,10 @@ function loadLicenseCompatibilityRules() {
         !isRecord(matrix.values)) {
         throw new Error("License compatibility YAML is missing required sections.");
     }
+}
+function validateMatrix(matrix) {
+    if (!isRecord(matrix.groups) || !isRecord(matrix.values))
+        throw new Error("License compatibility YAML is missing required sections.");
     const groupNames = Object.keys(matrix.groups);
     for (const group of groupNames) {
         const rule = matrix.groups[group];
@@ -48769,14 +48792,10 @@ function loadLicenseCompatibilityRules() {
             throw new Error(`Invalid license compatibility value in row: ${group}.`);
         }
     }
-    for (const category of [
-        "permissive",
-        "strong-copyleft",
-        "weak-copyleft",
-        "network-copyleft",
-        "other",
-    ]) {
-        const rule = parsed["license-categories"][category];
+}
+function validateLicenseCategories(categories) {
+    for (const category of LICENSE_CATEGORIES) {
+        const rule = categories[category];
         if (!isRecord(rule) ||
             (!Array.isArray(rule.exact) && !Array.isArray(rule.prefixes)) ||
             (Array.isArray(rule.exact) &&
@@ -48785,33 +48804,28 @@ function loadLicenseCompatibilityRules() {
                 !rule.prefixes.every((id) => typeof id === "string")))
             throw new Error(`Invalid license category in compatibility YAML: ${category}.`);
     }
-    for (const model of [
-        "internal-use",
-        "proprietary-binary",
-        "public-saas",
-        "open-source-redistribution",
-        "static-linking",
-        "dynamic-linking",
-    ]) {
-        const policy = parsed["proprietary-policies"][model];
+}
+function validateProprietaryPolicies(policies) {
+    for (const model of DISTRIBUTION_MODELS) {
+        const policy = policies[model];
         if (!isRecord(policy) ||
-            [
-                "permissive",
-                "strong-copyleft",
-                "weak-copyleft",
-                "network-copyleft",
-                "other",
-            ].some((category) => !["approve", "review", "deny"].includes(String(policy[category]))))
+            LICENSE_CATEGORIES.some((category) => {
+                const decision = policy[category];
+                return (typeof decision !== "string" ||
+                    !POLICY_DECISIONS.includes(decision));
+            }))
             throw new Error(`Invalid proprietary policy in compatibility YAML: ${model}.`);
     }
+}
+function validateClassifications(parsed) {
     for (const key of ["fsf-free", "osi-approved"]) {
         const classification = parsed[key];
-        if (!isRecord(classification) ||
-            !Array.isArray(classification.licenses) ||
-            !classification.licenses.every((id) => typeof id === "string")) {
+        if (!isRecord(classification) || !isStringArray(classification.licenses)) {
             throw new Error(`Invalid ${key} license list in compatibility YAML.`);
         }
     }
+}
+function validateDistributionWarnings(parsed) {
     if (!Array.isArray(parsed["distribution-warnings"]) ||
         parsed["distribution-warnings"].some((rule) => !isRecord(rule) ||
             typeof rule.message !== "string" ||
@@ -48822,12 +48836,27 @@ function loadLicenseCompatibilityRules() {
                 !rule.prefixes.every((prefix) => typeof prefix === "string")))) {
         throw new Error("Invalid distribution warning rules in compatibility YAML.");
     }
+}
+function validateConditionalExceptions(parsed) {
     if (!Array.isArray(parsed["conditional-exceptions"]) ||
         parsed["conditional-exceptions"].some((rule) => !isRecord(rule) ||
             typeof rule["license-prefix"] !== "string" ||
             typeof rule.exception !== "string")) {
         throw new Error("Invalid conditional exception rules in compatibility YAML.");
     }
+}
+function loadLicenseCompatibilityRules() {
+    const rulesPath = __nccwpck_require__.ab + "license-compatibility.yaml";
+    const parsed = (0,yaml__WEBPACK_IMPORTED_MODULE_3__/* .parse */ .qg)((0,node_fs__WEBPACK_IMPORTED_MODULE_0__.readFileSync)(rulesPath, "utf8"));
+    if (!isRecord(parsed))
+        throw new Error("Invalid license compatibility YAML.");
+    validateRequiredSections(parsed);
+    validateMatrix(parsed.matrix);
+    validateLicenseCategories(parsed["license-categories"]);
+    validateProprietaryPolicies(parsed["proprietary-policies"]);
+    validateClassifications(parsed);
+    validateDistributionWarnings(parsed);
+    validateConditionalExceptions(parsed);
     return parsed;
 }
 const LICENSE_RULES = loadLicenseCompatibilityRules();

@@ -18,9 +18,11 @@ import { resolve } from "node:path";
 import { headerRules } from "../config.js";
 import { Logger } from "../logger.js";
 import {
+  DEFAULT_DISTRIBUTION,
   checkCompatibility,
   checkProprietaryCompatibility,
   distributionWarningFor,
+  licenseCompatAdviceUrl,
   normalizeLicenseExpression,
 } from "../spdx.js";
 import type {
@@ -30,7 +32,6 @@ import type {
   DistributionModel,
   LicenseEyeConfig,
 } from "../types.js";
-import { DEFAULT_DISTRIBUTION, licenseCompatAdviceUrl } from "../spdx.js";
 import { isFile, matchesPath, uniqueBy } from "../util.js";
 import { collectDependencyManifest } from "./registry.js";
 import { systemGoPackageList } from "./go/checker.js";
@@ -52,6 +53,20 @@ function mainLicenseFor(
       (left, right) => (right.path?.length ?? 0) - (left.path?.length ?? 0),
     )[0];
   return selected?.license["spdx-id"] ?? rules[0]?.license["spdx-id"];
+}
+
+function compatibilityReason(
+  compatibility: DependencyResult["compatible"],
+  proprietary: boolean,
+  distribution: DistributionModel,
+): string | undefined {
+  if (compatibility === "compatible") return undefined;
+  if (compatibility === "unknown" || compatibility === "weak-compatible") {
+    return "Manual approval required: conditional, unlisted, or unverified license compatibility.";
+  }
+  if (proprietary)
+    return `${compatibility} with proprietary software under ${distribution}`;
+  return `${compatibility} with project license`;
 }
 
 export async function checkDependencies(
@@ -200,14 +215,11 @@ export async function checkDependencies(
         normalized,
         distribution,
       ),
-      reason:
-        compatibility === "compatible"
-          ? undefined
-          : compatibility === "unknown" || compatibility === "weak-compatible"
-            ? "Manual approval required: conditional, unlisted, or unverified license compatibility."
-            : dependencyConfig.projectLicense === "proprietary"
-              ? `${compatibility} with proprietary software under ${distribution}`
-              : `${compatibility} with project license`,
+      reason: compatibilityReason(
+        compatibility,
+        dependencyConfig.projectLicense === "proprietary",
+        distribution,
+      ),
     };
     logger.debug(
       `Dependency ${dependency.name}@${dependency.version}: ${normalized} (${compatibility})`,

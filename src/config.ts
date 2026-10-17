@@ -245,7 +245,8 @@ function normalizeDependencies(value: unknown): DependencyConfig | undefined {
   }
   if (
     record["project-license"] !== undefined &&
-    !["header", "proprietary"].includes(String(record["project-license"]))
+    (typeof record["project-license"] !== "string" ||
+      !["header", "proprietary"].includes(record["project-license"]))
   ) {
     throw new Error(
       "dependency.project-license must be either header or proprietary.",

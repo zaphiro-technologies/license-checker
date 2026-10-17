@@ -80,8 +80,9 @@ function commentBody(report: CheckReport): string {
       "|---|---:|---|---|---|---|",
     );
     for (const result of report.dependency.failures.slice(0, 100)) {
+      const adviceLink = result.adviceUrl ? `[Open](${result.adviceUrl})` : "";
       lines.push(
-        `| ${result.name} | ${result.version} | ${result.normalized} | ${result.compatible} | ${escapeTableCell(result.reason ?? "")} | ${result.adviceUrl ? `[Open](${result.adviceUrl})` : ""} |`,
+        `| ${result.name} | ${result.version} | ${result.normalized} | ${result.compatible} | ${escapeTableCell(result.reason ?? "")} | ${adviceLink} |`,
       );
     }
     lines.push("");

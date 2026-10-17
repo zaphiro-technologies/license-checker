@@ -76,19 +76,35 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
-function loadLicenseCompatibilityRules(): LicenseCompatibilityRules {
-  const rulesPath = new URL(
-    "../config/license-compatibility.yaml",
-    import.meta.url,
+const LICENSE_CATEGORIES: LicenseCategory[] = [
+  "permissive",
+  "strong-copyleft",
+  "weak-copyleft",
+  "network-copyleft",
+  "other",
+];
+const DISTRIBUTION_MODELS: DistributionModel[] = [
+  "internal-use",
+  "proprietary-binary",
+  "public-saas",
+  "open-source-redistribution",
+  "static-linking",
+  "dynamic-linking",
+];
+const POLICY_DECISIONS: PolicyDecision[] = ["approve", "review", "deny"];
+
+function isStringArray(value: unknown): value is string[] {
+  return (
+    Array.isArray(value) && value.every((item) => typeof item === "string")
   );
-  const parsed: unknown = parseYaml(readFileSync(rulesPath, "utf8"));
-  if (!isRecord(parsed)) throw new Error("Invalid license compatibility YAML.");
-  const { aliases, matrix } = parsed;
+}
+
+function validateRequiredSections(parsed: Record<string, unknown>): void {
+  const matrix = parsed.matrix;
   if (
-    !isRecord(aliases) ||
+    !isRecord(parsed.aliases) ||
     !isRecord(parsed["review-required"]) ||
-    !Array.isArray(parsed["review-required"].licenses) ||
-    !parsed["review-required"].licenses.every((id) => typeof id === "string") ||
+    !isStringArray(parsed["review-required"].licenses) ||
     !isRecord(parsed["license-categories"]) ||
     !isRecord(parsed["proprietary-policies"]) ||
     !isRecord(matrix) ||
@@ -97,6 +113,11 @@ function loadLicenseCompatibilityRules(): LicenseCompatibilityRules {
   ) {
     throw new Error("License compatibility YAML is missing required sections.");
   }
+}
+
+function validateMatrix(matrix: Record<string, unknown>): void {
+  if (!isRecord(matrix.groups) || !isRecord(matrix.values))
+    throw new Error("License compatibility YAML is missing required sections.");
   const groupNames = Object.keys(matrix.groups);
   for (const group of groupNames) {
     const rule = matrix.groups[group];
@@ -119,14 +140,11 @@ function loadLicenseCompatibilityRules(): LicenseCompatibilityRules {
       throw new Error(`Invalid license compatibility value in row: ${group}.`);
     }
   }
-  for (const category of [
-    "permissive",
-    "strong-copyleft",
-    "weak-copyleft",
-    "network-copyleft",
-    "other",
-  ] as const) {
-    const rule = parsed["license-categories"][category];
+}
+
+function validateLicenseCategories(categories: Record<string, unknown>): void {
+  for (const category of LICENSE_CATEGORIES) {
+    const rule = categories[category];
     if (
       !isRecord(rule) ||
       (!Array.isArray(rule.exact) && !Array.isArray(rule.prefixes)) ||
@@ -139,42 +157,37 @@ function loadLicenseCompatibilityRules(): LicenseCompatibilityRules {
         `Invalid license category in compatibility YAML: ${category}.`,
       );
   }
-  for (const model of [
-    "internal-use",
-    "proprietary-binary",
-    "public-saas",
-    "open-source-redistribution",
-    "static-linking",
-    "dynamic-linking",
-  ] as const) {
-    const policy = parsed["proprietary-policies"][model];
+}
+
+function validateProprietaryPolicies(policies: Record<string, unknown>): void {
+  for (const model of DISTRIBUTION_MODELS) {
+    const policy = policies[model];
     if (
       !isRecord(policy) ||
-      [
-        "permissive",
-        "strong-copyleft",
-        "weak-copyleft",
-        "network-copyleft",
-        "other",
-      ].some(
-        (category) =>
-          !["approve", "review", "deny"].includes(String(policy[category])),
-      )
+      LICENSE_CATEGORIES.some((category) => {
+        const decision = policy[category];
+        return (
+          typeof decision !== "string" ||
+          !POLICY_DECISIONS.includes(decision as PolicyDecision)
+        );
+      })
     )
       throw new Error(
         `Invalid proprietary policy in compatibility YAML: ${model}.`,
       );
   }
+}
+
+function validateClassifications(parsed: Record<string, unknown>): void {
   for (const key of ["fsf-free", "osi-approved"] as const) {
     const classification = parsed[key];
-    if (
-      !isRecord(classification) ||
-      !Array.isArray(classification.licenses) ||
-      !classification.licenses.every((id) => typeof id === "string")
-    ) {
+    if (!isRecord(classification) || !isStringArray(classification.licenses)) {
       throw new Error(`Invalid ${key} license list in compatibility YAML.`);
     }
   }
+}
+
+function validateDistributionWarnings(parsed: Record<string, unknown>): void {
   if (
     !Array.isArray(parsed["distribution-warnings"]) ||
     parsed["distribution-warnings"].some(
@@ -192,6 +205,9 @@ function loadLicenseCompatibilityRules(): LicenseCompatibilityRules {
       "Invalid distribution warning rules in compatibility YAML.",
     );
   }
+}
+
+function validateConditionalExceptions(parsed: Record<string, unknown>): void {
   if (
     !Array.isArray(parsed["conditional-exceptions"]) ||
     parsed["conditional-exceptions"].some(
@@ -205,6 +221,26 @@ function loadLicenseCompatibilityRules(): LicenseCompatibilityRules {
       "Invalid conditional exception rules in compatibility YAML.",
     );
   }
+}
+
+function loadLicenseCompatibilityRules(): LicenseCompatibilityRules {
+  const rulesPath = new URL(
+    "../config/license-compatibility.yaml",
+    import.meta.url,
+  );
+  const parsed: unknown = parseYaml(readFileSync(rulesPath, "utf8"));
+  if (!isRecord(parsed)) throw new Error("Invalid license compatibility YAML.");
+  validateRequiredSections(parsed);
+  validateMatrix(parsed.matrix as Record<string, unknown>);
+  validateLicenseCategories(
+    parsed["license-categories"] as Record<string, unknown>,
+  );
+  validateProprietaryPolicies(
+    parsed["proprietary-policies"] as Record<string, unknown>,
+  );
+  validateClassifications(parsed);
+  validateDistributionWarnings(parsed);
+  validateConditionalExceptions(parsed);
   return parsed as unknown as LicenseCompatibilityRules;
 }
 

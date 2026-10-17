@@ -18,6 +18,7 @@ import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { loadConfig } from "../src/config.js";
 import { checkDependencies } from "../src/dependencies.js";
 import { Logger } from "../src/logger.js";
 import type { LicenseEyeConfig } from "../src/types.js";
@@ -770,6 +771,60 @@ describe("dependency checker", () => {
         reason: "Approved by legal for this pinned dependency version.",
       },
     });
+  });
+
+  it("applies the repository approval for spdx-exceptions 2.5.0", async () => {
+    const root = mkdtempSync(join(tmpdir(), "license-checker-spdx-approval-"));
+    writeFileSync(
+      join(root, "package.json"),
+      JSON.stringify({ dependencies: { "spdx-exceptions": "2.5.0" } }),
+    );
+    writeFileSync(
+      join(root, "package-lock.json"),
+      JSON.stringify({
+        lockfileVersion: 3,
+        packages: {
+          "": { name: "license-checker-test", version: "1.0.0" },
+          "node_modules/spdx-exceptions": { version: "2.5.0" },
+        },
+      }),
+    );
+    const repositoryConfig = loadConfig(
+      process.cwd(),
+      ".github/config/.licenserc.yaml",
+    ).config;
+    const config: LicenseEyeConfig = {
+      ...repositoryConfig,
+      header: { license: { "spdx-id": "Apache-2.0" } },
+      dependency: {
+        ...repositoryConfig.dependency,
+        files: ["package.json"],
+      },
+    };
+    const fetch = vi.fn();
+    vi.stubGlobal("fetch", fetch);
+
+    const report = await checkDependencies(
+      root,
+      config,
+      undefined,
+      false,
+      new Logger("error"),
+    );
+
+    expect(report.checked).toBe(1);
+    expect(report.failures).toHaveLength(0);
+    expect(report.results[0]).toMatchObject({
+      name: "spdx-exceptions",
+      version: "2.5.0",
+      license: "LicenseRef-Manual-Exception",
+      compatible: "approved-exception",
+      resolution: "exception",
+      approval: {
+        url: "https://creativecommons.org/licenses/by/3.0/",
+      },
+    });
+    expect(fetch).not.toHaveBeenCalled();
   });
 
   it("parses Yarn Berry selectors and versions", async () => {

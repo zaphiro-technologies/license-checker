@@ -48773,6 +48773,14 @@ const DISTRIBUTION_MODELS = [
     "static-linking",
     "dynamic-linking",
 ];
+const LICENSECOMPAT_MODELS = {
+    "internal-use": "internal_only",
+    "proprietary-binary": "proprietary_binary",
+    "public-saas": "saas_public",
+    "open-source-redistribution": "open_source_redistribution",
+    "static-linking": "static_linking",
+    "dynamic-linking": "dynamic_linking",
+};
 const POLICY_DECISIONS = new Set(["approve", "review", "deny"]);
 function isStringArray(value) {
     return (Array.isArray(value) && value.every((item) => typeof item === "string"));
@@ -49007,7 +49015,7 @@ function licenseCompatAdviceUrl(projectExpression, dependencyExpression, distrib
             ...licenseIds(parseLicenseExpression(dependencyExpression)),
         ].filter((id) => id !== "Unknown")),
     ];
-    return `${LICENSECOMPAT_CHECKER_URL}?licenses=${encodeURIComponent(ids.join(","))}&model=${distribution.replaceAll("-", "_")}`;
+    return `${LICENSECOMPAT_CHECKER_URL}?licenses=${encodeURIComponent(ids.join(","))}&model=${LICENSECOMPAT_MODELS[distribution]}`;
 }
 function matrixCompatibility(main, dependency, weakCompatible) {
     const dependencyIndex = MATRIX_GROUPS.indexOf(dependency);

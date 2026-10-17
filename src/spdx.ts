@@ -91,6 +91,14 @@ const DISTRIBUTION_MODELS: DistributionModel[] = [
   "static-linking",
   "dynamic-linking",
 ];
+const LICENSECOMPAT_MODELS: Record<DistributionModel, string> = {
+  "internal-use": "internal_only",
+  "proprietary-binary": "proprietary_binary",
+  "public-saas": "saas_public",
+  "open-source-redistribution": "open_source_redistribution",
+  "static-linking": "static_linking",
+  "dynamic-linking": "dynamic_linking",
+};
 const POLICY_DECISIONS = new Set<PolicyDecision>(["approve", "review", "deny"]);
 
 function isStringArray(value: unknown): value is string[] {
@@ -409,7 +417,7 @@ export function licenseCompatAdviceUrl(
       ].filter((id) => id !== "Unknown"),
     ),
   ];
-  return `${LICENSECOMPAT_CHECKER_URL}?licenses=${encodeURIComponent(ids.join(","))}&model=${distribution.replaceAll("-", "_")}`;
+  return `${LICENSECOMPAT_CHECKER_URL}?licenses=${encodeURIComponent(ids.join(","))}&model=${LICENSECOMPAT_MODELS[distribution]}`;
 }
 
 function matrixCompatibility(

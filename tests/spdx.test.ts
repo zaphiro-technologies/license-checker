@@ -159,7 +159,20 @@ describe("SPDX normalization", () => {
       "https://licensecompat.com/?licenses=MIT%2CMPL-2.0&model=dynamic_linking",
     );
     expect(licenseCompatAdviceUrl(undefined, "BSD-4-Clause")).toBe(
-      "https://licensecompat.com/?licenses=BSD-4-Clause&model=public_saas",
+      "https://licensecompat.com/?licenses=BSD-4-Clause&model=saas_public",
+    );
+  });
+
+  it.each([
+    ["internal-use", "internal_only"],
+    ["proprietary-binary", "proprietary_binary"],
+    ["public-saas", "saas_public"],
+    ["open-source-redistribution", "open_source_redistribution"],
+    ["static-linking", "static_linking"],
+    ["dynamic-linking", "dynamic_linking"],
+  ] as const)("maps %s to licensecompat model %s", (distribution, model) => {
+    expect(licenseCompatAdviceUrl(undefined, "MIT", distribution)).toBe(
+      `https://licensecompat.com/?licenses=MIT&model=${model}`,
     );
   });
 });

@@ -107,16 +107,16 @@ alone does not establish license terms.
 
 ### Compatibility reference
 
-Compatibility models follow [licensecompat](https://licensecompat.com/compatibility/).
-The action's rules are in [`config/license-compatibility.yaml`](config/license-compatibility.yaml).
+Compatibility models follow
+[licensecompat](https://licensecompat.com/compatibility/). The action's rules
+are in [`config/license-compatibility.yaml`](config/license-compatibility.yaml).
 With `project-license: proprietary`, the selected model decides whether a known
 dependency is compatible with keeping the product proprietary, needs manual
-review, or is incompatible. Commercial use is generally permitted by open
-source licenses; this setting is about the obligations that may prevent a
-closed-source product. It does not claim that the dependency itself is
-non-commercial. The proprietary outcomes are conservative category-level
-policies in this repository, not a copy of licensecompat's complete pair
-dataset.
+review, or is incompatible. Commercial use is generally permitted by open source
+licenses; this setting is about the obligations that may prevent a closed-source
+product. It does not claim that the dependency itself is non-commercial. The
+proprietary outcomes are conservative category-level policies in this
+repository, not a copy of licensecompat's complete pair dataset.
 
 | `distribution` model         | Use case                                                     |
 | ---------------------------- | ------------------------------------------------------------ |
@@ -132,15 +132,14 @@ overrides it. If neither is set, the model defaults to `public-saas`. Pair
 checks against `header.license.spdx-id` are independent of
 the distribution model. Use `project-license: header` for
 `open-source-redistribution`; proprietary target checks cannot determine the
-license of a new open-source combined work. For
-`project-license: proprietary`, the YAML policy uses broad license families
-and may request manual review. Unlisted licenses and CC-BY-3.0/4.0 remain
-unresolved for manual review. Outcomes requiring review fail until covered by
-a manual exception in `dependency.exceptions`.
-Set the model under the action's `with:` section, for example
-`distribution: proprietary-binary`.
-Licensecompat provides general guidance, not legal advice. FSF-free and
-OSI-approved identifiers are exact snapshots from the SPDX
+license of a new open-source combined work. For `project-license: proprietary`,
+the YAML policy uses broad license families and may request manual review.
+Unlisted licenses and CC-BY-3.0/4.0 remain unresolved for manual review.
+Outcomes requiring review fail until covered by a manual exception in
+`dependency.exceptions`. Set the model under the action's `with:` section, for
+example `distribution: proprietary-binary`. Licensecompat provides general
+guidance, not legal advice. FSF-free and OSI-approved identifiers are exact
+snapshots from the SPDX
 [License List v3.29.0](https://github.com/spdx/license-list-data/blob/main/json/licenses.json).
 Conditional or review outcomes include a link to the
 [licensecompat checker](https://licensecompat.com/).

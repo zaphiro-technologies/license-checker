@@ -48773,7 +48773,7 @@ const DISTRIBUTION_MODELS = [
     "static-linking",
     "dynamic-linking",
 ];
-const POLICY_DECISIONS = ["approve", "review", "deny"];
+const POLICY_DECISIONS = new Set(["approve", "review", "deny"]);
 function isStringArray(value) {
     return (Array.isArray(value) && value.every((item) => typeof item === "string"));
 }
@@ -48828,7 +48828,7 @@ function validateProprietaryPolicies(policies) {
             LICENSE_CATEGORIES.some((category) => {
                 const decision = policy[category];
                 return (typeof decision !== "string" ||
-                    !POLICY_DECISIONS.includes(decision));
+                    !POLICY_DECISIONS.has(decision));
             }))
             throw new Error(`Invalid proprietary policy in compatibility YAML: ${model}.`);
     }

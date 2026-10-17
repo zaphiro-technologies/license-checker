@@ -91,7 +91,7 @@ const DISTRIBUTION_MODELS: DistributionModel[] = [
   "static-linking",
   "dynamic-linking",
 ];
-const POLICY_DECISIONS: PolicyDecision[] = ["approve", "review", "deny"];
+const POLICY_DECISIONS = new Set<PolicyDecision>(["approve", "review", "deny"]);
 
 function isStringArray(value: unknown): value is string[] {
   return (
@@ -168,7 +168,7 @@ function validateProprietaryPolicies(policies: Record<string, unknown>): void {
         const decision = policy[category];
         return (
           typeof decision !== "string" ||
-          !POLICY_DECISIONS.includes(decision as PolicyDecision)
+          !POLICY_DECISIONS.has(decision as PolicyDecision)
         );
       })
     )

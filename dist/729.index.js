@@ -1,19 +1,3 @@
-/*
- * Copyright 2026 Zaphiro Technologies
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
 export const id = 729;
 export const ids = [729];
 export const modules = {
@@ -9980,7 +9964,7 @@ function internal_pattern_helper_partialMatch(patterns, itemPath) {
 // EXTERNAL MODULE: external "os"
 var external_os_ = __webpack_require__(857);
 // EXTERNAL MODULE: ../../.yarn/berry/cache/minimatch-npm-10.2.6-fd0d1cf467-10c0.zip/node_modules/minimatch/dist/esm/index.js + 7 modules
-var esm = __webpack_require__(2854);
+var esm = __webpack_require__(2881);
 ;// CONCATENATED MODULE: ../../.yarn/berry/cache/@actions-glob-npm-0.7.0-3b3349331f-10c0.zip/node_modules/@actions/glob/lib/internal-path.js
 
 

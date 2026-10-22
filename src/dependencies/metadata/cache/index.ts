@@ -71,16 +71,16 @@ export async function restoreMetadataCache(
 
   enabled = true;
   const hash = createHash("sha256");
-  for (const path of [...dependencyFiles].sort()) {
+  const paths = [...dependencyFiles].sort((a, b) => a.localeCompare(b, "en"));
+  const fileContents = await Promise.all(
+    paths.map((path) => readFile(join(root, path)).catch(() => "<missing>")),
+  );
+  paths.forEach((path, index) => {
     hash.update(path);
     hash.update("\0");
-    try {
-      hash.update(await readFile(join(root, path)));
-    } catch {
-      hash.update("<missing>");
-    }
+    hash.update(fileContents[index] ?? "<missing>");
     hash.update("\0");
-  }
+  });
   dependencyHash = hash.digest("hex").slice(0, 16);
 
   try {

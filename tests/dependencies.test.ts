@@ -1043,6 +1043,47 @@ describe("dependency checker", () => {
     });
   });
 
+  it("retries transient PyPI registry failures", async () => {
+    const root = mkdtempSync(join(tmpdir(), "license-checker-pypi-retry-"));
+    writeFileSync(join(root, "requirements.txt"), "retry-package==1.0.0\n");
+    const fetch = vi
+      .fn()
+      .mockResolvedValueOnce(
+        new Response("", {
+          status: 503,
+          headers: { "retry-after": "0" },
+        }),
+      )
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            info: { version: "1.0.0", license_expression: "MIT" },
+          }),
+          { status: 200, headers: { "content-type": "application/json" } },
+        ),
+      );
+    vi.stubGlobal("fetch", fetch);
+    const config: LicenseEyeConfig = {
+      header: { license: { "spdx-id": "Apache-2.0" } },
+      dependency: { files: ["requirements.txt"] },
+    };
+
+    const report = await checkDependencies(
+      root,
+      config,
+      undefined,
+      false,
+      new Logger("error"),
+    );
+
+    expect(fetch).toHaveBeenCalledTimes(2);
+    expect(report.results[0]).toMatchObject({
+      name: "retry-package",
+      license: "MIT",
+      resolution: "registry",
+    });
+  });
+
   it("uses a normalized PyPI classifier when legacy license metadata is prose", async () => {
     const root = mkdtempSync(
       join(tmpdir(), "license-checker-pypi-classifier-"),

@@ -46605,36 +46605,34 @@ function retryDelay(response, attempt) {
     }
     return Math.min(2000, 250 * 2 ** attempt);
 }
-async function fetchWithRetry(url, init) {
-    for (let attempt = 0; attempt < MAX_FETCH_ATTEMPTS; attempt += 1) {
-        let response;
-        try {
-            response = await fetch(url, {
-                ...init,
-                signal: AbortSignal.timeout(8000),
-            });
-            if (response.ok)
-                return response;
-            if (!RETRYABLE_STATUS_CODES.has(response.status))
-                return undefined;
-        }
-        catch {
-            if (attempt === MAX_FETCH_ATTEMPTS - 1)
-                return undefined;
-            await new Promise((resolve) => setTimeout(resolve, retryDelay(undefined, attempt)));
-            continue;
-        }
-        try {
-            await response.body?.cancel();
-        }
-        catch {
-            // The response body may already be closed.
-        }
-        if (attempt < MAX_FETCH_ATTEMPTS - 1) {
-            await new Promise((resolve) => setTimeout(resolve, retryDelay(response, attempt)));
-        }
+async function fetchWithRetry(url, init, attempt = 0) {
+    let response;
+    try {
+        response = await fetch(url, {
+            ...init,
+            signal: AbortSignal.timeout(8000),
+        });
     }
-    return undefined;
+    catch {
+        if (attempt >= MAX_FETCH_ATTEMPTS - 1)
+            return undefined;
+        await new Promise((resolve) => setTimeout(resolve, retryDelay(undefined, attempt)));
+        return fetchWithRetry(url, init, attempt + 1);
+    }
+    if (response.ok)
+        return response;
+    if (!RETRYABLE_STATUS_CODES.has(response.status))
+        return undefined;
+    try {
+        await response.body?.cancel();
+    }
+    catch {
+        // The response body may already be closed.
+    }
+    if (attempt >= MAX_FETCH_ATTEMPTS - 1)
+        return undefined;
+    await new Promise((resolve) => setTimeout(resolve, retryDelay(response, attempt)));
+    return fetchWithRetry(url, init, attempt + 1);
 }
 const LICENSE_FILENAMES = [
     "LICENSE",
@@ -48794,17 +48792,14 @@ async function restoreMetadataCache(root, dependencyFiles) {
         return;
     enabled = true;
     const hash = (0,external_node_crypto_.createHash)("sha256");
-    for (const path of [...dependencyFiles].sort()) {
+    const paths = [...dependencyFiles].sort((a, b) => a.localeCompare(b, "en"));
+    const fileContents = await Promise.all(paths.map((path) => (0,promises_namespaceObject.readFile)((0,external_node_path_.join)(root, path)).catch(() => "<missing>")));
+    paths.forEach((path, index) => {
         hash.update(path);
         hash.update("\0");
-        try {
-            hash.update(await (0,promises_namespaceObject.readFile)((0,external_node_path_.join)(root, path)));
-        }
-        catch {
-            hash.update("<missing>");
-        }
+        hash.update(fileContents[index] ?? "<missing>");
         hash.update("\0");
-    }
+    });
     dependencyHash = hash.digest("hex").slice(0, 16);
     try {
         const cache = await __nccwpck_require__.e(/* import() */ 260).then(__nccwpck_require__.bind(__nccwpck_require__, 7260));

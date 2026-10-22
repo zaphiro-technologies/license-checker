@@ -49,36 +49,35 @@ function retryDelay(response: Response | undefined, attempt: number): number {
 async function fetchWithRetry(
   url: string,
   init?: RequestInit,
+  attempt = 0,
 ): Promise<Response | undefined> {
-  for (let attempt = 0; attempt < MAX_FETCH_ATTEMPTS; attempt += 1) {
-    let response: Response;
-    try {
-      response = await fetch(url, {
-        ...init,
-        signal: AbortSignal.timeout(8000),
-      });
-      if (response.ok) return response;
-      if (!RETRYABLE_STATUS_CODES.has(response.status)) return undefined;
-    } catch {
-      if (attempt === MAX_FETCH_ATTEMPTS - 1) return undefined;
-      await new Promise((resolve) =>
-        setTimeout(resolve, retryDelay(undefined, attempt)),
-      );
-      continue;
-    }
-
-    try {
-      await response.body?.cancel();
-    } catch {
-      // The response body may already be closed.
-    }
-    if (attempt < MAX_FETCH_ATTEMPTS - 1) {
-      await new Promise((resolve) =>
-        setTimeout(resolve, retryDelay(response, attempt)),
-      );
-    }
+  let response: Response;
+  try {
+    response = await fetch(url, {
+      ...init,
+      signal: AbortSignal.timeout(8000),
+    });
+  } catch {
+    if (attempt >= MAX_FETCH_ATTEMPTS - 1) return undefined;
+    await new Promise((resolve) =>
+      setTimeout(resolve, retryDelay(undefined, attempt)),
+    );
+    return fetchWithRetry(url, init, attempt + 1);
   }
-  return undefined;
+
+  if (response.ok) return response;
+  if (!RETRYABLE_STATUS_CODES.has(response.status)) return undefined;
+
+  try {
+    await response.body?.cancel();
+  } catch {
+    // The response body may already be closed.
+  }
+  if (attempt >= MAX_FETCH_ATTEMPTS - 1) return undefined;
+  await new Promise((resolve) =>
+    setTimeout(resolve, retryDelay(response, attempt)),
+  );
+  return fetchWithRetry(url, init, attempt + 1);
 }
 
 export const LICENSE_FILENAMES = [

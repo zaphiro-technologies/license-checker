@@ -25,25 +25,25 @@
   },
   "dependencies": {
     "@actions/cache": "6.3.0",
-    "@actions/core": "^1.11.1",
-    "@actions/github": "^6.0.0",
+    "@actions/core": "^3.0.1",
+    "@actions/github": "^9.1.1",
     "@iarna/toml": "^2.2.5",
-    "eslint": "^10.8.1",
+    "eslint": "^10.13.0",
     "minimatch": "^10.0.1",
     "spdx-correct": "^3.2.0",
-    "spdx-expression-parse": "^3.0.1",
-    "yaml": "^2.6.1"
+    "spdx-expression-parse": "^5.0.0",
+    "yaml": "^2.9.1"
   },
   "devDependencies": {
-    "@types/node": "^22.10.2",
+    "@types/node": "^26.6.5",
     "@types/spdx-correct": "^3.0.0",
-    "@types/spdx-expression-parse": "^3.0.1",
-    "@vercel/ncc": "^0.38.3",
-    "@vitest/coverage-v8": "2.1.9",
-    "prettier": "^3.4.2",
-    "tsx": "^4.19.2",
+    "@types/spdx-expression-parse": "^4.0.0",
+    "@vercel/ncc": "^0.45.0",
+    "@vitest/coverage-v8": "5.0.5",
+    "prettier": "^3.9.10",
+    "tsx": "^4.23.15",
     "typescript": "^5.7.2",
-    "typescript-eslint": "^8.67.0",
-    "vitest": "^2.1.8"
+    "typescript-eslint": "^8.71.2",
+    "vitest": "^5.0.5"
   }
 }

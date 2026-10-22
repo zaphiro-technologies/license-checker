@@ -15,4 +15,18 @@ jobs:
     uses: zaphiro-technologies/github-workflows/.github/workflows/license.yaml@main
     secrets: inherit
     with:
+      skip-dependency: true
       skip-fix: false
+
+  dependency-licenses:
+    name: Check dependency licenses
+    runs-on: ubuntu-latest
+    if: ${{ github.event_name != 'pull_request' || github.event.pull_request.draft == false }}
+    steps:
+      - uses: actions/checkout@v7
+      - name: Check dependencies with this branch's action
+        uses: ./
+        with:
+          config: .github/config/.licenserc.yaml
+          token: ${{ github.token }}
+          log: info

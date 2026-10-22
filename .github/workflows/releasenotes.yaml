@@ -17,5 +17,5 @@ on:
 
 jobs:
   release-notes:
-    uses: zaphiro-technologies/github-workflows/.github/workflows/release-notes.yaml@fix-tag-discovery
+    uses: zaphiro-technologies/github-workflows/.github/workflows/release-notes.yaml@main
     secrets: inherit

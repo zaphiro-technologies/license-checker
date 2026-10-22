@@ -11,7 +11,7 @@ header:
     - ".github"
     - ".docker"
     - "**/*.{md,MD}"
-    - "examples/*"
+    - "examples/**"
     - "package.json"
     - "LICENSE"
     - ".vscode"

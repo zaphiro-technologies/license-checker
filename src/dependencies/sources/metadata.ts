@@ -17,9 +17,70 @@
 import type { LicenseEvidence } from "../checker.js";
 import type { LicenseRule } from "../../types.js";
 import { DEFAULT_LICENSE_TEXT_RULES } from "./default-license-rules.js";
+import {
+  cachedNpmLicenseMetadata,
+  rememberNpmLicenseMetadata,
+} from "../metadata/cache/npm.js";
+import {
+  cachedPythonLicenseMetadata,
+  rememberPythonLicenseMetadata,
+} from "../metadata/cache/python.js";
 
 const jsonCache = new Map<string, Promise<unknown>>();
 const textCache = new Map<string, Promise<string | undefined>>();
+const MAX_FETCH_ATTEMPTS = 3;
+const MAX_RETRY_AFTER_MS = 30_000;
+const RETRYABLE_STATUS_CODES = new Set([408, 425, 429, 500, 502, 503, 504]);
+
+function retryDelay(response: Response | undefined, attempt: number): number {
+  const retryAfter = response?.headers.get("retry-after");
+  if (retryAfter) {
+    const seconds = Number(retryAfter);
+    const retryAt = Number.isFinite(seconds)
+      ? Date.now() + seconds * 1000
+      : Date.parse(retryAfter);
+    if (Number.isFinite(retryAt)) {
+      return Math.max(0, Math.min(MAX_RETRY_AFTER_MS, retryAt - Date.now()));
+    }
+  }
+  return Math.min(2000, 250 * 2 ** attempt);
+}
+
+async function fetchWithRetry(
+  url: string,
+  init?: RequestInit,
+): Promise<Response | undefined> {
+  for (let attempt = 0; attempt < MAX_FETCH_ATTEMPTS; attempt += 1) {
+    let response: Response;
+    try {
+      response = await fetch(url, {
+        ...init,
+        signal: AbortSignal.timeout(8000),
+      });
+      if (response.ok) return response;
+      if (!RETRYABLE_STATUS_CODES.has(response.status)) return undefined;
+    } catch {
+      if (attempt === MAX_FETCH_ATTEMPTS - 1) return undefined;
+      await new Promise((resolve) =>
+        setTimeout(resolve, retryDelay(undefined, attempt)),
+      );
+      continue;
+    }
+
+    try {
+      await response.body?.cancel();
+    } catch {
+      // The response body may already be closed.
+    }
+    if (attempt < MAX_FETCH_ATTEMPTS - 1) {
+      await new Promise((resolve) =>
+        setTimeout(resolve, retryDelay(response, attempt)),
+      );
+    }
+  }
+  return undefined;
+}
+
 export const LICENSE_FILENAMES = [
   "LICENSE",
   "LICENCE",
@@ -34,23 +95,34 @@ export async function fetchJson(url: string, token?: string): Promise<unknown> {
   const cacheKey = `${token ? "authenticated" : "anonymous"}:${url}`;
   const cached = jsonCache.get(cacheKey);
   if (cached) return cached;
+  const persistentCache = !token
+    ? (cachedNpmLicenseMetadata(url) ?? cachedPythonLicenseMetadata(url))
+    : undefined;
+  if (persistentCache) return persistentCache;
 
   const request = (async (): Promise<unknown> => {
+    const response = await fetchWithRetry(url, {
+      headers: token
+        ? { authorization: `Bearer ${token}`, accept: "application/json" }
+        : { accept: "application/json" },
+    });
+    if (!response) return undefined;
     try {
-      const response = await fetch(url, {
-        headers: token
-          ? { authorization: `Bearer ${token}`, accept: "application/json" }
-          : { accept: "application/json" },
-        signal: AbortSignal.timeout(8000),
-      });
-      if (!response.ok) return undefined;
-      return (await response.json()) as unknown;
+      const json = (await response.json()) as unknown;
+      if (!token) {
+        rememberNpmLicenseMetadata(url, json);
+        rememberPythonLicenseMetadata(url, json);
+      }
+      return json;
     } catch {
       return undefined;
     }
   })();
   jsonCache.set(cacheKey, request);
-  return request;
+  const result = await request;
+  if (result === undefined && jsonCache.get(cacheKey) === request)
+    jsonCache.delete(cacheKey);
+  return result;
 }
 
 export async function fetchText(url: string): Promise<string | undefined> {
@@ -58,15 +130,19 @@ export async function fetchText(url: string): Promise<string | undefined> {
   if (cached) return cached;
 
   const request = (async (): Promise<string | undefined> => {
+    const response = await fetchWithRetry(url);
+    if (!response) return undefined;
     try {
-      const response = await fetch(url, { signal: AbortSignal.timeout(8000) });
-      return response.ok ? response.text() : undefined;
+      return await response.text();
     } catch {
       return undefined;
     }
   })();
   textCache.set(url, request);
-  return request;
+  const result = await request;
+  if (result === undefined && textCache.get(url) === request)
+    textCache.delete(url);
+  return result;
 }
 
 export function identifyLicenseText(

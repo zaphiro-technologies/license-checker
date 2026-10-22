@@ -15,7 +15,8 @@ permissions:
   pull-requests: write
 
 steps:
-  - uses: actions/checkout@v4
+  - uses: actions/checkout@v7
+  # npm and PyPI license metadata is cached automatically by the action.
   - uses: zaphiro-technologies/license-checker@v1
     with:
       config: .licenserc.yaml
@@ -27,6 +28,12 @@ The action is dependency check-only. It does not modify files or scan
 source-file headers. It writes a job summary and workflow annotations. When a
 pull request has a failure or distribution-review warning and a token is
 available, it creates or updates one managed pull-request comment.
+
+On GitHub Actions, the action caches successfully resolved npm and PyPI package
+license metadata across runs, so no separate `actions/cache` step is needed.
+Cache entries are keyed from the configured dependency files and cached
+metadata. The current license policy is evaluated on every run; GitHub
+repository metadata and license text are not cached.
 
 ## Configuration
 

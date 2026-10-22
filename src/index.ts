@@ -20,6 +20,10 @@ import { checkDependencies } from "./dependencies.js";
 import { Logger } from "./logger.js";
 import { DEFAULT_DISTRIBUTION } from "./spdx.js";
 import {
+  restoreMetadataCache,
+  saveMetadataCache,
+} from "./dependencies/metadata/cache/index.js";
+import {
   annotate,
   commentOnPullRequest,
   distributionWarnings,
@@ -68,6 +72,7 @@ async function run(): Promise<void> {
   const reportAll = reportAllInput.toLowerCase() === "true";
   logger.info(`Loading configuration from ${configInput}`);
   const { config } = loadConfig(root, configInput);
+  await restoreMetadataCache(root, config.dependency?.files ?? []);
   const distributionInput =
     core.getInput("distribution") ||
     argumentValue("--distribution") ||
@@ -87,6 +92,7 @@ async function run(): Promise<void> {
     undefined,
     distributionInput as DistributionModel,
   );
+  await saveMetadataCache();
   const report: CheckReport = {
     dependency,
     failed: dependency.failures.length > 0,

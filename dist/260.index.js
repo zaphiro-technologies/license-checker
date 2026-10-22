@@ -37505,14 +37505,6 @@ formatters.O = function (v) {
 
 /***/ }),
 
-/***/ 9287:
-/***/ ((module) => {
-
-module.exports = eval("require")("@protobuf-ts/runtime");
-
-
-/***/ }),
-
 /***/ 364:
 /***/ ((__unused_webpack_module, exports) => {
 
@@ -91408,8 +91400,8 @@ function saveCache(cacheId, archivePath, signedUploadURL, options) {
 //# sourceMappingURL=cacheHttpClient.js.map
 // EXTERNAL MODULE: ../../.yarn/berry/cache/@protobuf-ts-runtime-rpc-npm-2.11.1-8b98df67dd-10c0.zip/node_modules/@protobuf-ts/runtime-rpc/build/commonjs/index.js
 var commonjs = __webpack_require__(4194);
-// EXTERNAL MODULE: ../../.yarn/berry/cache/@vercel-ncc-npm-0.38.4-c7f6d7c3e6-10c0.zip/node_modules/@vercel/ncc/dist/ncc/@@notfound.js?@protobuf-ts/runtime
-var runtime = __webpack_require__(9287);
+// EXTERNAL MODULE: ../../.yarn/berry/cache/@protobuf-ts-runtime-npm-2.11.1-a4ca635dbd-10c0.zip/node_modules/@protobuf-ts/runtime/build/commonjs/index.js
+var build_commonjs = __webpack_require__(2733);
 ;// CONCATENATED MODULE: ../../.yarn/berry/cache/@actions-cache-npm-6.3.0-332ce092a3-10c0.zip/node_modules/@actions/cache/lib/generated/results/entities/v1/cachescope.js
 
 
@@ -91417,7 +91409,7 @@ var runtime = __webpack_require__(9287);
 
 
 // @generated message type with reflection information, may provide speed optimized methods
-class CacheScope$Type extends runtime.MessageType {
+class CacheScope$Type extends build_commonjs.MessageType {
     constructor() {
         super("github.actions.results.entities.v1.CacheScope", [
             { no: 1, name: "scope", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
@@ -91426,9 +91418,9 @@ class CacheScope$Type extends runtime.MessageType {
     }
     create(value) {
         const message = { scope: "", permission: "0" };
-        globalThis.Object.defineProperty(message, runtime.MESSAGE_TYPE, { enumerable: false, value: this });
+        globalThis.Object.defineProperty(message, build_commonjs.MESSAGE_TYPE, { enumerable: false, value: this });
         if (value !== undefined)
-            (0,runtime.reflectionMergePartial)(this, message, value);
+            (0,build_commonjs.reflectionMergePartial)(this, message, value);
         return message;
     }
     internalBinaryRead(reader, length, options, target) {
@@ -91448,7 +91440,7 @@ class CacheScope$Type extends runtime.MessageType {
                         throw new globalThis.Error(`Unknown field ${fieldNo} (wire type ${wireType}) for ${this.typeName}`);
                     let d = reader.skip(wireType);
                     if (u !== false)
-                        (u === true ? runtime.UnknownFieldHandler.onRead : u)(this.typeName, message, fieldNo, wireType, d);
+                        (u === true ? build_commonjs.UnknownFieldHandler.onRead : u)(this.typeName, message, fieldNo, wireType, d);
             }
         }
         return message;
@@ -91456,13 +91448,13 @@ class CacheScope$Type extends runtime.MessageType {
     internalBinaryWrite(message, writer, options) {
         /* string scope = 1; */
         if (message.scope !== "")
-            writer.tag(1, runtime.WireType.LengthDelimited).string(message.scope);
+            writer.tag(1, build_commonjs.WireType.LengthDelimited).string(message.scope);
         /* int64 permission = 2; */
         if (message.permission !== "0")
-            writer.tag(2, runtime.WireType.Varint).int64(message.permission);
+            writer.tag(2, build_commonjs.WireType.Varint).int64(message.permission);
         let u = options.writeUnknownFields;
         if (u !== false)
-            (u == true ? runtime.UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
+            (u == true ? build_commonjs.UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
         return writer;
     }
 }
@@ -91479,7 +91471,7 @@ const CacheScope = new CacheScope$Type();
 
 
 // @generated message type with reflection information, may provide speed optimized methods
-class CacheMetadata$Type extends runtime.MessageType {
+class CacheMetadata$Type extends build_commonjs.MessageType {
     constructor() {
         super("github.actions.results.entities.v1.CacheMetadata", [
             { no: 1, name: "repository_id", kind: "scalar", T: 3 /*ScalarType.INT64*/ },
@@ -91488,9 +91480,9 @@ class CacheMetadata$Type extends runtime.MessageType {
     }
     create(value) {
         const message = { repositoryId: "0", scope: [] };
-        globalThis.Object.defineProperty(message, runtime.MESSAGE_TYPE, { enumerable: false, value: this });
+        globalThis.Object.defineProperty(message, build_commonjs.MESSAGE_TYPE, { enumerable: false, value: this });
         if (value !== undefined)
-            (0,runtime.reflectionMergePartial)(this, message, value);
+            (0,build_commonjs.reflectionMergePartial)(this, message, value);
         return message;
     }
     internalBinaryRead(reader, length, options, target) {
@@ -91510,7 +91502,7 @@ class CacheMetadata$Type extends runtime.MessageType {
                         throw new globalThis.Error(`Unknown field ${fieldNo} (wire type ${wireType}) for ${this.typeName}`);
                     let d = reader.skip(wireType);
                     if (u !== false)
-                        (u === true ? runtime.UnknownFieldHandler.onRead : u)(this.typeName, message, fieldNo, wireType, d);
+                        (u === true ? build_commonjs.UnknownFieldHandler.onRead : u)(this.typeName, message, fieldNo, wireType, d);
             }
         }
         return message;
@@ -91518,13 +91510,13 @@ class CacheMetadata$Type extends runtime.MessageType {
     internalBinaryWrite(message, writer, options) {
         /* int64 repository_id = 1; */
         if (message.repositoryId !== "0")
-            writer.tag(1, runtime.WireType.Varint).int64(message.repositoryId);
+            writer.tag(1, build_commonjs.WireType.Varint).int64(message.repositoryId);
         /* repeated github.actions.results.entities.v1.CacheScope scope = 2; */
         for (let i = 0; i < message.scope.length; i++)
-            CacheScope.internalBinaryWrite(message.scope[i], writer.tag(2, runtime.WireType.LengthDelimited).fork(), options).join();
+            CacheScope.internalBinaryWrite(message.scope[i], writer.tag(2, build_commonjs.WireType.LengthDelimited).fork(), options).join();
         let u = options.writeUnknownFields;
         if (u !== false)
-            (u == true ? runtime.UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
+            (u == true ? build_commonjs.UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
         return writer;
     }
 }
@@ -91545,7 +91537,7 @@ const CacheMetadata = new CacheMetadata$Type();
 
 
 // @generated message type with reflection information, may provide speed optimized methods
-class CreateCacheEntryRequest$Type extends runtime.MessageType {
+class CreateCacheEntryRequest$Type extends build_commonjs.MessageType {
     constructor() {
         super("github.actions.results.api.v1.CreateCacheEntryRequest", [
             { no: 1, name: "metadata", kind: "message", T: () => CacheMetadata },
@@ -91555,9 +91547,9 @@ class CreateCacheEntryRequest$Type extends runtime.MessageType {
     }
     create(value) {
         const message = { key: "", version: "" };
-        globalThis.Object.defineProperty(message, runtime.MESSAGE_TYPE, { enumerable: false, value: this });
+        globalThis.Object.defineProperty(message, build_commonjs.MESSAGE_TYPE, { enumerable: false, value: this });
         if (value !== undefined)
-            (0,runtime.reflectionMergePartial)(this, message, value);
+            (0,build_commonjs.reflectionMergePartial)(this, message, value);
         return message;
     }
     internalBinaryRead(reader, length, options, target) {
@@ -91580,7 +91572,7 @@ class CreateCacheEntryRequest$Type extends runtime.MessageType {
                         throw new globalThis.Error(`Unknown field ${fieldNo} (wire type ${wireType}) for ${this.typeName}`);
                     let d = reader.skip(wireType);
                     if (u !== false)
-                        (u === true ? runtime.UnknownFieldHandler.onRead : u)(this.typeName, message, fieldNo, wireType, d);
+                        (u === true ? build_commonjs.UnknownFieldHandler.onRead : u)(this.typeName, message, fieldNo, wireType, d);
             }
         }
         return message;
@@ -91588,16 +91580,16 @@ class CreateCacheEntryRequest$Type extends runtime.MessageType {
     internalBinaryWrite(message, writer, options) {
         /* github.actions.results.entities.v1.CacheMetadata metadata = 1; */
         if (message.metadata)
-            CacheMetadata.internalBinaryWrite(message.metadata, writer.tag(1, runtime.WireType.LengthDelimited).fork(), options).join();
+            CacheMetadata.internalBinaryWrite(message.metadata, writer.tag(1, build_commonjs.WireType.LengthDelimited).fork(), options).join();
         /* string key = 2; */
         if (message.key !== "")
-            writer.tag(2, runtime.WireType.LengthDelimited).string(message.key);
+            writer.tag(2, build_commonjs.WireType.LengthDelimited).string(message.key);
         /* string version = 3; */
         if (message.version !== "")
-            writer.tag(3, runtime.WireType.LengthDelimited).string(message.version);
+            writer.tag(3, build_commonjs.WireType.LengthDelimited).string(message.version);
         let u = options.writeUnknownFields;
         if (u !== false)
-            (u == true ? runtime.UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
+            (u == true ? build_commonjs.UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
         return writer;
     }
 }
@@ -91606,7 +91598,7 @@ class CreateCacheEntryRequest$Type extends runtime.MessageType {
  */
 const cache_CreateCacheEntryRequest = new CreateCacheEntryRequest$Type();
 // @generated message type with reflection information, may provide speed optimized methods
-class CreateCacheEntryResponse$Type extends runtime.MessageType {
+class CreateCacheEntryResponse$Type extends build_commonjs.MessageType {
     constructor() {
         super("github.actions.results.api.v1.CreateCacheEntryResponse", [
             { no: 1, name: "ok", kind: "scalar", T: 8 /*ScalarType.BOOL*/ },
@@ -91616,9 +91608,9 @@ class CreateCacheEntryResponse$Type extends runtime.MessageType {
     }
     create(value) {
         const message = { ok: false, signedUploadUrl: "", message: "" };
-        globalThis.Object.defineProperty(message, runtime.MESSAGE_TYPE, { enumerable: false, value: this });
+        globalThis.Object.defineProperty(message, build_commonjs.MESSAGE_TYPE, { enumerable: false, value: this });
         if (value !== undefined)
-            (0,runtime.reflectionMergePartial)(this, message, value);
+            (0,build_commonjs.reflectionMergePartial)(this, message, value);
         return message;
     }
     internalBinaryRead(reader, length, options, target) {
@@ -91641,7 +91633,7 @@ class CreateCacheEntryResponse$Type extends runtime.MessageType {
                         throw new globalThis.Error(`Unknown field ${fieldNo} (wire type ${wireType}) for ${this.typeName}`);
                     let d = reader.skip(wireType);
                     if (u !== false)
-                        (u === true ? runtime.UnknownFieldHandler.onRead : u)(this.typeName, message, fieldNo, wireType, d);
+                        (u === true ? build_commonjs.UnknownFieldHandler.onRead : u)(this.typeName, message, fieldNo, wireType, d);
             }
         }
         return message;
@@ -91649,16 +91641,16 @@ class CreateCacheEntryResponse$Type extends runtime.MessageType {
     internalBinaryWrite(message, writer, options) {
         /* bool ok = 1; */
         if (message.ok !== false)
-            writer.tag(1, runtime.WireType.Varint).bool(message.ok);
+            writer.tag(1, build_commonjs.WireType.Varint).bool(message.ok);
         /* string signed_upload_url = 2; */
         if (message.signedUploadUrl !== "")
-            writer.tag(2, runtime.WireType.LengthDelimited).string(message.signedUploadUrl);
+            writer.tag(2, build_commonjs.WireType.LengthDelimited).string(message.signedUploadUrl);
         /* string message = 3; */
         if (message.message !== "")
-            writer.tag(3, runtime.WireType.LengthDelimited).string(message.message);
+            writer.tag(3, build_commonjs.WireType.LengthDelimited).string(message.message);
         let u = options.writeUnknownFields;
         if (u !== false)
-            (u == true ? runtime.UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
+            (u == true ? build_commonjs.UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
         return writer;
     }
 }
@@ -91667,7 +91659,7 @@ class CreateCacheEntryResponse$Type extends runtime.MessageType {
  */
 const cache_CreateCacheEntryResponse = new CreateCacheEntryResponse$Type();
 // @generated message type with reflection information, may provide speed optimized methods
-class FinalizeCacheEntryUploadRequest$Type extends runtime.MessageType {
+class FinalizeCacheEntryUploadRequest$Type extends build_commonjs.MessageType {
     constructor() {
         super("github.actions.results.api.v1.FinalizeCacheEntryUploadRequest", [
             { no: 1, name: "metadata", kind: "message", T: () => CacheMetadata },
@@ -91678,9 +91670,9 @@ class FinalizeCacheEntryUploadRequest$Type extends runtime.MessageType {
     }
     create(value) {
         const message = { key: "", sizeBytes: "0", version: "" };
-        globalThis.Object.defineProperty(message, runtime.MESSAGE_TYPE, { enumerable: false, value: this });
+        globalThis.Object.defineProperty(message, build_commonjs.MESSAGE_TYPE, { enumerable: false, value: this });
         if (value !== undefined)
-            (0,runtime.reflectionMergePartial)(this, message, value);
+            (0,build_commonjs.reflectionMergePartial)(this, message, value);
         return message;
     }
     internalBinaryRead(reader, length, options, target) {
@@ -91706,7 +91698,7 @@ class FinalizeCacheEntryUploadRequest$Type extends runtime.MessageType {
                         throw new globalThis.Error(`Unknown field ${fieldNo} (wire type ${wireType}) for ${this.typeName}`);
                     let d = reader.skip(wireType);
                     if (u !== false)
-                        (u === true ? runtime.UnknownFieldHandler.onRead : u)(this.typeName, message, fieldNo, wireType, d);
+                        (u === true ? build_commonjs.UnknownFieldHandler.onRead : u)(this.typeName, message, fieldNo, wireType, d);
             }
         }
         return message;
@@ -91714,19 +91706,19 @@ class FinalizeCacheEntryUploadRequest$Type extends runtime.MessageType {
     internalBinaryWrite(message, writer, options) {
         /* github.actions.results.entities.v1.CacheMetadata metadata = 1; */
         if (message.metadata)
-            CacheMetadata.internalBinaryWrite(message.metadata, writer.tag(1, runtime.WireType.LengthDelimited).fork(), options).join();
+            CacheMetadata.internalBinaryWrite(message.metadata, writer.tag(1, build_commonjs.WireType.LengthDelimited).fork(), options).join();
         /* string key = 2; */
         if (message.key !== "")
-            writer.tag(2, runtime.WireType.LengthDelimited).string(message.key);
+            writer.tag(2, build_commonjs.WireType.LengthDelimited).string(message.key);
         /* int64 size_bytes = 3; */
         if (message.sizeBytes !== "0")
-            writer.tag(3, runtime.WireType.Varint).int64(message.sizeBytes);
+            writer.tag(3, build_commonjs.WireType.Varint).int64(message.sizeBytes);
         /* string version = 4; */
         if (message.version !== "")
-            writer.tag(4, runtime.WireType.LengthDelimited).string(message.version);
+            writer.tag(4, build_commonjs.WireType.LengthDelimited).string(message.version);
         let u = options.writeUnknownFields;
         if (u !== false)
-            (u == true ? runtime.UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
+            (u == true ? build_commonjs.UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
         return writer;
     }
 }
@@ -91735,7 +91727,7 @@ class FinalizeCacheEntryUploadRequest$Type extends runtime.MessageType {
  */
 const cache_FinalizeCacheEntryUploadRequest = new FinalizeCacheEntryUploadRequest$Type();
 // @generated message type with reflection information, may provide speed optimized methods
-class FinalizeCacheEntryUploadResponse$Type extends runtime.MessageType {
+class FinalizeCacheEntryUploadResponse$Type extends build_commonjs.MessageType {
     constructor() {
         super("github.actions.results.api.v1.FinalizeCacheEntryUploadResponse", [
             { no: 1, name: "ok", kind: "scalar", T: 8 /*ScalarType.BOOL*/ },
@@ -91745,9 +91737,9 @@ class FinalizeCacheEntryUploadResponse$Type extends runtime.MessageType {
     }
     create(value) {
         const message = { ok: false, entryId: "0", message: "" };
-        globalThis.Object.defineProperty(message, runtime.MESSAGE_TYPE, { enumerable: false, value: this });
+        globalThis.Object.defineProperty(message, build_commonjs.MESSAGE_TYPE, { enumerable: false, value: this });
         if (value !== undefined)
-            (0,runtime.reflectionMergePartial)(this, message, value);
+            (0,build_commonjs.reflectionMergePartial)(this, message, value);
         return message;
     }
     internalBinaryRead(reader, length, options, target) {
@@ -91770,7 +91762,7 @@ class FinalizeCacheEntryUploadResponse$Type extends runtime.MessageType {
                         throw new globalThis.Error(`Unknown field ${fieldNo} (wire type ${wireType}) for ${this.typeName}`);
                     let d = reader.skip(wireType);
                     if (u !== false)
-                        (u === true ? runtime.UnknownFieldHandler.onRead : u)(this.typeName, message, fieldNo, wireType, d);
+                        (u === true ? build_commonjs.UnknownFieldHandler.onRead : u)(this.typeName, message, fieldNo, wireType, d);
             }
         }
         return message;
@@ -91778,16 +91770,16 @@ class FinalizeCacheEntryUploadResponse$Type extends runtime.MessageType {
     internalBinaryWrite(message, writer, options) {
         /* bool ok = 1; */
         if (message.ok !== false)
-            writer.tag(1, runtime.WireType.Varint).bool(message.ok);
+            writer.tag(1, build_commonjs.WireType.Varint).bool(message.ok);
         /* int64 entry_id = 2; */
         if (message.entryId !== "0")
-            writer.tag(2, runtime.WireType.Varint).int64(message.entryId);
+            writer.tag(2, build_commonjs.WireType.Varint).int64(message.entryId);
         /* string message = 3; */
         if (message.message !== "")
-            writer.tag(3, runtime.WireType.LengthDelimited).string(message.message);
+            writer.tag(3, build_commonjs.WireType.LengthDelimited).string(message.message);
         let u = options.writeUnknownFields;
         if (u !== false)
-            (u == true ? runtime.UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
+            (u == true ? build_commonjs.UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
         return writer;
     }
 }
@@ -91796,7 +91788,7 @@ class FinalizeCacheEntryUploadResponse$Type extends runtime.MessageType {
  */
 const cache_FinalizeCacheEntryUploadResponse = new FinalizeCacheEntryUploadResponse$Type();
 // @generated message type with reflection information, may provide speed optimized methods
-class GetCacheEntryDownloadURLRequest$Type extends runtime.MessageType {
+class GetCacheEntryDownloadURLRequest$Type extends build_commonjs.MessageType {
     constructor() {
         super("github.actions.results.api.v1.GetCacheEntryDownloadURLRequest", [
             { no: 1, name: "metadata", kind: "message", T: () => CacheMetadata },
@@ -91807,9 +91799,9 @@ class GetCacheEntryDownloadURLRequest$Type extends runtime.MessageType {
     }
     create(value) {
         const message = { key: "", restoreKeys: [], version: "" };
-        globalThis.Object.defineProperty(message, runtime.MESSAGE_TYPE, { enumerable: false, value: this });
+        globalThis.Object.defineProperty(message, build_commonjs.MESSAGE_TYPE, { enumerable: false, value: this });
         if (value !== undefined)
-            (0,runtime.reflectionMergePartial)(this, message, value);
+            (0,build_commonjs.reflectionMergePartial)(this, message, value);
         return message;
     }
     internalBinaryRead(reader, length, options, target) {
@@ -91835,7 +91827,7 @@ class GetCacheEntryDownloadURLRequest$Type extends runtime.MessageType {
                         throw new globalThis.Error(`Unknown field ${fieldNo} (wire type ${wireType}) for ${this.typeName}`);
                     let d = reader.skip(wireType);
                     if (u !== false)
-                        (u === true ? runtime.UnknownFieldHandler.onRead : u)(this.typeName, message, fieldNo, wireType, d);
+                        (u === true ? build_commonjs.UnknownFieldHandler.onRead : u)(this.typeName, message, fieldNo, wireType, d);
             }
         }
         return message;
@@ -91843,19 +91835,19 @@ class GetCacheEntryDownloadURLRequest$Type extends runtime.MessageType {
     internalBinaryWrite(message, writer, options) {
         /* github.actions.results.entities.v1.CacheMetadata metadata = 1; */
         if (message.metadata)
-            CacheMetadata.internalBinaryWrite(message.metadata, writer.tag(1, runtime.WireType.LengthDelimited).fork(), options).join();
+            CacheMetadata.internalBinaryWrite(message.metadata, writer.tag(1, build_commonjs.WireType.LengthDelimited).fork(), options).join();
         /* string key = 2; */
         if (message.key !== "")
-            writer.tag(2, runtime.WireType.LengthDelimited).string(message.key);
+            writer.tag(2, build_commonjs.WireType.LengthDelimited).string(message.key);
         /* repeated string restore_keys = 3; */
         for (let i = 0; i < message.restoreKeys.length; i++)
-            writer.tag(3, runtime.WireType.LengthDelimited).string(message.restoreKeys[i]);
+            writer.tag(3, build_commonjs.WireType.LengthDelimited).string(message.restoreKeys[i]);
         /* string version = 4; */
         if (message.version !== "")
-            writer.tag(4, runtime.WireType.LengthDelimited).string(message.version);
+            writer.tag(4, build_commonjs.WireType.LengthDelimited).string(message.version);
         let u = options.writeUnknownFields;
         if (u !== false)
-            (u == true ? runtime.UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
+            (u == true ? build_commonjs.UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
         return writer;
     }
 }
@@ -91864,7 +91856,7 @@ class GetCacheEntryDownloadURLRequest$Type extends runtime.MessageType {
  */
 const cache_GetCacheEntryDownloadURLRequest = new GetCacheEntryDownloadURLRequest$Type();
 // @generated message type with reflection information, may provide speed optimized methods
-class GetCacheEntryDownloadURLResponse$Type extends runtime.MessageType {
+class GetCacheEntryDownloadURLResponse$Type extends build_commonjs.MessageType {
     constructor() {
         super("github.actions.results.api.v1.GetCacheEntryDownloadURLResponse", [
             { no: 1, name: "ok", kind: "scalar", T: 8 /*ScalarType.BOOL*/ },
@@ -91874,9 +91866,9 @@ class GetCacheEntryDownloadURLResponse$Type extends runtime.MessageType {
     }
     create(value) {
         const message = { ok: false, signedDownloadUrl: "", matchedKey: "" };
-        globalThis.Object.defineProperty(message, runtime.MESSAGE_TYPE, { enumerable: false, value: this });
+        globalThis.Object.defineProperty(message, build_commonjs.MESSAGE_TYPE, { enumerable: false, value: this });
         if (value !== undefined)
-            (0,runtime.reflectionMergePartial)(this, message, value);
+            (0,build_commonjs.reflectionMergePartial)(this, message, value);
         return message;
     }
     internalBinaryRead(reader, length, options, target) {
@@ -91899,7 +91891,7 @@ class GetCacheEntryDownloadURLResponse$Type extends runtime.MessageType {
                         throw new globalThis.Error(`Unknown field ${fieldNo} (wire type ${wireType}) for ${this.typeName}`);
                     let d = reader.skip(wireType);
                     if (u !== false)
-                        (u === true ? runtime.UnknownFieldHandler.onRead : u)(this.typeName, message, fieldNo, wireType, d);
+                        (u === true ? build_commonjs.UnknownFieldHandler.onRead : u)(this.typeName, message, fieldNo, wireType, d);
             }
         }
         return message;
@@ -91907,16 +91899,16 @@ class GetCacheEntryDownloadURLResponse$Type extends runtime.MessageType {
     internalBinaryWrite(message, writer, options) {
         /* bool ok = 1; */
         if (message.ok !== false)
-            writer.tag(1, runtime.WireType.Varint).bool(message.ok);
+            writer.tag(1, build_commonjs.WireType.Varint).bool(message.ok);
         /* string signed_download_url = 2; */
         if (message.signedDownloadUrl !== "")
-            writer.tag(2, runtime.WireType.LengthDelimited).string(message.signedDownloadUrl);
+            writer.tag(2, build_commonjs.WireType.LengthDelimited).string(message.signedDownloadUrl);
         /* string matched_key = 3; */
         if (message.matchedKey !== "")
-            writer.tag(3, runtime.WireType.LengthDelimited).string(message.matchedKey);
+            writer.tag(3, build_commonjs.WireType.LengthDelimited).string(message.matchedKey);
         let u = options.writeUnknownFields;
         if (u !== false)
-            (u == true ? runtime.UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
+            (u == true ? build_commonjs.UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
         return writer;
     }
 }

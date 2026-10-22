@@ -84,7 +84,9 @@ describe("action entry point", () => {
     mocks.distributionWarnings.mockReturnValue([]);
     mocks.writeSummary.mockResolvedValue(undefined);
     mocks.commentOnPullRequest.mockResolvedValue(undefined);
-    mocks.Logger.mockImplementation(() => ({ info: vi.fn() }));
+    mocks.Logger.mockImplementation(function loggerMock() {
+      return { info: vi.fn() };
+    });
     mocks.loadConfig.mockReturnValue({ config: {} });
   });
 

@@ -30,10 +30,9 @@ pull request has a failure or distribution-review warning and a token is
 available, it creates or updates one managed pull-request comment.
 
 On GitHub Actions, the action caches successfully resolved npm and PyPI package
-license metadata across runs.
-Cache entries are keyed from the configured dependency files and cached
-metadata. The current license policy is evaluated on every run; GitHub
-repository metadata and license text are not cached.
+license metadata across runs. Cache entries are keyed from the configured
+dependency files and cached metadata. The current license policy is evaluated on
+every run; GitHub repository metadata and license text are not cached.
 
 ## Configuration
 

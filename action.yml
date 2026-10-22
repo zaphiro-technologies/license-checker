@@ -12,11 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-name: License Checker
+name: Dependency License Compatibility
 description: Check License Eye-compatible dependency licenses for JavaScript, Go, and Python projects.
 author: Zaphiro Technologies
 branding:
-  icon: shield
+  icon: check-circle
   color: blue
 inputs:
   config:

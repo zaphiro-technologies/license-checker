@@ -1,8 +1,13 @@
 # license-checker Release Notes
 
-## 1.0.2-dev - 2026-10-22
+## 1.0.2-dev - 2026-11-02
 
-- no changes
+### Dependencies
+
+- build(deps): bump the all-dependencies group with 3 updates (PR #8 by
+  @dependabot[bot])
+- build(deps-dev): bump the all-dependencies group with 2 updates (PR #7 by
+  @dependabot[bot])
 
 ## 1.0.1 - 2026-10-22
 

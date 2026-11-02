@@ -47312,6 +47312,10 @@ function systemGoPackageList(moduleDirectory, packages, includeTests) {
         ...packages,
     ], { cwd: moduleDirectory, encoding: "utf8", maxBuffer: 64 * 1024 * 1024 });
 }
+const goModuleDirectories = new WeakMap();
+function goModuleDirectoryFor(dependency) {
+    return goModuleDirectories.get(dependency);
+}
 function updateGoJSONState(character, state) {
     if (state.start < 0)
         return false;
@@ -47381,7 +47385,7 @@ function goModuleDependency(manifest, packageObject) {
         versionResolutionError =
             "The Go package graph did not provide an exact module version.";
     }
-    return {
+    const dependency = {
         name,
         version: version || "unresolved",
         ecosystem: "go",
@@ -47389,6 +47393,9 @@ function goModuleDependency(manifest, packageObject) {
         versionResolved,
         versionResolutionError,
     };
+    if (typeof module.Dir === "string")
+        goModuleDirectories.set(dependency, module.Dir);
+    return dependency;
 }
 function addGoGraphFailure(manifest, dependencies, message) {
     dependencies.push({
@@ -47868,6 +47875,7 @@ async function resolveGithubRepositoryLicense(repository, token, includeMatchTex
 
 
 
+
 function resolveVendoredGoLicense(root, dependency, includeMatchText, licenseRules) {
     const vendorRoot = (0,external_node_path_.join)(root, (0,external_node_path_.dirname)(dependency.manifest), "vendor");
     let directory = (0,external_node_path_.join)(vendorRoot, ...dependency.name.split("/"));
@@ -47898,6 +47906,23 @@ async function resolveGoLicense(root, dependency, token, logger, includeMatchTex
             ...vendored,
             resolution: "manifest",
         };
+    const moduleDirectory = goModuleDirectoryFor(dependency);
+    if (moduleDirectory) {
+        for (const filename of LICENSE_FILENAMES) {
+            const path = (0,external_node_path_.join)(moduleDirectory, filename);
+            const text = readText(path);
+            if (!text)
+                continue;
+            const license = identifyLicenseText(text, licenseRules);
+            if (license || includeMatchText)
+                return {
+                    license,
+                    source: `${dependency.name}@${dependency.version}/${filename}`,
+                    matchText: includeMatchText ? text : undefined,
+                    resolution: "manifest",
+                };
+        }
+    }
     const match = /^github\.com\/([^/]+\/[^/]+)(?:\/v\d+)?$/.exec(dependency.name);
     if (!match) {
         logger.debug(`No repository resolver for Go module ${dependency.name}`);

@@ -104,6 +104,14 @@ interface GoJSONState {
   escaped: boolean;
 }
 
+const goModuleDirectories = new WeakMap<Dependency, string>();
+
+export function goModuleDirectoryFor(
+  dependency: Dependency,
+): string | undefined {
+  return goModuleDirectories.get(dependency);
+}
+
 function updateGoJSONState(character: string, state: GoJSONState): boolean {
   if (state.start < 0) return false;
   if (state.inString) {
@@ -165,6 +173,7 @@ function goModuleDependency(
         Version?: unknown;
         Main?: unknown;
         Replace?: unknown;
+        Dir?: unknown;
       }
     | undefined;
   if (!module || module.Main === true || typeof module.Path !== "string")
@@ -182,7 +191,7 @@ function goModuleDependency(
     versionResolutionError =
       "The Go package graph did not provide an exact module version.";
   }
-  return {
+  const dependency: Dependency = {
     name,
     version: version || "unresolved",
     ecosystem: "go",
@@ -190,6 +199,9 @@ function goModuleDependency(
     versionResolved,
     versionResolutionError,
   };
+  if (typeof module.Dir === "string")
+    goModuleDirectories.set(dependency, module.Dir);
+  return dependency;
 }
 
 function addGoGraphFailure(

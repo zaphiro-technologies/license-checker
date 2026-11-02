@@ -25,6 +25,7 @@ import {
   LICENSE_FILENAMES,
 } from "../sources/metadata.js";
 import type { LicenseEvidence } from "../checker.js";
+import { goModuleDirectoryFor } from "./parsers/package-graph.js";
 
 function resolveVendoredGoLicense(
   root: string,
@@ -73,6 +74,22 @@ export async function resolveGoLicense(
       ...vendored,
       resolution: "manifest",
     };
+  const moduleDirectory = goModuleDirectoryFor(dependency);
+  if (moduleDirectory) {
+    for (const filename of LICENSE_FILENAMES) {
+      const path = join(moduleDirectory, filename);
+      const text = readText(path);
+      if (!text) continue;
+      const license = identifyLicenseText(text, licenseRules);
+      if (license || includeMatchText)
+        return {
+          license,
+          source: `${dependency.name}@${dependency.version}/${filename}`,
+          matchText: includeMatchText ? text : undefined,
+          resolution: "manifest",
+        };
+    }
+  }
   const match = /^github\.com\/([^/]+\/[^/]+)(?:\/v\d+)?$/.exec(
     dependency.name,
   );

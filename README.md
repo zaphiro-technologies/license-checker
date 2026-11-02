@@ -230,3 +230,17 @@ See [`examples/README.md`](examples/README.md) for the example configs and
 workflow.
 
 For contributor workflows, see the [development guide](DEVELOPMENT.md).
+
+## Updating the `v1` major tag
+
+After pushing a new stable `v1.x.y` release tag, move the floating `v1` tag to
+the newest stable `v1.x.y` tag. This keeps workflows using
+`zaphiro-technologies/license-checker@v1` on the latest v1 release. From a
+checkout with access to the repository:
+
+```sh
+git fetch origin --tags
+
+git tag --force --annotate v1 v1.x.y
+git push --force origin refs/tags/v1
+```

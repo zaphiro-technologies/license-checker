@@ -28,9 +28,9 @@
     "@actions/core": "^3.0.1",
     "@actions/github": "^9.1.1",
     "@iarna/toml": "^2.2.5",
-    "eslint": "^10.14.0",
-    "minimatch": "^11.0.8",
-    "spdx-correct": "^3.2.0",
+    "eslint": "^10.15.0",
+    "minimatch": "^11.0.9",
+    "spdx-correct": "^4.0.0",
     "spdx-expression-parse": "^5.0.0",
     "yaml": "^2.9.1"
   },
@@ -39,12 +39,12 @@
     "@types/spdx-correct": "^3.0.0",
     "@types/spdx-expression-parse": "^4.0.0",
     "@vercel/ncc": "^0.45.0",
-    "@vitest/coverage-v8": "5.1.0",
+    "@vitest/coverage-v8": "5.1.1",
     "prettier": "^3.10.1",
     "tsx": "^4.23.15",
     "typescript": "^5.7.2",
-    "typescript-eslint": "^8.72.2",
+    "typescript-eslint": "^8.73.0",
     "vite": "^8",
-    "vitest": "^5.1.0"
+    "vitest": "^5.1.1"
   }
 }

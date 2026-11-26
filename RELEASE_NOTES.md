@@ -1,12 +1,16 @@
 # license-checker Release Notes
 
-## 1.0.3-dev - 2026-11-16
+## 1.0.3-dev - 2026-11-26
 
 ### Dependencies
 
-- build(deps): bump the all-dependencies group with 5 updates (PR #9 by
+- build(deps): bump the all-dependencies group with 6 updates (PR #12 by
+  @dependabot[bot])
+- build(deps): bump the all-dependencies group with 4 updates (PR #11 by
   @dependabot[bot])
 - build(deps): bump fast-xml-parser from 5.11.2 to 5.12.0 (PR #10 by
+  @dependabot[bot])
+- build(deps): bump the all-dependencies group with 5 updates (PR #9 by
   @dependabot[bot])
 
 ## 1.0.2 - 2026-11-02
